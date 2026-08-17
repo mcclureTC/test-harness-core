@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_EventReporterSendsAndDoesNotFail" Id="{3c1c2053-b9b3-46ef-9042-65db06f34d29}" SpecialFunc="None">
+    <Declaration><![CDATA[// The load-bearing test for this sink: an event was accepted by the EventLogger,
+// and no call returned a failing HRESULT.
+//
+// FailedSends is what distinguishes "the event class is not registered" from
+// "everything is fine" - both look identical from the PLC otherwise, because a
+// failed Create produces exactly as much visible output as a successful one that
+// nobody is watching. R3's lesson, applied to a different sink.
+FUNCTION_BLOCK TEST_EventReporterSendsAndDoesNotFail IMPLEMENTS I_Test
+VAR
+	Sink : TestEventReporter;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	Error : HRESULT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{27ebd6a7-75a4-441d-b8dd-4177c147ec72}" />
+    <Method Name="Run" Id="{8a26c5c3-64f2-4654-8df1-2c3f1e784894}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'a failure', Location := '',
+				  Status := E_TestStatus.Failed, Kind := E_FailureKind.ValueMismatch,
+				  Summary := 'expected 1, actual 2', ElapsedTime := 0.0,
+				  ElapsedCycles := 1, Assertions := 1);
+
+ExpectedCount := 1;
+ActualCount	  := Sink.EventsSent;
+Test.AssertEqual(ExpectedCount, ActualCount, 'the event was accepted');
+
+ExpectedCount := 0;
+ActualCount	  := Sink.FailedSends;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was refused');
+
+// Reported rather than swallowed. If this is non-zero the HRESULT says why.
+Error := Sink.LastError;
+Test.AssertTrue(Error = 0, 'no HRESULT was returned');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

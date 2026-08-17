@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_EventReporterWorksThroughTheFanout" Id="{3db1b01b-9f08-4df4-8045-22c56a99b94b}" SpecialFunc="None">
+    <Declaration><![CDATA[// It is an ordinary I_TestReporter, so the fan-out takes it beside any other sink
+// and both receive everything.
+//
+// Also the case that matters for a build: the ADSLOGSTR sink and the EventLogger
+// sink attached together, because they answer different questions and a rig
+// usually wants both.
+FUNCTION_BLOCK TEST_EventReporterWorksThroughTheFanout IMPLEMENTS I_Test
+VAR
+	Fanout	  : TestReporterFanout;
+	Events	  : TestEventReporter;
+	LogSink		  : TestLogReporter;
+	Attached  : BOOL;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{122ebdbe-6d94-4921-a25b-f10ac47a200d}" />
+    <Method Name="Run" Id="{50c39cde-3020-4952-883e-d8534b871947}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Attached := Fanout.Attach(Events) AND Fanout.Attach(LogSink);
+Test.AssertTrue(Attached, 'both sinks attached');
+
+Fanout.FrameworkError(Source := 'the fan-out', Message := 'reached both sinks');
+
+ExpectedCount := 1;
+ActualCount	  := Events.EventsSent;
+Test.AssertEqual(ExpectedCount, ActualCount, 'the event sink raised one');
+
+ActualCount := LogSink.FrameworkErrorsLogged;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and the log sink wrote one');
+
+// Neither starts asynchronous work, so a run is never held open by them.
+Test.AssertTrue(Events.IsIdle, 'the event sink is idle');
+Test.AssertTrue(Fanout.IsIdle, 'so the fan-out is');
+
+// Suspending covers both, which is what makes an individual re-run silent.
+Fanout.Suspend();
+Fanout.FrameworkError(Source := 'the fan-out', Message := 'must not be raised');
+ActualCount := Events.EventsSent;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and Suspend silences it too');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

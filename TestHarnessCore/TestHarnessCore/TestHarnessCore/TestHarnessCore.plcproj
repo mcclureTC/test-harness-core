@@ -130,6 +130,9 @@
     <Compile Include="POUs\TestDeadline.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\TestEventReporter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\TestJournal.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -229,6 +232,10 @@
     <PlaceholderReference Include="Tc2_Utilities">
       <DefaultResolution>Tc2_Utilities, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc2_Utilities</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_EventLogger">
+      <DefaultResolution>Tc3_EventLogger, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_EventLogger</Namespace>
     </PlaceholderReference>
     <PlaceholderReference Include="Tc3_Module">
       <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>

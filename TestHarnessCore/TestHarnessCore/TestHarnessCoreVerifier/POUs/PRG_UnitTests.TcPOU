@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{a3c5c11b-6993-45a2-ab7e-e08480108b78}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{67a6e922-452c-49b2-9313-b96e1de63c55}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      59 - assert this. A test that stops being registered vanishes
+//   Total      63 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //
@@ -26,14 +26,15 @@
 // so a defect that never completes fails its own test instead of hanging
 // everything and looking like a broken verifier.
 //
-// THIS SUITE STILL ATTACHES NO REPORTER, even now that one exists. The LogReporter
-// tests drive their own instances and assert on its counters. Nothing here writes
-// to the log, so a logging defect cannot be mistaken for a harness defect and the
+// THIS SUITE STILL ATTACHES NO REPORTER, even though two now exist. The reporter
+// tests drive their own instances. Nothing here writes to the log or raises an
+// event, so a reporting defect cannot be mistaken for a harness defect and the
 // counts below remain the whole result.
 //
-// What the LogReporter tests CANNOT check is whether a line actually reached the
-// TwinCAT log, or what it says - ADSLOGSTR gives no answer back. Read the Logged
-// Events window once, by eye.
+// The reporter tests establish that the right BRANCH was taken and, for the event
+// sink, that the logger ACCEPTED the event - FailedSends and LastError are what
+// separate "the event class is not registered" from "everything is fine". What
+// neither can check is the wording. Read the Logged Events window once, by eye.
 PROGRAM PRG_UnitTests
 VAR
 	Suite	: TestSuite<70>;
@@ -114,6 +115,12 @@ VAR
 	logReporterNarratesWhenAsked	: TEST_LogReporterNarratesWhenAsked;
 	logReporterAlwaysWritesFrameworkErrors	: TEST_LogReporterAlwaysWritesFrameworkErrors;
 	logReporterSummarisesASuite	: TEST_LogReporterSummarisesASuite;
+
+	// -- EventReporter --
+	eventReporterSendsAndDoesNotFail	: TEST_EventReporterSendsAndDoesNotFail;
+	eventReporterIsQuietAboutPasses	: TEST_EventReporterIsQuietAboutPasses;
+	eventReporterRaisesEachOutcomeOnce	: TEST_EventReporterRaisesEachOutcomeOnce;
+	eventReporterWorksThroughTheFanout	: TEST_EventReporterWorksThroughTheFanout;
 
 	// -- the result, for the watch window ---------------------------------------
 	Complete : BOOL;
@@ -205,6 +212,12 @@ END_VAR]]></Declaration>
 	Suite.Register(logReporterNarratesWhenAsked, 'LogReporter: verbosity turns narration on and off', Budgets);
 	Suite.Register(logReporterAlwaysWritesFrameworkErrors, 'LogReporter: framework errors are never suppressed', Budgets);
 	Suite.Register(logReporterSummarisesASuite, 'LogReporter: one line per suite, carrying the counts', Budgets);
+
+	// EventReporter
+	Suite.Register(eventReporterSendsAndDoesNotFail, 'EventReporter: an event is accepted and no HRESULT is returned', Budgets);
+	Suite.Register(eventReporterIsQuietAboutPasses, 'EventReporter: quiet about passes until narration is asked for', Budgets);
+	Suite.Register(eventReporterRaisesEachOutcomeOnce, 'EventReporter: one event per notification, none raised twice', Budgets);
+	Suite.Register(eventReporterWorksThroughTheFanout, 'EventReporter: it sits behind the fan-out beside the log sink', Budgets);
 
 END_IF
 

@@ -7,6 +7,9 @@
 					<Name>PlcTask</Name>
 				</Task>
 			</Tasks>
+			<TypeSystem>
+				<AdditionalTmcFile Name="TestHarnessEvents" File="..\..\..\..\Users\Administrator\Downloads\TcSkill\TestHarnessCore-30\TestHarnessEvents.tmc"/>
+			</TypeSystem>
 		</System>
 		<Plc>
 			<Project File="TestHarnessCore.xti"/>

@@ -105,6 +105,18 @@
     <Compile Include="Tests\Arbiter\TEST_ArbiterVisitsEveryTestOnce.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\EventReporter\TEST_EventReporterIsQuietAboutPasses.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\EventReporter\TEST_EventReporterRaisesEachOutcomeOnce.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\EventReporter\TEST_EventReporterSendsAndDoesNotFail.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\EventReporter\TEST_EventReporterWorksThroughTheFanout.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Fanout\TEST_FanoutCarriesTheSuiteResultThrough.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -275,6 +287,7 @@
     <Folder Include="Tests\Journal" />
     <Folder Include="Tests\Fanout" />
     <Folder Include="Tests\LogReporter" />
+    <Folder Include="Tests\EventReporter" />
     <Folder Include="Tests\Suite" />
     <Folder Include="Tests\Runner" />
     <Folder Include="Tests\Verdict" />
