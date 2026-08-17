@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_FanoutRefusesBeyondCapacityAndTellsTheRest" Id="{ef4902ce-9f05-4936-977d-b18fdb801c32}" SpecialFunc="None">
+    <Declaration><![CDATA[// A refused attachment is reported through the sinks ALREADY attached. That reads
+// circular and is not: the ones already there are exactly the ones that can still
+// report it.
+//
+// A rejection with nothing attached at all is genuinely silent, which is why Count
+// exists - assert it in CI. A sink that stops being attached takes its output with
+// it, and a result file that never appears reads as a broken build rather than a
+// missing sink.
+FUNCTION_BLOCK TEST_FanoutRefusesBeyondCapacityAndTellsTheRest IMPLEMENTS I_Test
+VAR
+	Fanout	 : TestReporterFanout;
+	Spies	 : ARRAY[0..8] OF SpyReporter;
+	NoSink	 : I_TestReporter;
+	i		 : DINT;
+	Accepted : BOOL;
+	Refused	 : BOOL;
+	RefusedNull : BOOL;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{3d3a8a70-e55d-438d-b31c-637e06caf115}" />
+    <Method Name="Run" Id="{45081993-5fff-4c06-bda4-76e8aec82a99}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Fill it to the parameter capacity, whatever that is set to.
+FOR i := 0 TO TO_DINT(TestHarnessParameter.ReporterCapacity) - 1 DO
+	Accepted := Fanout.Attach(Spies[i]);
+	Test.AssertTrue(Accepted, 'accepted up to capacity');
+END_FOR
+
+ExpectedCount := TestHarnessParameter.ReporterCapacity;
+ActualCount	  := Fanout.Count;
+Test.AssertEqual(ExpectedCount, ActualCount, 'Count matches capacity');
+
+Refused := Fanout.Attach(Spies[8]);
+Test.AssertFalse(Refused, 'one beyond capacity is refused');
+
+ActualCount := Fanout.Count;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and took no slot');
+
+// Reported through the sinks that were already there.
+Test.AssertTrue(Spies[0].FrameworkErrorCalls > 0, 'the refusal was reported');
+
+RefusedNull := Fanout.Attach(NoSink);
+Test.AssertFalse(RefusedNull, 'a null reporter is refused too');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

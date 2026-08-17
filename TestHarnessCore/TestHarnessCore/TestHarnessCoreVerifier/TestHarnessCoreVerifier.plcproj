@@ -48,6 +48,9 @@
     <Compile Include="Doubles\OrderedHooksTest.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Doubles\OrderWitness.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Doubles\PassingTest.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -60,7 +63,16 @@
     <Compile Include="Doubles\SpanningTest.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Doubles\SpyReporter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\VerdictOnlyReporter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\E_FloorStage.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_ProbeWitness.TcIO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="PlcTask.TcTTO">
@@ -91,6 +103,24 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Arbiter\TEST_ArbiterVisitsEveryTestOnce.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fanout\TEST_FanoutCarriesTheSuiteResultThrough.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fanout\TEST_FanoutIsIdleIsTheAndOfEverySink.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fanout\TEST_FanoutNotifiesEverySinkInOrder.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fanout\TEST_FanoutOnlyChecksGoToDetailSinks.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fanout\TEST_FanoutRefusesBeyondCapacityAndTellsTheRest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Fanout\TEST_FanoutSuspendSilencesEverything.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Journal\TEST_JournalDefaultsFillOnlyWhatWasNotClaimed.TcPOU">
@@ -223,10 +253,12 @@
   <ItemGroup>
     <Folder Include="DUTs" />
     <Folder Include="Doubles" />
+    <Folder Include="Interfaces" />
     <Folder Include="Tests" />
     <Folder Include="POUs" />
     <Folder Include="Tests\Arbiter" />
     <Folder Include="Tests\Journal" />
+    <Folder Include="Tests\Fanout" />
     <Folder Include="Tests\Suite" />
     <Folder Include="Tests\Runner" />
     <Folder Include="Tests\Verdict" />

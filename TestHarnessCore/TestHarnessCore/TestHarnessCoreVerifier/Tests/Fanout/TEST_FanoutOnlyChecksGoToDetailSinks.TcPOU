@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_FanoutOnlyChecksGoToDetailSinks" Id="{f1bae789-7e07-48db-ade4-575046bbeb50}" SpecialFunc="None">
+    <Declaration><![CDATA[// A reporter that only wants verdicts is never called for a check, and does not
+// write empty method bodies to say so.
+//
+// The fan-out asks ONCE, when the sink is attached, and remembers. A per-check
+// __QUERYINTERFACE would put an interface lookup in the hottest path in the
+// library - a forty-check test would pay for forty of them.
+FUNCTION_BLOCK TEST_FanoutOnlyChecksGoToDetailSinks IMPLEMENTS I_Test
+VAR
+	Fanout	   : TestReporterFanout;
+	Detailed   : SpyReporter;
+	VerdictOnly : VerdictOnlyReporter;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{65dd960c-3389-4e37-89ad-c394ac8cffd7}" />
+    <Method Name="Run" Id="{3145380e-9eb8-4823-9036-1e1fbf38b6f2}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Fanout.Attach(Detailed);
+Fanout.Attach(VerdictOnly);
+
+Fanout.TestStarted(SuiteLabel := 'suite', TestLabel := 'a test', Location := '');
+Fanout.CheckPassed(StepLabel := '', Detail := '');
+Fanout.CheckFailed(StepLabel := '', Kind := E_FailureKind.ValueMismatch,
+				   Expected := '1', Actual := '2', Diagnostic := 'expected 1, actual 2',
+				   Message := 'deliberate');
+
+ExpectedCount := 1;
+ActualCount	  := Detailed.TestStartedCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'the detail sink was opened');
+
+ExpectedCount := 2;
+ActualCount	  := Detailed.CheckCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and got both checks');
+
+// The values arrive in their own fields, not buried in the diagnostic.
+Test.AssertTrue(Detailed.LastExpected = '1', 'expected travelled in its own field');
+Test.AssertTrue(Detailed.LastActual = '2', 'and so did actual');
+
+// The verdict-only sink still gets verdicts.
+Fanout.TestFinished(SuiteLabel := 'suite', TestLabel := 'a test', Location := '',
+					Status := E_TestStatus.Passed, Kind := E_FailureKind.None,
+					Summary := '', ElapsedTime := 0.0, ElapsedCycles := 0, Assertions := 1);
+
+ExpectedCount := 1;
+ActualCount	  := VerdictOnly.TestFinishedCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'the verdict-only sink got the verdict');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

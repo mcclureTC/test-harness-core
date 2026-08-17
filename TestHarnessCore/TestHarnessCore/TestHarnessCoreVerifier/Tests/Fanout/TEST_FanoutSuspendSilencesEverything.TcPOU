@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_FanoutSuspendSilencesEverything" Id="{3c834966-9d69-4864-8eab-4dd46e0b2597}" SpecialFunc="None">
+    <Declaration><![CDATA[// Suspending is how an individual re-run records nothing and saves nothing: the
+// suite silences every sink at once, rather than a condition threaded through the
+// runner and the journal and remembered in three places.
+//
+// CyclicLogic is NOT suppressed. A file write already in flight must still finish,
+// or IsIdle never goes TRUE and CI waits forever.
+FUNCTION_BLOCK TEST_FanoutSuspendSilencesEverything IMPLEMENTS I_Test
+VAR
+	Fanout : TestReporterFanout;
+	Spy	   : SpyReporter;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{1680295f-aeee-442a-b6ac-8e88cec9ab28}" />
+    <Method Name="Run" Id="{6edc1228-af8c-470c-a91b-1406a38ae721}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Fanout.Attach(Spy);
+
+Fanout.Suspend();
+
+Fanout.TestFinished(SuiteLabel := '', TestLabel := 'ignored', Location := '',
+					Status := E_TestStatus.Passed, Kind := E_FailureKind.None,
+					Summary := '', ElapsedTime := 0.0, ElapsedCycles := 0, Assertions := 0);
+Fanout.FrameworkError(Source := '', Message := 'ignored');
+Fanout.TestStarted(SuiteLabel := '', TestLabel := 'ignored', Location := '');
+Fanout.CheckPassed(StepLabel := '', Detail := '');
+
+ExpectedCount := 0;
+ActualCount	  := Spy.TestFinishedCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'no verdict reached the sink');
+ActualCount := Spy.FrameworkErrorCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'nor a framework error');
+ActualCount := Spy.CheckCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'nor a check');
+
+// Work in flight must still be advanced.
+Fanout.CyclicLogic();
+Test.AssertTrue(Spy.CyclicCalls > 0, 'but CyclicLogic is not suppressed');
+
+Fanout.Resume();
+Fanout.TestFinished(SuiteLabel := '', TestLabel := 'counted', Location := '',
+					Status := E_TestStatus.Passed, Kind := E_FailureKind.None,
+					Summary := '', ElapsedTime := 0.0, ElapsedCycles := 0, Assertions := 0);
+
+ExpectedCount := 1;
+ActualCount	  := Spy.TestFinishedCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and notifications resume');
+
+// Nothing is replayed - it was deliberately not recorded.
+Test.AssertTrue(Spy.LastTestLabel = 'counted', 'the suspended one was not replayed');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

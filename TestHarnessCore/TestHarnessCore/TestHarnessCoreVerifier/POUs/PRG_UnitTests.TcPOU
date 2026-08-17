@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{6cd4ed7a-a0cf-4271-aed4-b1ee702af985}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{23877c2b-a592-4237-9d65-f354094de04d}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      48 - assert this. A test that stops being registered vanishes
+//   Total      54 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //
@@ -16,10 +16,9 @@
 // be trusted until it is explained.
 //
 // THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests drive DELIBERATE
-// failures into a private journal and assert the journal noticed; the Suite tests
-// register doubles that fail and error on purpose. They all pass. What they prove
-// is that going red works - without them, a wall of green would only show that
-// nothing objected.
+// failures into a private journal; the Suite tests register doubles that fail and
+// error on purpose. They all pass. What they prove is that going red works -
+// without them, a wall of green would only show that nothing objected.
 //
 // THE RUNNER AND SUITE TESTS ARE MULTI-SCAN. Each holds a private runner or suite
 // and steps it one scan per call, returning FALSE until it finishes - the same
@@ -27,12 +26,13 @@
 // so a defect that never completes fails its own test instead of hanging
 // everything and looking like a broken verifier.
 //
-// NO REPORTER IS ATTACHED. Nothing reaches disk or the event log; these counts are
-// the whole result. That is deliberate - the harness is verified before logging is
-// added, so a logging defect cannot be mistaken for a harness defect.
+// THIS SUITE STILL ATTACHES NO REPORTER. The Fanout tests attach spies to their
+// OWN fan-out instances; nothing here reaches disk or the event log, and these
+// counts are the whole result. That is deliberate - the harness is verified before
+// logging is added to it, so a logging defect cannot be mistaken for a harness one.
 PROGRAM PRG_UnitTests
 VAR
-	Suite	: TestSuite<50>;
+	Suite	: TestSuite<60>;
 	Budgets : ST_TestBudgets;
 	Wired	: BOOL;
 
@@ -95,6 +95,14 @@ VAR
 	suiteWithNothingRegisteredIsComplete	: TEST_SuiteWithNothingRegisteredIsComplete;
 	suiteWithNoLabelIsAFrameworkError	: TEST_SuiteWithNoLabelIsAFrameworkError;
 	suiteDefaultsReachTheTests	: TEST_SuiteDefaultsReachTheTests;
+
+	// -- Fanout --
+	fanoutNotifiesEverySinkInOrder	: TEST_FanoutNotifiesEverySinkInOrder;
+	fanoutOnlyChecksGoToDetailSinks	: TEST_FanoutOnlyChecksGoToDetailSinks;
+	fanoutIsIdleIsTheAndOfEverySink	: TEST_FanoutIsIdleIsTheAndOfEverySink;
+	fanoutSuspendSilencesEverything	: TEST_FanoutSuspendSilencesEverything;
+	fanoutRefusesBeyondCapacityAndTellsTheRest	: TEST_FanoutRefusesBeyondCapacityAndTellsTheRest;
+	fanoutCarriesTheSuiteResultThrough	: TEST_FanoutCarriesTheSuiteResultThrough;
 
 	// -- the result, for the watch window ---------------------------------------
 	Complete : BOOL;
@@ -171,6 +179,14 @@ END_VAR]]></Declaration>
 	Suite.Register(suiteWithNothingRegisteredIsComplete, 'Suite: an empty suite is complete, not red', Budgets);
 	Suite.Register(suiteWithNoLabelIsAFrameworkError, 'Suite: an unnamed suite is a framework error', Budgets);
 	Suite.Register(suiteDefaultsReachTheTests, 'Suite: suite defaults reach every unclaimed test', Budgets);
+
+	// Fanout
+	Suite.Register(fanoutNotifiesEverySinkInOrder, 'Fanout: every sink is notified, in attachment order', Budgets);
+	Suite.Register(fanoutOnlyChecksGoToDetailSinks, 'Fanout: only detail sinks receive checks', Budgets);
+	Suite.Register(fanoutIsIdleIsTheAndOfEverySink, 'Fanout: IsIdle is the AND of every sink', Budgets);
+	Suite.Register(fanoutSuspendSilencesEverything, 'Fanout: Suspend silences notifications but not CyclicLogic', Budgets);
+	Suite.Register(fanoutRefusesBeyondCapacityAndTellsTheRest, 'Fanout: attachment beyond capacity is refused and reported', Budgets);
+	Suite.Register(fanoutCarriesTheSuiteResultThrough, 'Fanout: SuiteFinished carries the live read model', Budgets);
 
 END_IF
 

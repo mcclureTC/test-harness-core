@@ -1,0 +1,143 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="VerdictOnlyReporter" Id="{00845107-92ff-41f1-b7f1-1324f1ea6c21}" SpecialFunc="None">
+    <Declaration><![CDATA[// A reporter that wants verdicts and NOT individual checks - the event logger and
+// the alarm block are both this shape.
+//
+// It implements I_TestReporter and deliberately not I_TestDetailSink, which is the
+// whole point: it should never be called for a check, and it should not have to
+// write empty method bodies to say so. The fan-out asks once, when it is attached,
+// and remembers the answer.
+FUNCTION_BLOCK VerdictOnlyReporter IMPLEMENTS I_TestReporter
+VAR
+	_CyclicCalls		 : UDINT;
+	_TestFinishedCalls	 : UDINT;
+	_SuiteFinishedCalls	 : UDINT;
+	_RunFinishedCalls	 : UDINT;
+	_FrameworkErrorCalls : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Cyclic" Id="{7ce02633-8390-4c96-b1a3-dedee32771f4}" />
+    <Folder Name="I_TestReporter" Id="{bd23fe0f-34c8-4a68-af34-e82c2c63a9f6}" />
+    <Property Name="CyclicCalls" Id="{e1ffe21f-fe35-4936-b622-6584efbd7f63}">
+      <Declaration><![CDATA[PROPERTY CyclicCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{5d282210-520b-4230-8e93-4f198d7667bb}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CyclicCalls := _CyclicCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="CyclicLogic" Id="{a7e463dc-4a0c-4bfb-9d7e-5fa043c1768c}" FolderPath="I_Cyclic\">
+      <Declaration><![CDATA[METHOD CyclicLogic]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CyclicCalls := _CyclicCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FrameworkError" Id="{af8dba50-d835-48d3-b2f8-07939f924a5b}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD FrameworkError
+VAR_INPUT
+	Source	: T_MaxString;
+	Message : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_FrameworkErrorCalls := _FrameworkErrorCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="FrameworkErrorCalls" Id="{30bbdbec-93c1-4ac0-a9b3-bc46b17c7aa6}">
+      <Declaration><![CDATA[PROPERTY FrameworkErrorCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{1b001e95-9ecf-4b99-b34c-11ac0ed0a43f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FrameworkErrorCalls := _FrameworkErrorCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="IsIdle" Id="{24b4a872-db3a-4123-9bc1-2da291b916b9}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[PROPERTY IsIdle : BOOL]]></Declaration>
+      <Get Name="Get" Id="{59558e65-60d3-4a3a-9e5e-e1aeeabc49cb}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsIdle := TRUE;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="RunFinished" Id="{b72352aa-b024-4bc3-a1fe-ca1f2a7ea03c}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD RunFinished
+VAR_INPUT
+	Status	   : I_TestRunStatus;
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_RunFinishedCalls := _RunFinishedCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="RunFinishedCalls" Id="{698086da-d7e4-4c30-9278-d64aed623b65}">
+      <Declaration><![CDATA[PROPERTY RunFinishedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{cb1acc1e-38d5-42d0-b12c-43adf0b427d9}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RunFinishedCalls := _RunFinishedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="SuiteFinished" Id="{56c8fcfd-340c-4740-af5d-f9d231d58721}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD SuiteFinished
+VAR_INPUT
+	Status : I_TestRunStatus;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SuiteFinishedCalls := _SuiteFinishedCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SuiteFinishedCalls" Id="{f6173a06-d644-44ac-b859-e685754fdf63}">
+      <Declaration><![CDATA[PROPERTY SuiteFinishedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{500af86a-c1b0-487a-9046-4e68b8ef7cdd}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SuiteFinishedCalls := _SuiteFinishedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="TestFinished" Id="{36a3516f-6fec-420a-92b0-1f95fb4d4748}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD TestFinished
+VAR_INPUT
+	SuiteLabel	  : T_MaxString;
+	TestLabel	  : T_MaxString;
+	Location	  : T_MaxString;
+	Status		  : E_TestStatus;
+	Kind		  : E_FailureKind;
+	Summary		  : T_MaxString;
+	ElapsedTime	  : LREAL;
+	ElapsedCycles : UDINT;
+	Assertions	  : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_TestFinishedCalls := _TestFinishedCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TestFinishedCalls" Id="{5e2e49d1-72f7-498f-b3f0-2e68f80f601c}">
+      <Declaration><![CDATA[PROPERTY TestFinishedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{9d14e4f0-afe3-4300-b2c7-b8ee3ae78346}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TestFinishedCalls := _TestFinishedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

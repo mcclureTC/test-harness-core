@@ -1,0 +1,412 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="SpyReporter" Id="{e0a15c8b-7328-4369-b37d-81a0c3cb775f}" SpecialFunc="None">
+    <Declaration><![CDATA[// A reporter that records what it was told, and nothing else.
+//
+// Implements BOTH faces: I_TestReporter for verdicts, I_TestDetailSink for
+// individual checks. VerdictOnlyReporter is the counterpart that implements only
+// the first, and the pair together are what proves the fan-out asks each sink what
+// it actually wants rather than calling everything on everyone.
+FUNCTION_BLOCK SpyReporter IMPLEMENTS I_TestReporter, I_TestDetailSink
+VAR
+	_CyclicCalls		 : UDINT;
+	_TestFinishedCalls	 : UDINT;
+	_SuiteFinishedCalls	 : UDINT;
+	_RunFinishedCalls	 : UDINT;
+	_FrameworkErrorCalls : UDINT;
+	_TestStartedCalls	 : UDINT;
+	_CheckCalls			 : UDINT;
+	_CheckPassedCalls	 : UDINT;
+	_CheckFailedCalls	 : UDINT;
+
+	_LastTestLabel	  : T_MaxString;
+	_LastSuiteLabel	  : T_MaxString;
+	_LastSummary	  : T_MaxString;
+	_LastExpected	  : T_MaxString;
+	_LastActual		  : T_MaxString;
+	_LastErrorSource  : T_MaxString;
+	_LastErrorMessage : T_MaxString;
+	_LastStatus		  : E_TestStatus;
+	_LastSuiteOutcome : E_RunOutcome;
+	_LastSuitePassed  : UDINT;
+
+	_StartedBeforeChecks : BOOL;
+	_IsBusy				 : BOOL;
+
+	_Ordinal : UDINT;
+	_Witness : I_ProbeWitness;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Cyclic" Id="{0eea7dc9-1472-44a7-afd9-046c382875a3}" />
+    <Folder Name="I_TestDetailSink" Id="{5d21b229-ef9a-4d03-acc0-a356ac5bc052}" />
+    <Folder Name="I_TestReporter" Id="{be220c5f-8658-4585-8c6e-4d252c191175}" />
+    <Property Name="CheckCalls" Id="{93ef746d-acdd-4e1a-9046-f396892e9d9c}">
+      <Declaration><![CDATA[PROPERTY CheckCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{bb5cba73-8858-4472-b504-a1ef896bee4a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CheckCalls := _CheckCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="CheckFailed" Id="{62e07e2d-184e-4b9c-9b11-29a534c45f39}" FolderPath="I_TestDetailSink\">
+      <Declaration><![CDATA[METHOD CheckFailed
+VAR_INPUT
+	StepLabel  : T_MaxString;
+	Kind	   : E_FailureKind;
+	Expected   : T_MaxString;
+	Actual	   : T_MaxString;
+	Diagnostic : T_MaxString;
+	Message	   : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CheckCalls		 := _CheckCalls + 1;
+_CheckFailedCalls := _CheckFailedCalls + 1;
+_LastExpected	 := Expected;
+_LastActual		 := Actual;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="CheckFailedCalls" Id="{1762dc93-df2e-4458-8311-8e1a9bc5c4c7}">
+      <Declaration><![CDATA[PROPERTY CheckFailedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{3103d872-a900-4425-be32-af82f48da6a6}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CheckFailedCalls := _CheckFailedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="CheckPassed" Id="{d11ea80a-66d0-41b8-a567-30d8f39fe4c3}" FolderPath="I_TestDetailSink\">
+      <Declaration><![CDATA[METHOD CheckPassed
+VAR_INPUT
+	StepLabel : T_MaxString;
+	Detail	  : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CheckCalls		 := _CheckCalls + 1;
+_CheckPassedCalls := _CheckPassedCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="CheckPassedCalls" Id="{20511a7b-ea15-4a47-8f44-09121317eaef}">
+      <Declaration><![CDATA[PROPERTY CheckPassedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{040e9ad7-e4bf-4baa-9302-d905933a3604}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CheckPassedCalls := _CheckPassedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Configure" Id="{738a2864-5aeb-4dcb-b9a5-148f384aebb4}">
+      <Declaration><![CDATA[// Identify this spy and give it somewhere to record the order it was called in.
+METHOD Configure
+VAR_INPUT
+	Ordinal : UDINT;
+	Witness : I_ProbeWitness;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Ordinal := Ordinal;
+_Witness := Witness;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="CyclicCalls" Id="{ac3f5811-986b-48b2-b40a-d06a3fd7dc45}">
+      <Declaration><![CDATA[PROPERTY CyclicCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{b3f8e21a-d5af-4d54-99ec-089aa73656ef}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CyclicCalls := _CyclicCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="CyclicLogic" Id="{c78a4aca-f838-4ce1-9180-6278aba820d0}" FolderPath="I_Cyclic\">
+      <Declaration><![CDATA[METHOD CyclicLogic]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CyclicCalls := _CyclicCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FrameworkError" Id="{e7405015-f51b-4d29-a3cf-fcf31d55d0e5}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD FrameworkError
+VAR_INPUT
+	Source	: T_MaxString;
+	Message : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_FrameworkErrorCalls := _FrameworkErrorCalls + 1;
+_LastErrorSource	 := Source;
+_LastErrorMessage	 := Message;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="FrameworkErrorCalls" Id="{64cf5387-a0fa-4f47-9dd1-83a752f1cb08}">
+      <Declaration><![CDATA[PROPERTY FrameworkErrorCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{bdb7cc24-b13f-4c4e-887c-5b487766d8ed}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FrameworkErrorCalls := _FrameworkErrorCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="IsIdle" Id="{c47732be-ea50-4e69-9948-e43eba0e0cc0}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[// FALSE while this spy claims work in flight. The fan-out ANDs every sink.
+PROPERTY IsIdle : BOOL]]></Declaration>
+      <Get Name="Get" Id="{7e5982d5-e02c-4eae-a553-ee9f6758f079}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsIdle := NOT _IsBusy;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastActual" Id="{1fce6d25-db9f-4763-b581-74b8ba58277d}">
+      <Declaration><![CDATA[PROPERTY LastActual : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{9ad69909-be6f-41bd-8147-d22b49ec32be}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastActual := _LastActual;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastErrorMessage" Id="{4da443b2-dee5-4155-b53d-cf02aa3ce7e9}">
+      <Declaration><![CDATA[PROPERTY LastErrorMessage : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{63bdca11-9f9f-4d09-b5a6-78b0433d015c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastErrorMessage := _LastErrorMessage;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastErrorSource" Id="{594a8c28-6a6f-4d3c-868e-3afa2ffbdd37}">
+      <Declaration><![CDATA[PROPERTY LastErrorSource : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{79af712d-8971-486a-ae32-bfd9522540cd}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastErrorSource := _LastErrorSource;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastExpected" Id="{ccff1456-cbf8-46f2-8a74-a29f652fe0b6}">
+      <Declaration><![CDATA[PROPERTY LastExpected : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{9db91a51-1871-4190-9fce-fb176d657779}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastExpected := _LastExpected;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastStatus" Id="{be9069e8-e483-48aa-8303-1b88131cf772}">
+      <Declaration><![CDATA[PROPERTY LastStatus : E_TestStatus]]></Declaration>
+      <Get Name="Get" Id="{d66ee953-2e04-46f7-983e-9e080e650682}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastStatus := _LastStatus;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastSuiteLabel" Id="{d727403a-5544-4df3-bfa8-39fc24a86360}">
+      <Declaration><![CDATA[PROPERTY LastSuiteLabel : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{21ee705f-b587-4dc9-9221-7636229b5aeb}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastSuiteLabel := _LastSuiteLabel;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastSuiteOutcome" Id="{5ed5b30f-4d9a-498a-a8de-1c237cb5bcb6}">
+      <Declaration><![CDATA[PROPERTY LastSuiteOutcome : E_RunOutcome]]></Declaration>
+      <Get Name="Get" Id="{f3549d18-27ec-43c6-a258-704ee30b6360}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastSuiteOutcome := _LastSuiteOutcome;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastSuitePassed" Id="{a139097c-0617-41e3-af0d-1785d3655750}">
+      <Declaration><![CDATA[PROPERTY LastSuitePassed : UDINT]]></Declaration>
+      <Get Name="Get" Id="{f2183ca4-8f55-4806-8493-c8d1653f88cd}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastSuitePassed := _LastSuitePassed;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastSummary" Id="{91dc5bba-3d11-43d4-9cc0-cc46ef55915f}">
+      <Declaration><![CDATA[PROPERTY LastSummary : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{13facbf7-a59b-42b4-905c-c0be8017c8ca}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastSummary := _LastSummary;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastTestLabel" Id="{9504cb73-5c49-4bc6-ae0b-66345fe3fd39}">
+      <Declaration><![CDATA[PROPERTY LastTestLabel : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{7ca8da91-7f6e-4f0d-9805-1db712f39355}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastTestLabel := _LastTestLabel;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="RunFinished" Id="{8e62adbe-2b75-489b-8e91-6b3b85d60477}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD RunFinished
+VAR_INPUT
+	Status	   : I_TestRunStatus;
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_RunFinishedCalls := _RunFinishedCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="RunFinishedCalls" Id="{bd9f3b8a-6c15-40bc-8503-343ca60818d2}">
+      <Declaration><![CDATA[PROPERTY RunFinishedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{9970d8ee-acaa-42d3-87ad-a1a95d29b736}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RunFinishedCalls := _RunFinishedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="SetBusy" Id="{59cf7a44-723b-4a89-b398-166a4c85d503}">
+      <Declaration><![CDATA[// Pretend to have asynchronous work in flight, so IsIdle can be checked without a
+// real file write.
+METHOD SetBusy
+VAR_INPUT
+	Busy : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_IsBusy := Busy;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="StartedBeforeChecks" Id="{0985fc30-f9d9-4250-b868-46ad8808c3df}">
+      <Declaration><![CDATA[// TRUE if TestStarted arrived before any check did. The ordering guarantee is the
+// whole reason TestStarted exists - a sink building a document has nowhere to put
+// a check until it has been told to open an element.
+PROPERTY StartedBeforeChecks : BOOL]]></Declaration>
+      <Get Name="Get" Id="{57578b07-b1df-41d9-a8c6-fc3ca8ea0600}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StartedBeforeChecks := _StartedBeforeChecks;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="SuiteFinished" Id="{f5c199b3-c851-4f54-8b47-919f47c03ab4}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD SuiteFinished
+VAR_INPUT
+	Status : I_TestRunStatus;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SuiteFinishedCalls := _SuiteFinishedCalls + 1;
+IF Status <> 0 THEN
+	_LastSuiteOutcome := Status.Outcome;
+	_LastSuitePassed  := Status.PassedCount;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SuiteFinishedCalls" Id="{a0b13905-0246-45c6-b0d9-8c87939f9c76}">
+      <Declaration><![CDATA[PROPERTY SuiteFinishedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{8c4c8a95-42ba-4ca6-8285-430fd23ddd42}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SuiteFinishedCalls := _SuiteFinishedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="TestFinished" Id="{da2b751b-a54a-49ec-bc33-e202ed5885e6}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD TestFinished
+VAR_INPUT
+	SuiteLabel	  : T_MaxString;
+	TestLabel	  : T_MaxString;
+	Location	  : T_MaxString;
+	Status		  : E_TestStatus;
+	Kind		  : E_FailureKind;
+	Summary		  : T_MaxString;
+	ElapsedTime	  : LREAL;
+	ElapsedCycles : UDINT;
+	Assertions	  : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_TestFinishedCalls := _TestFinishedCalls + 1;
+_LastTestLabel	   := TestLabel;
+_LastSuiteLabel	   := SuiteLabel;
+_LastStatus		   := Status;
+_LastSummary	   := Summary;
+
+// Order of notification is order of attachment. Each spy stamps itself into a
+// shared witness so a test can read the sequence back.
+IF _Witness <> 0 THEN
+	_Witness.Note(_Ordinal);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TestFinishedCalls" Id="{190ac2fc-daa5-4d7b-8423-a03bc43d84e7}">
+      <Declaration><![CDATA[PROPERTY TestFinishedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{aded91bb-c84e-4100-a523-6c775346dccc}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TestFinishedCalls := _TestFinishedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="TestStarted" Id="{f6e38227-38ee-4605-83c5-62d6da68f008}" FolderPath="I_TestDetailSink\">
+      <Declaration><![CDATA[METHOD TestStarted
+VAR_INPUT
+	SuiteLabel : T_MaxString;
+	TestLabel  : T_MaxString;
+	Location   : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_TestStartedCalls := _TestStartedCalls + 1;
+_StartedBeforeChecks := (_CheckCalls = 0);]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TestStartedCalls" Id="{fc102957-6f61-4493-b346-918bdc8b6c2a}">
+      <Declaration><![CDATA[PROPERTY TestStartedCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{18a66005-5351-45a6-88ed-0e3cbb290d6d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TestStartedCalls := _TestStartedCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

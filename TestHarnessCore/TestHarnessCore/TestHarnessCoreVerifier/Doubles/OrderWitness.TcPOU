@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="OrderWitness" Id="{4946b57c-907f-42cd-9a34-8eebd48dda93}" SpecialFunc="None">
+    <Declaration><![CDATA[// Records the order spies were notified in, as a string like '1,2,3'.
+//
+// A string rather than an array because the assertion reads better and because the
+// whole point is to compare against a literal the reader can see.
+FUNCTION_BLOCK OrderWitness IMPLEMENTS I_ProbeWitness
+VAR
+	_Sequence : T_MaxString;
+	_Count	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_ProbeWitness" Id="{00f2ab5f-55ea-423d-a9c2-bb53427495a6}" />
+    <Method Name="Clear" Id="{4c241895-68b5-4279-bdb7-1f3a492da5d5}">
+      <Declaration><![CDATA[METHOD Clear]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Sequence := '';
+_Count	  := 0;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Note" Id="{5725087f-eafc-460c-b00e-b34146d4517e}" FolderPath="I_ProbeWitness\">
+      <Declaration><![CDATA[METHOD Note
+VAR_INPUT
+	Ordinal : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _Count > 0 THEN
+	_Sequence := CONCAT(_Sequence, ',');
+END_IF
+
+_Sequence := CONCAT(_Sequence, UDINT_TO_STRING(Ordinal));
+_Count	  := _Count + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Sequence" Id="{e20e4b43-8f17-4162-83e6-0aa38264119b}">
+      <Declaration><![CDATA[// The ordinals in the order they arrived, comma separated.
+PROPERTY Sequence : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{d2e9e1e0-a2f1-435e-baed-f4cba2fbee96}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Sequence := _Sequence;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>
