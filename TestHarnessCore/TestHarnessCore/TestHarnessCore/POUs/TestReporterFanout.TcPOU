@@ -194,7 +194,7 @@ END_FOR]]></ST>
 PROPERTY IsIdle : BOOL]]></Declaration>
       <Get Name="Get" Id="{f2dcf839-ea43-4546-b68f-f5b1539979c7}">
         <Declaration><![CDATA[VAR
- i: DINT;
+	i : DINT;
 END_VAR
 ]]></Declaration>
         <Implementation>
