@@ -1,0 +1,592 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestSuite" Id="{b07633b0-8158-4191-b934-913c367328cb}" SpecialFunc="None">
+    <Declaration><![CDATA[// The composition root's handle on a set of tests, and the sequencer's handle on
+// running them. Six interfaces, four audiences, one object.
+//
+// It is a FACADE and should stay one. Registration lives in TestRegistry,
+// ordering in TestArbiter, the test lifecycle in TestRunner, the counts in
+// TestRunTally, the sinks in TestReporterFanout. What is left here is the
+// registration window, the per-scan order of operations, and naming a framework
+// error - and if this object grows past that, something belongs in one of the
+// five.
+//
+// The original did all six jobs in one function block. That is most of why it is
+// being replaced.
+//
+// GENERIC only because it declares TestRegistry<Capacity> as a member and only a
+// generic can forward the argument. Nothing here is sized by Capacity. Everything
+// else it owns is plain, and reaches the registry through interfaces this object
+// hands out.
+FUNCTION_BLOCK TestSuite
+VAR_GENERIC CONSTANT
+	Capacity : UDINT := TestHarnessParameter.Capacity;
+END_VAR IMPLEMENTS I_TestRegistration, I_TestDefaults, I_TestConfiguration, I_TestSuite, I_TestReRun
+VAR
+	_Registry  : TestRegistry<Capacity>;
+	_Arbiter   : TestArbiter;
+	_Runner	   : TestRunner;
+	_Tally	   : TestRunTally;
+	_Reporters : TestReporterFanout;
+
+	// ONE per suite, not one per test. Only one test runs at a time, so the handle
+	// is retargeted to whichever journal is active rather than allocated per slot.
+	// At capacity 50 that is the difference between one copy of the assertion
+	// machinery and fifty.
+	_Verdict : TestVerdict;
+
+	_Label	  : T_MaxString;
+	_Defaults : ST_TestBudgets;
+
+	_IsRunning : BOOL;
+	_IsWired   : BOOL;
+
+	// An individual re-run is in progress: one test, reported nowhere and counted
+	// nowhere. The arbiter is not involved and the tally is not touched.
+	_IsSingle : BOOL;
+
+	// Framework errors raised BEFORE the run started - a rejected registration, an
+	// unnamed suite. Tally.Begin clears its counts, so these are held and re-applied
+	// once the run exists. Without that, a test that failed to register would leave
+	// the run green, which is the exact regression hazard the reporting exists for.
+	_PendingErrors : UDINT;
+
+	// The journal of the test that just finished, held so PublishTest can read it
+	// after the runner has unloaded.
+	_LastJournal	: REFERENCE TO TestJournal;
+	_ActiveLocation : T_MaxString;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+	No cyclic body, deliberately. This object is reached through its interfaces -
+	Register, Run, Skip - and a sequencer holding I_TestSuite has no way to call the
+	function block itself. Wiring that depended on this running would silently never
+	happen.
+
+	EnsureWired is called from every entry point instead.
+*)]]></ST>
+    </Implementation>
+    <Folder Name="I_Labelled" Id="{32e30b35-705e-4045-91ac-98d4e59219d4}" />
+    <Folder Name="I_TestConfiguration" Id="{e849ddaf-c62c-4d58-a4c0-30bb790ff535}" />
+    <Folder Name="I_TestDefaults" Id="{38fb1a35-d5ce-4af3-bf12-f343d4e13f99}" />
+    <Folder Name="I_TestExecution" Id="{9d7e0ae2-a8da-49d8-874b-9983ce649228}" />
+    <Folder Name="I_TestRegistration" Id="{89da61b1-998f-4ec2-bc93-851701c7a10d}" />
+    <Folder Name="I_TestReRun" Id="{aa7a75d5-d87d-41eb-bc48-c32e94c4b326}" />
+    <Folder Name="I_TestRunStatus" Id="{e7aae5b4-7503-4862-9f14-220c1487b1b3}" />
+    <Method Name="AddReporter" Id="{baa79725-0ccb-4a1d-a164-743f22612f9a}" FolderPath="I_TestConfiguration\">
+      <Declaration><![CDATA[METHOD AddReporter : BOOL
+VAR_INPUT
+	Reporter : I_TestReporter;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AddReporter := _Reporters.Attach(Reporter);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="EnsureWired" Id="{c191e45e-2a3e-4733-8621-de50ed48fcf0}">
+      <Declaration><![CDATA[// Hand the five collaborators to each other. Once, on first use.
+//
+// Not FB_init: the members are not all constructed when it runs. Not the cyclic
+// body: this object is driven through its interfaces and the function block itself
+// may never be called.
+METHOD EnsureWired]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _IsWired THEN
+	RETURN;
+END_IF
+
+_IsWired := TRUE;
+
+_Verdict.AttachDetailSink(_Reporters);
+_Runner.Attach(Roster := _Registry, Verdict := _Verdict);
+_Arbiter.Attach(_Registry);]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ErrorCount" Id="{0b6c4d37-d12b-43bf-b0f9-363f3049a18a}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY ErrorCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{cbd749cf-bbe9-4537-8645-53d3275e7765}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ErrorCount := _Tally.ErrorCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FailedCount" Id="{9f7a22e6-b260-465d-86f3-6b628fc1951a}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY FailedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{8df06e9d-9cf0-43fe-b647-3ce06ff424c7}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FailedCount := _Tally.FailedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="FinishRun" Id="{eeab7f99-5041-4334-b8aa-1cd81111659b}">
+      <Declaration><![CDATA[// The pass is over, cleanly or by abandonment. Settles the aggregate and tells
+// the sinks once.
+METHOD FinishRun]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT _IsRunning THEN
+	RETURN;
+END_IF
+
+_IsRunning := FALSE;
+_Tally.Finish();
+_Reporters.SuiteFinished(THIS^);]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="IsComplete" Id="{ac1fb95d-ad9c-40c1-9e73-d35ee73170a0}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY IsComplete : BOOL]]></Declaration>
+      <Get Name="Get" Id="{5f7b87ee-2f4d-448b-a2fb-a374afc9c6e7}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsComplete := _Tally.IsComplete;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="IsOpen" Id="{da9e09cf-7149-4bfc-8ddf-f4af89091d38}" FolderPath="I_TestRegistration\">
+      <Declaration><![CDATA[PROPERTY IsOpen : BOOL]]></Declaration>
+      <Get Name="Get" Id="{3f446930-fcfd-4ebd-bc51-2a5309ef7073}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsOpen := _Registry.IsOpen;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Label" Id="{1473a791-d77c-44e4-9a4a-43e67afe194b}" FolderPath="I_Labelled\">
+      <Declaration><![CDATA[PROPERTY Label : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{6a7e9786-ca65-426a-bf36-636c19baf8c8}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Label := _Label;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Outcome" Id="{fd703da1-3127-409b-a8de-c717f3251176}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY Outcome : E_RunOutcome]]></Declaration>
+      <Get Name="Get" Id="{cdab800a-dd43-402e-bb47-e676cbaf4766}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Outcome := _Tally.Outcome;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PassedCount" Id="{fd1896a9-b632-4e91-951a-44e2f74ebe99}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY PassedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{0699f8fe-b833-4db5-8515-7c68263d73d8}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PassedCount := _Tally.PassedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="PublishTest" Id="{a0ab878e-2ee1-4316-a9b4-83eabc3fe1ce}">
+      <Declaration><![CDATA[// One test reached a terminal state. Fold it into the totals and tell the sinks.
+METHOD PublishTest
+VAR
+	Journal : REFERENCE TO TestJournal;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _IsSingle THEN
+	// Records nothing. The verdict is visible in the journal for whoever is at the
+	// keyboard; it does not reach the counts or the sinks.
+	RETURN;
+END_IF
+
+Journal REF= _LastJournal;
+
+IF NOT __ISVALIDREF(Journal) THEN
+	RETURN;
+END_IF
+
+_Tally.Record(Verdict := Journal.Status, ElapsedTime := Journal.ElapsedTime);
+
+_Reporters.TestFinished(
+	SuiteLabel	  := _Label,
+	TestLabel	  := Journal.Label,
+	Location	  := Journal.Location,
+	Status		  := Journal.Status,
+	Kind		  := Journal.Kind,
+	Summary		  := Journal.Summary,
+	ElapsedTime	  := Journal.ElapsedTime,
+	ElapsedCycles := Journal.ElapsedCycles,
+	Assertions	  := Journal.AssertionCount);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RaiseFrameworkError" Id="{853be5de-8d56-4ff4-8da3-fb47cc0c0259}">
+      <Declaration><![CDATA[// One place framework errors are named, so every one of them carries this suite's
+// label as its source.
+METHOD RaiseFrameworkError
+VAR_INPUT
+	Message : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _IsSingle THEN
+	// An individual re-run is a debugging session, not a result. Its problems are
+	// visible at the keyboard and must not turn a CI run red.
+	RETURN;
+END_IF
+
+IF _IsRunning THEN
+	_Tally.RecordFrameworkError();
+ELSE
+	// Held until there is a run to attribute it to.
+	_PendingErrors := _PendingErrors + 1;
+END_IF
+
+_Reporters.FrameworkError(Source := _Label, Message := Message);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Register" Id="{f5741316-8794-4432-af24-78cbfe50a1b5}" FolderPath="I_TestRegistration\">
+      <Declaration><![CDATA[METHOD Register : BOOL
+VAR_INPUT
+	Test	: I_Test;
+	Label	: T_MaxString;
+	Budgets : ST_TestBudgets;
+END_VAR
+
+VAR
+	Fault : E_RegistrationFault;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.EnsureWired();
+
+Fault	 := _Registry.TryClaim(Test := Test, Label := Label, Budgets := Budgets);
+Register := (Fault = E_RegistrationFault.None);
+
+IF Register THEN
+	RETURN;
+END_IF
+
+// Never silent. A test that failed to register would otherwise vanish from the
+// results and CI would see fewer passes rather than a failure - precisely the
+// regression hazard RegisteredCount exists to catch.
+CASE Fault OF
+E_RegistrationFault.Full:
+	THIS^.RaiseFrameworkError(CONCAT('suite is full, rejected: ', Label));
+E_RegistrationFault.DuplicateLabel:
+	THIS^.RaiseFrameworkError(CONCAT('label already registered: ', Label));
+E_RegistrationFault.EmptyLabel:
+	THIS^.RaiseFrameworkError('a test was offered with no label');
+E_RegistrationFault.NoTest:
+	THIS^.RaiseFrameworkError(CONCAT('no test supplied for label: ', Label));
+E_RegistrationFault.Closed:
+	THIS^.RaiseFrameworkError(CONCAT('registration has closed, rejected: ', Label));
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="RegisteredCount" Id="{1bf75843-3c48-4b28-a2e3-93ca7a5fd865}" FolderPath="I_TestRegistration\">
+      <Declaration><![CDATA[PROPERTY RegisteredCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{9e9bf422-a4f9-4cf9-a071-ff3c099c9a79}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RegisteredCount := _Registry.Count;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ReporterCount" Id="{d98748a8-d272-48f0-a25c-15b911eef335}" FolderPath="I_TestConfiguration\">
+      <Declaration><![CDATA[PROPERTY ReporterCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{97bd5966-d7c0-4ca4-9465-53573d881c0f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ReporterCount := _Reporters.Count;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="ReRun" Id="{9879baec-8e77-47eb-8039-a871c6679755}" FolderPath="I_TestReRun\">
+      <Declaration><![CDATA[METHOD ReRun]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _IsRunning THEN
+	THIS^.RaiseFrameworkError('ReRun called while a run is in progress');
+	RETURN;
+END_IF
+
+// The registered set is not redefined, only re-executed. The window stays shut.
+_Registry.ResetAll();
+THIS^.StartRun();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ReRunSingle" Id="{69e098da-80fb-495b-8499-d8694381cd8c}" FolderPath="I_TestReRun\">
+      <Declaration><![CDATA[METHOD ReRunSingle : BOOL
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR
+
+VAR
+	Index	: DINT;
+	Slot	: ST_TestSlot;
+	Journal : REFERENCE TO TestJournal;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.EnsureWired();
+
+ReRunSingle := FALSE;
+
+IF _IsRunning THEN
+	// Not while the suite is running. Two tests writing the same fixtures is the
+	// interference serial execution exists to prevent.
+	RETURN;
+END_IF
+
+Index := _Registry.Lookup(Label);
+
+IF Index < 0 THEN
+	RETURN;
+END_IF
+
+Journal REF= _Registry.Journal(Index);
+
+IF NOT __ISVALIDREF(Journal) THEN
+	RETURN;
+END_IF
+
+Slot := _Registry.Slot(Index);
+
+// Records nothing and saves nothing. Silencing the fan-out is the whole
+// mechanism: a session at the keyboard cannot pollute the CI artifact with
+// duplicate entries, and no condition has to be threaded through the runner.
+_Reporters.Suspend();
+
+Journal.Reset();
+
+IF NOT _Runner.Load(Slot) THEN
+	_Reporters.Resume();
+	RETURN;
+END_IF
+
+_LastJournal REF= Journal;
+_IsSingle	:= TRUE;
+_IsRunning	:= TRUE;
+ReRunSingle := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Run" Id="{efe3e9db-28cd-4677-a15c-91e84a39194b}" FolderPath="I_TestExecution\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+END_VAR
+
+VAR
+	Slot	: ST_TestSlot;
+	Outcome : E_PhaseOutcome;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.EnsureWired();
+
+// Sinks advance whatever the suite is doing. A file write started at the end of
+// the last run still has to finish, and a suite that has completed must keep
+// pumping them or IsIdle never goes TRUE.
+_Reporters.CyclicLogic();
+
+Run := _Tally.IsComplete;
+
+IF NOT Enable THEN
+	IF _IsRunning THEN
+		_Runner.Advance(Enable := FALSE);
+		_Arbiter.Abandon();
+		THIS^.FinishRun();
+		Run := _Tally.IsComplete;
+	END_IF
+	RETURN;
+END_IF
+
+IF _Registry.IsOpen THEN
+	THIS^.StartRun();
+END_IF
+
+IF NOT _IsRunning THEN
+	RETURN;
+END_IF
+
+Outcome := _Runner.Advance(Enable := TRUE);
+
+CASE Outcome OF
+
+E_PhaseOutcome.Running:
+	RETURN;
+
+E_PhaseOutcome.TeardownOverran:
+	// The verdict stands - a passing test whose cleanup hung still proved the code
+	// correct - but the run cannot be trusted, and on a rig this may mean an axis
+	// left powered.
+	THIS^.RaiseFrameworkError(CONCAT(CONCAT('teardown abandoned in ', _Runner.ActiveLabel),
+									 CONCAT(': ', _Runner.TeardownDiagnostic)));
+	THIS^.PublishTest();
+
+E_PhaseOutcome.Finished:
+	THIS^.PublishTest();
+
+END_CASE
+
+IF _IsSingle THEN
+	// One test, done. Nothing was recorded and nothing was saved, so there is
+	// nothing to settle - just put the sinks back.
+	_IsSingle  := FALSE;
+	_IsRunning := FALSE;
+	_Reporters.Resume();
+	Run := _Tally.IsComplete;
+	RETURN;
+END_IF
+
+// Idle, or just finished one. Take the next.
+IF _Arbiter.Advance() THEN
+	Slot := _Arbiter.Current;
+	IF NOT _Runner.Load(Slot) THEN
+		// The arbiter offered something the runner would not take. Report it rather
+		// than spinning on it.
+		THIS^.RaiseFrameworkError(CONCAT('could not start test: ', Slot.Label));
+		_Arbiter.Abandon();
+		THIS^.FinishRun();
+	ELSE
+		// Held so PublishTest can read the record after the runner has unloaded.
+		_LastJournal REF= _Registry.Journal(Slot.Index);
+		_ActiveLocation := '';
+		IF __ISVALIDREF(_LastJournal) THEN
+			_ActiveLocation := _LastJournal.Location;
+		END_IF
+
+		_Reporters.TestStarted(SuiteLabel := _Label,
+							   TestLabel  := Slot.Label,
+							   Location	  := _ActiveLocation);
+	END_IF
+ELSIF _Arbiter.IsExhausted THEN
+	THIS^.FinishRun();
+END_IF
+
+Run := _Tally.IsComplete;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetDefaults" Id="{7093f627-cd86-43b7-ae76-4dcebc51b353}" FolderPath="I_TestDefaults\">
+      <Declaration><![CDATA[METHOD SetDefaults
+VAR_INPUT
+	Defaults : ST_TestBudgets;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Stored, not applied. They reach the journals when the run starts, because a
+// default may be set after some tests are already registered.
+_Defaults := Defaults;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetLabel" Id="{c74c736e-0694-48e1-b138-75ce17f7a978}" FolderPath="I_TestConfiguration\">
+      <Declaration><![CDATA[METHOD SetLabel
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Label := Label;
+_Tally.SetLabel(Label);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Skip" Id="{d6891dda-456f-42b7-9aa5-5bd5fa8c4e00}" FolderPath="I_TestExecution\">
+      <Declaration><![CDATA[METHOD Skip
+VAR
+	i		: DINT;
+	Journal : REFERENCE TO TestJournal;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.EnsureWired();
+
+IF NOT _Registry.IsOpen THEN
+	// Already enabled or already complete. Skipping now would rewrite results that
+	// have been reported.
+	THIS^.RaiseFrameworkError('Skip called after the suite was enabled');
+	RETURN;
+END_IF
+
+// Closes the window. A skipped suite is complete, and registration does not
+// reopen for a suite that has reached a terminal state.
+_Registry.Close();
+_Tally.Begin(_Registry.Count);
+
+FOR i := 0 TO TO_DINT(_Registry.Count) - 1 DO
+	Journal REF= _Registry.Journal(i);
+	IF __ISVALIDREF(Journal) THEN
+		Journal.MarkSkipped();
+		_Tally.Record(Verdict := E_TestStatus.Skipped, ElapsedTime := 0.0);
+	END_IF
+END_FOR
+
+_Tally.Finish();
+_Reporters.SuiteFinished(THIS^);]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SkippedCount" Id="{98cde481-38b7-493d-b0ca-c185c5e2ec01}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY SkippedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{9b1d0d8e-128a-4766-bbf5-c1c090d26163}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SkippedCount := _Tally.SkippedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="StartRun" Id="{d46f3912-a93b-45f7-a65d-d04fb8d5cf98}">
+      <Declaration><![CDATA[// First enable, or a re-run. Closes the window, pushes the defaults into every
+// journal, and starts the pass.
+METHOD StartRun
+VAR
+	i : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Registry.Close();
+_Registry.ApplyDefaults(_Defaults);
+
+IF _Label = '' THEN
+	// An unnamed suite produces an unnamed node in the result document, which no
+	// CI system can group by.
+	THIS^.RaiseFrameworkError('suite was enabled with no label');
+END_IF
+
+_Tally.Begin(_Registry.Count);
+
+// Re-apply anything raised before the run existed, so a rejected registration
+// still turns this run red.
+FOR i := 1 TO TO_DINT(_PendingErrors) DO
+	_Tally.RecordFrameworkError();
+END_FOR
+
+_Arbiter.Begin();
+_IsRunning := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TestCount" Id="{7f49f3cb-6218-4fd7-83a1-20c5a2d3b231}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY TestCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{19e24700-160d-4cf9-85c3-1cd10fa842e0}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TestCount := _Tally.TestCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TotalDuration" Id="{a32344ab-1156-4518-941d-67489124735c}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY TotalDuration : LREAL]]></Declaration>
+      <Get Name="Get" Id="{73638bd9-d62a-4136-8884-5b0baf69b309}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TotalDuration := _Tally.TotalDuration;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

@@ -3,12 +3,6 @@
 	<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" XtvPath="TestHarnessCore\TestHarnessCore Instance.xtv">
 		<Name>__FILENAME__</Name>
 		<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
-		<Contexts>
-			<Context>
-				<Id>1</Id>
-				<Name>Default</Name>
-			</Context>
-		</Contexts>
 		<JsonDynPous><![CDATA[null]]></JsonDynPous>
 	</Instance>
 </TcSmItem>

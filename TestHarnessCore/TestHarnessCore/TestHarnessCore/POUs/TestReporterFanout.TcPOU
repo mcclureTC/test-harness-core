@@ -10,6 +10,9 @@
 // threaded through the runner. Severity policy and the duplicated event-logger
 // blocks become choices about which sinks a build attaches.
 //
+// It can also be SUSPENDED, which is what makes an individual re-run possible
+// without a condition threaded through the runner.
+//
 // It implements I_TestDetailSink as well, and fans checks out only to the sinks
 // that wanted them. Each reporter is queried once, when it is attached; a
 // per-check query would put an interface lookup in the hottest path in the
@@ -25,6 +28,16 @@ VAR
 	// where that reporter did not want checks. Resolved once, at Add.
 	_DetailSinks : ARRAY[0..TestHarnessParameter.ReporterCapacity - 1] OF I_TestDetailSink;
 	_Count : UDINT;
+
+	// While TRUE, notifications are dropped and nothing reaches a sink.
+	//
+	// This is how an individual re-run records nothing and saves nothing: the suite
+	// silences every sink at once, rather than a condition threaded through the
+	// runner and the journal and remembered in three places.
+	//
+	// CyclicLogic is NOT suppressed. A file write already in flight must still
+	// finish, or IsIdle never goes TRUE and CI waits forever.
+	_IsSuspended : BOOL;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(*
@@ -101,7 +114,11 @@ VAR
 	i : DINT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[FOR i := 0 TO TO_DINT(_Count) - 1 DO
+        <ST><![CDATA[IF _IsSuspended THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	IF _DetailSinks[i] <> 0 THEN
 		_DetailSinks[i].CheckFailed(
 			StepLabel  := StepLabel,
@@ -125,7 +142,11 @@ VAR
 	i : DINT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[FOR i := 0 TO TO_DINT(_Count) - 1 DO
+        <ST><![CDATA[IF _IsSuspended THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	IF _DetailSinks[i] <> 0 THEN
 		_DetailSinks[i].CheckPassed(StepLabel := StepLabel, Detail := Detail);
 	END_IF
@@ -177,7 +198,11 @@ VAR
 	i : DINT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[FOR i := 0 TO TO_DINT(_Count) - 1 DO
+        <ST><![CDATA[IF _IsSuspended THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	_Reporters[i].FrameworkError(Source := Source, Message := Message);
 END_FOR]]></ST>
       </Implementation>
@@ -209,6 +234,14 @@ END_FOR]]></ST>
         </Implementation>
       </Get>
     </Property>
+    <Method Name="Resume" Id="{cb881c75-5c35-4306-9969-7f2b54c8d920}">
+      <Declaration><![CDATA[// Notify sinks again. Nothing that happened while suspended is replayed - it was
+// deliberately not recorded.
+METHOD Resume]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_IsSuspended := FALSE;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="RunFinished" Id="{d445a976-1d73-4d95-a2a1-4bf7d7a18389}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[METHOD RunFinished
 VAR_INPUT
@@ -220,7 +253,11 @@ VAR
 	i : DINT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[FOR i := 0 TO TO_DINT(_Count) - 1 DO
+        <ST><![CDATA[IF _IsSuspended THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	_Reporters[i].RunFinished(Status := Status, TargetInfo := TargetInfo);
 END_FOR]]></ST>
       </Implementation>
@@ -235,9 +272,24 @@ VAR
 	i : DINT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[FOR i := 0 TO TO_DINT(_Count) - 1 DO
+        <ST><![CDATA[IF _IsSuspended THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	_Reporters[i].SuiteFinished(Status);
 END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Suspend" Id="{59f8506e-4c82-4dfd-a387-7ea12c318327}">
+      <Declaration><![CDATA[// Stop notifying sinks. Used for an individual re-run, which must not pollute the
+// CI artifact with duplicate entries.
+//
+// Work already in flight is unaffected - CyclicLogic keeps running - so a document
+// being written when this is called still lands.
+METHOD Suspend]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_IsSuspended := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="TestFinished" Id="{a43a6462-1cf7-4709-9ec5-69542ac23a66}" FolderPath="I_TestReporter\">
@@ -258,7 +310,11 @@ VAR
 	i : DINT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[FOR i := 0 TO TO_DINT(_Count) - 1 DO
+        <ST><![CDATA[IF _IsSuspended THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	_Reporters[i].TestFinished(
 		SuiteLabel	  := SuiteLabel,
 		TestLabel	  := TestLabel,
@@ -286,7 +342,11 @@ VAR
 	i : DINT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[FOR i := 0 TO TO_DINT(_Count) - 1 DO
+        <ST><![CDATA[IF _IsSuspended THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	IF _DetailSinks[i] <> 0 THEN
 		_DetailSinks[i].TestStarted(
 			SuiteLabel := SuiteLabel,

@@ -123,13 +123,40 @@ END_VAR]]></Declaration>
         </Implementation>
       </Get>
     </Property>
-    <Method Name="Complete" Id="{74cb9823-229c-4015-bdd2-73a1478c3f93}">
+    <Property Name="ElapsedCycles" Id="{a734db6d-2f01-4bad-aabf-a0902aec7086}">
+      <Declaration><![CDATA[PROPERTY ElapsedCycles : UDINT]]></Declaration>
+      <Get Name="Get" Id="{a3103c5a-712b-4a70-983a-53989c68db56}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ElapsedCycles := _ElapsedCycles;
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ElapsedTime" Id="{0403d3c5-dc22-4fc0-b623-f96801bef105}">
+      <Declaration><![CDATA[// Seconds elapsed for this test. Backs I_TestTiming.ElapsedTime.
+PROPERTY ElapsedTime : LREAL]]></Declaration>
+      <Get Name="Get" Id="{35f9721c-c669-44cc-9783-c577ab45e725}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ElapsedTime := _Stopwatch.Elapsed;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Finish" Id="{74cb9823-229c-4015-bdd2-73a1478c3f93}">
       <Declaration><![CDATA[// Terminal. Composes the summary once and stops the clock.
+//
+// Named Finish, not Complete: Plan.md 2.1 bans status words as method names, and
+// Complete collides with IsComplete on the status interface.
 //
 // A Passed verdict with no recorded check becomes Errored: a body that checked
 // nothing usually means a branch never ran, and reporting that green is a silent
 // false pass.
-METHOD Complete
+METHOD Finish
 VAR_INPUT
 	Status : E_TestStatus;
 END_VAR]]></Declaration>
@@ -155,30 +182,6 @@ _Summary := TestSummaryLine(StepLabel  := _FailStep,
 							Message	   := _FailMessage);]]></ST>
       </Implementation>
     </Method>
-    <Property Name="ElapsedCycles" Id="{a734db6d-2f01-4bad-aabf-a0902aec7086}">
-      <Declaration><![CDATA[PROPERTY ElapsedCycles : UDINT]]></Declaration>
-      <Get Name="Get" Id="{a3103c5a-712b-4a70-983a-53989c68db56}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[ElapsedCycles := _ElapsedCycles;
-]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
-    <Property Name="ElapsedTime" Id="{0403d3c5-dc22-4fc0-b623-f96801bef105}">
-      <Declaration><![CDATA[// Seconds elapsed for this test. Backs I_TestTiming.ElapsedTime.
-PROPERTY ElapsedTime : LREAL]]></Declaration>
-      <Get Name="Get" Id="{35f9721c-c669-44cc-9783-c577ab45e725}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-        <Implementation>
-          <ST><![CDATA[ElapsedTime := _Stopwatch.Elapsed;]]></ST>
-        </Implementation>
-      </Get>
-    </Property>
     <Property Name="IsFirstCycle" Id="{31eba7f5-a511-4659-9363-3ecd682056bf}">
       <Declaration><![CDATA[PROPERTY IsFirstCycle : BOOL]]></Declaration>
       <Get Name="Get" Id="{9a09ee75-68fb-472b-a918-423b5f38dcf1}">
@@ -231,7 +234,18 @@ END_VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[// TODO: validate before storing
+          <ST><![CDATA[// R13: validated before storing. An instance path is a diagnostic, so a bad one
+// should read as "not supplied" rather than send the reader somewhere that does
+// not exist.
+//
+// Length is the only check available: T_MaxString truncates silently at 255, and a
+// path cut mid-segment names a place that is not there. An empty classname is
+// honest; a wrong one is worse than none.
+IF LEN(Location) >= 255 THEN
+	_Location := '';
+	RETURN;
+END_IF
+
 _Location := Location;
 ]]></ST>
         </Implementation>
@@ -389,7 +403,7 @@ IF (_Budgets.Body.Cycles > 0) AND (_ElapsedCycles >= _Budgets.Body.Cycles) THEN
 											Timeout	 := _Budgets.Body.Timeout,
 											ByCycles := TRUE),
 		Message	   := '');
-	THIS^.Complete(E_TestStatus.Failed);
+	THIS^.Finish(E_TestStatus.Failed);
 	Tick := TRUE;
 	RETURN;
 END_IF
@@ -402,7 +416,7 @@ IF (_Budgets.Body.Timeout > T#0S) AND (_Stopwatch.Elapsed >= (TO_LREAL(TIME_TO_U
 											Timeout	 := _Budgets.Body.Timeout,
 											ByCycles := FALSE),
 		Message	   := '');
-	THIS^.Complete(E_TestStatus.Failed);
+	THIS^.Finish(E_TestStatus.Failed);
 	Tick := TRUE;
 END_IF]]></ST>
       </Implementation>

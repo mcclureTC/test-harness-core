@@ -31,22 +31,6 @@ END_VAR]]></Declaration>
     <Folder Name="I_TestAssertions" Id="{e4112d56-62ba-4c84-abb2-d7401a0382bd}" />
     <Folder Name="I_TestOutcome" Id="{591f84b0-9ebd-47da-8445-73e8ef5d9a9a}" />
     <Folder Name="I_TestTiming" Id="{c05e452e-c8a8-4470-8166-6085e699955a}" />
-    <Method Name="AttachDetailSink" Id="{95131ad5-92e8-48d6-8c49-0eef69e407db}">
-      <Declaration><![CDATA[// Where individual checks go. Called once by the suite at composition; a null sink
-// is the normal case and costs one comparison per check.
-//
-// Not on I_TestAssertions. A test body holds this object and must not be able to
-// redirect the record of its own run.
-METHOD AttachDetailSink
-VAR_INPUT
-	Sink : I_TestDetailSink;
-END_VAR
-]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_DetailSink := Sink;
-]]></ST>
-      </Implementation>
-    </Method>
     <Method Name="AssertBufferEqual" Id="{31ca02a3-f5f0-40b4-bb0d-554fb550c585}" FolderPath="I_TestAssertions\">
       <Declaration><![CDATA[// Lengths first, so a size difference is reported as one rather than as a
 // difference at whatever byte happens to differ.
@@ -57,13 +41,27 @@ VAR_INPUT
 	pActual		   : POINTER TO BYTE;
 	ActualLength   : UDINT;
 	Message		   : T_MaxString;
+END_VAR
+
+VAR
+	ExpectedText : T_MaxString;
+	ActualText	 : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF ExpectedLength <> ActualLength THEN
-	THIS^.RecordFailure(E_FailureKind.SizeMismatch,
-		CONCAT(CONCAT(CONCAT(
-		'expected ', LREAL_TO_FMTSTR(TO_LREAL(ExpectedLength), 0, FALSE)),
-		' bytes, actual '), LREAL_TO_FMTSTR(TO_LREAL(ActualLength), 0, FALSE)), Message);
+	// Lengths first, so a size difference is reported as one rather than as a
+	// difference at whatever byte happens to differ.
+	ExpectedText := CONCAT(
+		LREAL_TO_FMTSTR(TO_LREAL(ExpectedLength), 0, FALSE), ' bytes');
+	ActualText	 := CONCAT(
+		LREAL_TO_FMTSTR(TO_LREAL(ActualLength), 0, FALSE), ' bytes');
+
+	THIS^.Emit(Kind		  := E_FailureKind.SizeMismatch,
+			   Expected	  := ExpectedText,
+			   Actual	  := ActualText,
+			   Diagnostic := CONCAT(CONCAT(CONCAT(
+					'expected ', ExpectedText), ', actual '), ActualText),
+			   Message	  := Message);
 	RETURN;
 END_IF
 
@@ -77,6 +75,11 @@ METHOD AssertCompletedWithin
 VAR_INPUT
 	Cycles	: UDINT;
 	Message : T_MaxString;
+END_VAR
+
+VAR
+	ExpectedText : T_MaxString;
+	ActualText	 : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF NOT __ISVALIDREF(_Journal) THEN
@@ -85,13 +88,20 @@ END_IF
 
 IF _Journal.ElapsedCycles <= Cycles THEN
 	THIS^.RecordPass(Message);
-ELSE
-	THIS^.RecordFailure(E_FailureKind.Timeout,
-		CONCAT(CONCAT(CONCAT(
-		'expected within ', LREAL_TO_FMTSTR(TO_LREAL(Cycles), 0, FALSE)),
-		' cycles, actual '), LREAL_TO_FMTSTR(TO_LREAL(_Journal.ElapsedCycles), 0, FALSE)),
-		Message);
-END_IF]]></ST>
+	RETURN;
+END_IF
+
+ExpectedText := CONCAT(CONCAT('within ',
+	LREAL_TO_FMTSTR(TO_LREAL(Cycles), 0, FALSE)), ' cycles');
+ActualText	 := CONCAT(
+	LREAL_TO_FMTSTR(TO_LREAL(_Journal.ElapsedCycles), 0, FALSE), ' cycles');
+
+THIS^.Emit(Kind		  := E_FailureKind.Timeout,
+		   Expected	  := ExpectedText,
+		   Actual	  := ActualText,
+		   Diagnostic := CONCAT(CONCAT(CONCAT(
+				'expected ', ExpectedText), ', actual '), ActualText),
+		   Message	  := Message);]]></ST>
       </Implementation>
     </Method>
     <Method Name="AssertEqual" Id="{3991bd51-c3f2-4819-bda9-4529a3431716}" FolderPath="I_TestAssertions\">
@@ -129,7 +139,11 @@ END_VAR]]></Declaration>
         <ST><![CDATA[IF NOT Condition THEN
 	THIS^.RecordPass(Message);
 ELSE
-	THIS^.RecordFailure(E_FailureKind.ValueMismatch, 'expected FALSE, actual TRUE', Message);
+	THIS^.Emit(Kind		  := E_FailureKind.ValueMismatch,
+			   Expected	  := 'FALSE',
+			   Actual	  := 'TRUE',
+			   Diagnostic := 'expected FALSE, actual TRUE',
+			   Message	  := Message);
 END_IF]]></ST>
       </Implementation>
     </Method>
@@ -174,17 +188,28 @@ VAR_INPUT
 	Minimum : LREAL;
 	Maximum : LREAL;
 	Message : T_MaxString;
+END_VAR
+
+VAR
+	ExpectedText : T_MaxString;
+	ActualText	 : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF (Actual >= Minimum) AND (Actual <= Maximum) THEN
 	THIS^.RecordPass(Message);
-ELSE
-	THIS^.RecordFailure(E_FailureKind.ValueMismatch,
-		CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(
-		'expected ', LREAL_TO_FMTSTR(Minimum, 6, TRUE)),
-		' to '),	 LREAL_TO_FMTSTR(Maximum, 6, TRUE)),
-		', actual '), LREAL_TO_FMTSTR(Actual, 6, TRUE)), Message);
-END_IF]]></ST>
+	RETURN;
+END_IF
+
+ExpectedText := CONCAT(CONCAT(
+	LREAL_TO_FMTSTR(Minimum, 6, TRUE), ' to '), LREAL_TO_FMTSTR(Maximum, 6, TRUE));
+ActualText	 := LREAL_TO_FMTSTR(Actual, 6, TRUE);
+
+THIS^.Emit(Kind		  := E_FailureKind.ValueMismatch,
+		   Expected	  := ExpectedText,
+		   Actual	  := ActualText,
+		   Diagnostic := CONCAT(CONCAT(CONCAT(
+				'expected ', ExpectedText), ', actual '), ActualText),
+		   Message	  := Message);]]></ST>
       </Implementation>
     </Method>
     <Property Name="AssertionCount" Id="{6dc42526-bb10-4f7d-baa1-9d3bea6cfeae}" FolderPath="I_TestOutcome\">
@@ -244,12 +269,16 @@ VAR_INPUT
 END_VAR
 
 VAR
-	pLeft  : POINTER TO BYTE;
-	pRight : POINTER TO BYTE;
-	i	   : DINT;
+	pLeft		 : POINTER TO BYTE;
+	pRight		 : POINTER TO BYTE;
+	i			 : DINT;
+	ExpectedText : T_MaxString;
+	ActualText	 : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF (pExpected = 0) OR (pActual = 0) THEN
+	// Environment, not ValueMismatch: nothing was compared, so nothing about the
+	// code under test was shown to be wrong. No values to report either.
 	THIS^.RecordFailure(E_FailureKind.Environment, 'null buffer', Message);
 	RETURN;
 END_IF
@@ -259,11 +288,17 @@ pRight := pActual;
 
 FOR i := 0 TO TO_DINT(Length) - 1 DO
 	IF pLeft[i] <> pRight[i] THEN
-		THIS^.RecordFailure(E_FailureKind.ValueMismatch,
-			CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(
-			'differs at byte ', LREAL_TO_FMTSTR(TO_LREAL(i), 0, FALSE)),
-			': expected 16#'),	 BYTE_TO_HEXSTR(pLeft[i], 2, TRUE)),
-			', actual 16#'),	 BYTE_TO_HEXSTR(pRight[i], 2, TRUE)), Message);
+		ExpectedText := CONCAT('16#', BYTE_TO_HEXSTR(pLeft[i], 2, TRUE));
+		ActualText	 := CONCAT('16#', BYTE_TO_HEXSTR(pRight[i], 2, TRUE));
+
+		THIS^.Emit(Kind		  := E_FailureKind.ValueMismatch,
+				   Expected	  := ExpectedText,
+				   Actual	  := ActualText,
+				   Diagnostic := CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(
+						'differs at byte ', LREAL_TO_FMTSTR(TO_LREAL(i), 0, FALSE)),
+						': expected '), ExpectedText),
+						', actual '), ActualText),
+				   Message	  := Message);
 		RETURN;
 	END_IF
 END_FOR
@@ -287,17 +322,32 @@ VAR_INPUT
 	Actual	  : LREAL;
 	Tolerance : LREAL;
 	Message	  : T_MaxString;
+END_VAR
+
+VAR
+	ExpectedText : T_MaxString;
+	ActualText	 : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF ABS(Expected - Actual) <= ABS(Tolerance) THEN
 	THIS^.RecordPass(Message);
-ELSE
-	THIS^.RecordFailure(E_FailureKind.ValueMismatch,
-		CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(
-		'expected ', LREAL_TO_FMTSTR(Expected, 6, TRUE)),
-		' +/- '),	 LREAL_TO_FMTSTR(ABS(Tolerance), 6, TRUE)),
-		', actual '), LREAL_TO_FMTSTR(Actual, 6, TRUE)), Message);
-END_IF]]></ST>
+	RETURN;
+END_IF
+
+// The tolerance belongs with the expectation, not beside it: what the test
+// demanded is a band, and a reader comparing 5.000000 with 5.002000 cannot see
+// whether that was meant to pass without it.
+ExpectedText := CONCAT(CONCAT(CONCAT(
+	LREAL_TO_FMTSTR(Expected, 6, TRUE), ' +/- '),
+	LREAL_TO_FMTSTR(ABS(Tolerance), 6, TRUE)), '');
+ActualText	 := LREAL_TO_FMTSTR(Actual, 6, TRUE);
+
+THIS^.Emit(Kind		  := E_FailureKind.ValueMismatch,
+		   Expected	  := ExpectedText,
+		   Actual	  := ActualText,
+		   Diagnostic := CONCAT(CONCAT(CONCAT(
+				'expected ', ExpectedText), ', actual '), ActualText),
+		   Message	  := Message);]]></ST>
       </Implementation>
     </Method>
     <Method Name="AssertNotEqual" Id="{45468f40-82b0-41ee-86d3-f9f5b13cc0a7}" FolderPath="I_TestAssertions\">
@@ -337,7 +387,11 @@ END_VAR]]></Declaration>
         <ST><![CDATA[IF Condition THEN
 	THIS^.RecordPass(Message);
 ELSE
-	THIS^.RecordFailure(E_FailureKind.ValueMismatch, 'expected TRUE, actual FALSE', Message);
+	THIS^.Emit(Kind		  := E_FailureKind.ValueMismatch,
+			   Expected	  := 'TRUE',
+			   Actual	  := 'FALSE',
+			   Diagnostic := 'expected TRUE, actual FALSE',
+			   Message	  := Message);
 END_IF]]></ST>
       </Implementation>
     </Method>
@@ -363,8 +417,9 @@ VAR_INPUT
 END_VAR
 
 VAR
-	Tolerance : LREAL;
-	Detail	  : T_MaxString;
+	Tolerance	 : LREAL;
+	ExpectedText : T_MaxString;
+	ActualText	 : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Tolerance := ABS(Expected) * ABS(Fraction);
@@ -373,20 +428,52 @@ IF ABS(Expected - Actual) <= Tolerance THEN
 	RETURN;
 END_IF
 
+ActualText := LREAL_TO_FMTSTR(Actual, 6, TRUE);
+
 IF Expected = 0.0 THEN
-	Detail := CONCAT('expected exactly 0 - a relative tolerance admits nothing else; use AssertNear. Actual ', LREAL_TO_FMTSTR(Actual, 6, TRUE));
-	THIS^.RecordFailure(E_FailureKind.ValueMismatch, Detail, Message);
+	// A relative tolerance around zero admits only zero. Say which method the
+	// situation actually calls for rather than reporting a mysterious near miss.
+	ExpectedText := 'exactly 0 (relative tolerance admits nothing else - use AssertNear)';
+	THIS^.Emit(Kind		  := E_FailureKind.ValueMismatch,
+			   Expected	  := ExpectedText,
+			   Actual	  := ActualText,
+			   Diagnostic := CONCAT(CONCAT(
+					'expected ', ExpectedText), CONCAT(', actual ', ActualText)),
+			   Message	  := Message);
 	RETURN;
 END_IF
 
-Detail := CONCAT('expected ', LREAL_TO_FMTSTR(Expected, 6, TRUE));
-Detail := CONCAT(Detail, ' +/- ');
-Detail := CONCAT(Detail, LREAL_TO_FMTSTR(ABS(Fraction) * 100.0, 4, TRUE));
-Detail := CONCAT(Detail, '% (');
-Detail := CONCAT(Detail, LREAL_TO_FMTSTR(Tolerance, 6, TRUE));
-Detail := CONCAT(Detail, '), actual ');
-Detail := CONCAT(Detail, LREAL_TO_FMTSTR(Actual, 6, TRUE));
-THIS^.RecordFailure(E_FailureKind.ValueMismatch, Detail, Message);]]></ST>
+// Both forms of the band: the fraction the author wrote, and what it works out to
+// at this magnitude. Either one alone leaves the reader doing arithmetic.
+ExpectedText := LREAL_TO_FMTSTR(Expected, 6, TRUE);
+ExpectedText := CONCAT(ExpectedText, ' +/- ');
+ExpectedText := CONCAT(ExpectedText, LREAL_TO_FMTSTR(ABS(Fraction) * 100.0, 4, TRUE));
+ExpectedText := CONCAT(ExpectedText, '% (');
+ExpectedText := CONCAT(ExpectedText, LREAL_TO_FMTSTR(Tolerance, 6, TRUE));
+ExpectedText := CONCAT(ExpectedText, ')');
+
+THIS^.Emit(Kind		  := E_FailureKind.ValueMismatch,
+		   Expected	  := ExpectedText,
+		   Actual	  := ActualText,
+		   Diagnostic := CONCAT(CONCAT(
+				'expected ', ExpectedText), CONCAT(', actual ', ActualText)),
+		   Message	  := Message);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AttachDetailSink" Id="{95131ad5-92e8-48d6-8c49-0eef69e407db}">
+      <Declaration><![CDATA[// Where individual checks go. Called once by the suite at composition; a null sink
+// is the normal case and costs one comparison per check.
+//
+// Not on I_TestAssertions. A test body holds this object and must not be able to
+// redirect the record of its own run.
+METHOD AttachDetailSink
+VAR_INPUT
+	Sink : I_TestDetailSink;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_DetailSink := Sink;
+]]></ST>
       </Implementation>
     </Method>
     <Property Name="ElapsedCycles" Id="{08b61e99-6795-43f3-b627-cd8467c67f95}" FolderPath="I_TestTiming\">
@@ -540,6 +627,17 @@ END_IF]]></ST>
         </Implementation>
       </Get>
     </Property>
+    <Method Name="Target" Id="{3b0923a0-8738-4d87-88fa-9f83fa825da7}">
+      <Declaration><![CDATA[// Point the handle at the active test's journal. Called by the suite, never by a
+// test.
+METHOD Target
+VAR_INPUT
+	Journal : REFERENCE TO TestJournal;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Journal REF= Journal;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="Untarget" Id="{c45499c0-5b83-4ad5-b474-dda7b905135f}">
       <Declaration><![CDATA[// Point the handle at nothing. Called by the runner when a test finishes, so a
 // stray call cannot write into a completed test's record - or worse, into the
@@ -550,17 +648,6 @@ END_IF]]></ST>
 METHOD Untarget]]></Declaration>
       <Implementation>
         <ST><![CDATA[_Journal REF= 0;]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="Target" Id="{3b0923a0-8738-4d87-88fa-9f83fa825da7}">
-      <Declaration><![CDATA[// Point the handle at the active test's journal. Called by the suite, never by a
-// test.
-METHOD Target
-VAR_INPUT
-	Journal : REFERENCE TO TestJournal;
-END_VAR]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_Journal REF= Journal;]]></ST>
       </Implementation>
     </Method>
   </POU>

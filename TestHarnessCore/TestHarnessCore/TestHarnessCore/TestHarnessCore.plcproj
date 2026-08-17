@@ -18,6 +18,11 @@
     <LibraryReferences>{9917ce47-ed06-44aa-a361-5fed25420694}</LibraryReferences>
     <POUsForPropertyAccessIncluded>true</POUsForPropertyAccessIncluded>
     <GlobalVersionStructureIncluded>true</GlobalVersionStructureIncluded>
+    <Company>None</Company>
+    <Released>false</Released>
+    <Title>TestHarnessCore</Title>
+    <ProjectVersion>0.0.1</ProjectVersion>
+    <VirtualLibrary>true</VirtualLibrary>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="DUTs\E_FailureKind.TcDUT">
@@ -143,6 +148,9 @@
     <Compile Include="POUs\TestStopwatch.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\TestSuite.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\TestSummaryLine.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -167,10 +175,10 @@
     <Compile Include="POUs\TestValueString.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\TestVerdict.TcPOU">
+    <Compile Include="Parameters\TestHarnessParameter.TcGVL">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Parameters\TestHarnessParameter.TcGVL">
+    <Compile Include="POUs\TestVerdict.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Project Information\F_GetCompany.TcPOU">
@@ -193,6 +201,9 @@
     <Content Include="Documentation\UPDATE_13.md">
       <SubType>Content</SubType>
     </Content>
+    <None Include="TestHarnessCore.tmc">
+      <SubType>Content</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DUTs" />
