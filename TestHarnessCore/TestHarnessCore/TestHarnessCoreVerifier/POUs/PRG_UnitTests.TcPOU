@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{23877c2b-a592-4237-9d65-f354094de04d}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{a3c5c11b-6993-45a2-ab7e-e08480108b78}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      54 - assert this. A test that stops being registered vanishes
+//   Total      59 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //
@@ -26,13 +26,17 @@
 // so a defect that never completes fails its own test instead of hanging
 // everything and looking like a broken verifier.
 //
-// THIS SUITE STILL ATTACHES NO REPORTER. The Fanout tests attach spies to their
-// OWN fan-out instances; nothing here reaches disk or the event log, and these
-// counts are the whole result. That is deliberate - the harness is verified before
-// logging is added to it, so a logging defect cannot be mistaken for a harness one.
+// THIS SUITE STILL ATTACHES NO REPORTER, even now that one exists. The LogReporter
+// tests drive their own instances and assert on its counters. Nothing here writes
+// to the log, so a logging defect cannot be mistaken for a harness defect and the
+// counts below remain the whole result.
+//
+// What the LogReporter tests CANNOT check is whether a line actually reached the
+// TwinCAT log, or what it says - ADSLOGSTR gives no answer back. Read the Logged
+// Events window once, by eye.
 PROGRAM PRG_UnitTests
 VAR
-	Suite	: TestSuite<60>;
+	Suite	: TestSuite<70>;
 	Budgets : ST_TestBudgets;
 	Wired	: BOOL;
 
@@ -103,6 +107,13 @@ VAR
 	fanoutSuspendSilencesEverything	: TEST_FanoutSuspendSilencesEverything;
 	fanoutRefusesBeyondCapacityAndTellsTheRest	: TEST_FanoutRefusesBeyondCapacityAndTellsTheRest;
 	fanoutCarriesTheSuiteResultThrough	: TEST_FanoutCarriesTheSuiteResultThrough;
+
+	// -- LogReporter --
+	logReporterIsQuietAboutPasses	: TEST_LogReporterIsQuietAboutPasses;
+	logReporterWritesFailuresAndErrors	: TEST_LogReporterWritesFailuresAndErrors;
+	logReporterNarratesWhenAsked	: TEST_LogReporterNarratesWhenAsked;
+	logReporterAlwaysWritesFrameworkErrors	: TEST_LogReporterAlwaysWritesFrameworkErrors;
+	logReporterSummarisesASuite	: TEST_LogReporterSummarisesASuite;
 
 	// -- the result, for the watch window ---------------------------------------
 	Complete : BOOL;
@@ -187,6 +198,13 @@ END_VAR]]></Declaration>
 	Suite.Register(fanoutSuspendSilencesEverything, 'Fanout: Suspend silences notifications but not CyclicLogic', Budgets);
 	Suite.Register(fanoutRefusesBeyondCapacityAndTellsTheRest, 'Fanout: attachment beyond capacity is refused and reported', Budgets);
 	Suite.Register(fanoutCarriesTheSuiteResultThrough, 'Fanout: SuiteFinished carries the live read model', Budgets);
+
+	// LogReporter
+	Suite.Register(logReporterIsQuietAboutPasses, 'LogReporter: quiet about passes by default', Budgets);
+	Suite.Register(logReporterWritesFailuresAndErrors, 'LogReporter: failures and errors are written and counted apart', Budgets);
+	Suite.Register(logReporterNarratesWhenAsked, 'LogReporter: verbosity turns narration on and off', Budgets);
+	Suite.Register(logReporterAlwaysWritesFrameworkErrors, 'LogReporter: framework errors are never suppressed', Budgets);
+	Suite.Register(logReporterSummarisesASuite, 'LogReporter: one line per suite, carrying the counts', Budgets);
 
 END_IF
 

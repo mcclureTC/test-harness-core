@@ -1,0 +1,326 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestLogReporter" Id="{b7a4257f-4473-437e-8260-cd63342e609a}" SpecialFunc="None">
+    <Declaration><![CDATA[// Writes results to the TwinCAT system log through ADSLOGSTR.
+//
+// The simplest sink that is genuinely useful, and deliberately the first one
+// built: it needs no project setup, no event class, and no asynchronous work, so
+// attaching it cannot change whether a run completes. Anything that goes wrong
+// here is visibly this object's fault and not the harness's.
+//
+// It implements I_TestReporter and NOT I_TestDetailSink. A log wants verdicts; a
+// line per individual check would bury them. The fan-out asks once and never calls
+// this for a check.
+//
+// QUIET BY DEFAULT. Failures and errors are logged, passes are not - eighty green
+// lines hide the two that matter, and the counts are already available through
+// I_TestRunStatus for anyone who wants them. SetVerbosity(TRUE) if you want the
+// narration.
+//
+// Severity is not decoration. A FAILURE is an error: the code under test was shown
+// to be wrong. An ERROR is a warning: the test could not run, so nothing was shown
+// about the code at all, and a build should react differently to each.
+FUNCTION_BLOCK TestLogReporter IMPLEMENTS I_TestReporter
+VAR
+	_Prefix		   : T_MaxString;
+	_IncludePasses : BOOL;
+
+	_LinesWritten		   : UDINT;
+	_FailuresLogged		   : UDINT;
+	_ErrorsLogged		   : UDINT;
+	_FrameworkErrorsLogged : UDINT;
+	_TestsSeen			   : UDINT;
+	_SuitesSeen			   : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+	No cyclic body. Everything this sink does happens inside the notification that
+	prompted it.
+*)]]></ST>
+    </Implementation>
+    <Folder Name="I_Cyclic" Id="{834ca7d7-95a5-44bb-8a63-bafda8815df9}" />
+    <Folder Name="I_TestReporter" Id="{2f8dc224-839c-4edb-a4f8-52ecf4228bd4}" />
+    <Method Name="CyclicLogic" Id="{ca652c50-082b-47e9-9a34-4b7c829654c7}" FolderPath="I_Cyclic\">
+      <Declaration><![CDATA[// Nothing to advance. ADSLOGSTR completes within the call, which is what makes
+// this the cheapest sink to attach and the safest one to attach first.
+METHOD CyclicLogic]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+	Deliberately empty. This sink starts no asynchronous work, so it has none to
+	finish - which is also why IsIdle is always TRUE.
+*)]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Emit" Id="{ea668da0-5055-482d-a7e0-79175900cc15}">
+      <Declaration><![CDATA[// The one place anything is written. Private, so severity and destination are
+// chosen here and cannot drift between call sites.
+METHOD Emit
+VAR_INPUT
+	Severity : DWORD;
+	Line	 : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// A severity bit alone does not say where the message goes. LOG is what puts it
+// in the system event log; without it the behaviour is unstated.
+//
+// %s is filled by strArg. Passing the line as the FORMAT string instead would let
+// a test label containing a percent sign corrupt the output - or worse.
+ADSLOGSTR(msgCtrlMask := Severity OR ADSLOG_MSGTYPE_LOG OR ADSLOG_MSGTYPE_STRING,
+		  msgFmtStr	  := CONCAT(_Prefix, '%s'),
+		  strArg	  := Line);
+
+_LinesWritten := _LinesWritten + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ErrorsLogged" Id="{2117fd4a-e69f-448d-bc00-b19aab2d9c37}">
+      <Declaration><![CDATA[PROPERTY ErrorsLogged : UDINT]]></Declaration>
+      <Get Name="Get" Id="{801bb0eb-dd92-4f47-bc8a-1e018326112f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ErrorsLogged := _ErrorsLogged;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FailuresLogged" Id="{087f7bce-30b9-474f-b927-d0e20ab2cf94}">
+      <Declaration><![CDATA[PROPERTY FailuresLogged : UDINT]]></Declaration>
+      <Get Name="Get" Id="{2dfa643a-f64d-47fc-806d-2500f8699edb}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FailuresLogged := _FailuresLogged;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="FrameworkError" Id="{1a252fff-15ad-4cf8-ba27-796ab4ce7024}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD FrameworkError
+VAR_INPUT
+	Source	: T_MaxString;
+	Message : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_FrameworkErrorsLogged := _FrameworkErrorsLogged + 1;
+
+// Always an error, and never silent. This is the framework saying it could not do
+// something - a rejected registration, a teardown that overran, a document that
+// could not be written - and none of those is a test result.
+THIS^.Emit(ADSLOG_MSGTYPE_ERROR,
+	CONCAT(CONCAT('FRAMEWORK ', Source), CONCAT(': ', Message)));]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="FrameworkErrorsLogged" Id="{7a949255-cf12-410b-a2e9-b166a7d58e57}">
+      <Declaration><![CDATA[PROPERTY FrameworkErrorsLogged : UDINT]]></Declaration>
+      <Get Name="Get" Id="{874fb02e-0023-4265-b3c0-984b045a9170}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FrameworkErrorsLogged := _FrameworkErrorsLogged;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="IsIdle" Id="{c6becb6b-281b-4035-999b-1df852d1bc11}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[// Always TRUE. ADSLOGSTR completes within the call, so this sink never holds a
+// run open - which is precisely why it is the one to attach first.
+PROPERTY IsIdle : BOOL]]></Declaration>
+      <Get Name="Get" Id="{2ca30858-4cd7-490e-89bc-3074b1f02808}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsIdle := TRUE;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LinesWritten" Id="{10e48dfa-2d95-45c6-b1eb-2ecf1e752f85}">
+      <Declaration><![CDATA[// Every line this sink has written. Assert it in CI if the log is the artifact.
+PROPERTY LinesWritten : UDINT]]></Declaration>
+      <Get Name="Get" Id="{7f6a7ed7-7789-4beb-9a50-0b8e17a1b675}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LinesWritten := _LinesWritten;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="RunFinished" Id="{62eb5e4c-6f25-48df-9b45-7b8fc6892d8f}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD RunFinished
+VAR_INPUT
+	Status	   : I_TestRunStatus;
+	TargetInfo : T_MaxString;
+END_VAR
+
+VAR
+	Line : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Status = 0 THEN
+	RETURN;
+END_IF
+
+// TargetInfo identifies where the run happened. Without it a matrix run across
+// several targets produces log output that cannot be told apart.
+Line := CONCAT(CONCAT(THIS^.Tally(Status), '  on '), TargetInfo);
+
+IF Status.Outcome = E_RunOutcome.Passed THEN
+	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('RUN PASSED  ', Line));
+ELSE
+	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, CONCAT('RUN FAILED  ', Line));
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetPrefix" Id="{f9f3eda4-4dbe-4486-afa1-31324a80de1d}">
+      <Declaration><![CDATA[// Prepended to every line. Useful when several runs share one log - a rig
+// running unit and integration suites, or a matrix across targets.
+METHOD SetPrefix
+VAR_INPUT
+	Prefix : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Prefix := Prefix;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetVerbosity" Id="{89c5e1a8-d6f9-468b-a587-ea6da248eee0}">
+      <Declaration><![CDATA[// Which results reach the log. Default: failures and errors only.
+//
+// A suite of eighty passing tests writing eighty log lines buries the two that
+// matter. Passes are counted, not narrated - the counts are already available
+// through I_TestRunStatus for anyone who wants them.
+METHOD SetVerbosity
+VAR_INPUT
+	// TRUE also logs a line for every passing and skipped test.
+	IncludePasses : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_IncludePasses := IncludePasses;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SuiteFinished" Id="{5bece730-a5bb-41f8-a12c-ab3d72842215}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD SuiteFinished
+VAR_INPUT
+	Status : I_TestRunStatus;
+END_VAR
+
+VAR
+	Line : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Status = 0 THEN
+	RETURN;
+END_IF
+
+_SuitesSeen := _SuitesSeen + 1;
+
+Line := CONCAT(CONCAT(Status.Label, ': '), THIS^.Tally(Status));
+
+// Severity follows the outcome, so a log filtered to errors still shows which
+// suite was responsible rather than only the individual failures.
+IF Status.Outcome = E_RunOutcome.Passed THEN
+	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('SUITE PASSED  ', Line));
+ELSIF Status.Outcome = E_RunOutcome.Skipped THEN
+	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('SUITE SKIPPED ', Line));
+ELSIF Status.Outcome = E_RunOutcome.Errored THEN
+	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, CONCAT('SUITE ERRORED ', Line));
+ELSE
+	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, CONCAT('SUITE FAILED  ', Line));
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SuitesSeen" Id="{62fdfd7f-294a-4bc7-b841-1eea9945c0bf}">
+      <Declaration><![CDATA[PROPERTY SuitesSeen : UDINT]]></Declaration>
+      <Get Name="Get" Id="{b0c8343d-7920-4225-8240-d002c73746ce}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SuitesSeen := _SuitesSeen;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Tally" Id="{d78f9575-c8b7-4536-b8b3-b6d93aacb66e}">
+      <Declaration><![CDATA[// The counts as one readable phrase. Shared by the suite and run lines so the two
+// cannot drift apart.
+METHOD Tally : T_MaxString
+VAR_INPUT
+	Status : I_TestRunStatus;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Status = 0 THEN
+	RETURN;
+END_IF
+
+Tally := CONCAT(UDINT_TO_STRING(Status.PassedCount), ' passed');
+Tally := CONCAT(Tally, CONCAT(', ', UDINT_TO_STRING(Status.FailedCount)));
+Tally := CONCAT(Tally, ' failed');
+Tally := CONCAT(Tally, CONCAT(', ', UDINT_TO_STRING(Status.ErrorCount)));
+Tally := CONCAT(Tally, ' errored');
+Tally := CONCAT(Tally, CONCAT(', ', UDINT_TO_STRING(Status.SkippedCount)));
+Tally := CONCAT(Tally, ' skipped, of ');
+Tally := CONCAT(Tally, UDINT_TO_STRING(Status.TestCount));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="TestFinished" Id="{7364c4f4-2aa0-46db-bdb7-fe623dd31d4a}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD TestFinished
+VAR_INPUT
+	SuiteLabel	  : T_MaxString;
+	TestLabel	  : T_MaxString;
+	Location	  : T_MaxString;
+	Status		  : E_TestStatus;
+	Kind		  : E_FailureKind;
+	Summary		  : T_MaxString;
+	ElapsedTime	  : LREAL;
+	ElapsedCycles : UDINT;
+	Assertions	  : UDINT;
+END_VAR
+
+VAR
+	Line : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_TestsSeen := _TestsSeen + 1;
+
+CASE Status OF
+
+E_TestStatus.Failed:
+	_FailuresLogged := _FailuresLogged + 1;
+	// The summary is already composed to fit one line, kind first in its own field.
+	// Repeating the kind here would spend characters the summary needs.
+	Line := CONCAT(CONCAT(CONCAT(CONCAT(
+			'FAILED ', SuiteLabel), ' / '), TestLabel), CONCAT(': ', Summary));
+	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, Line);
+
+E_TestStatus.Errored:
+	_ErrorsLogged := _ErrorsLogged + 1;
+	// Warning, not error: the code under test was never shown to be wrong. A build
+	// should react differently, and so should whoever is reading the log.
+	Line := CONCAT(CONCAT(CONCAT(CONCAT(
+			'ERRORED ', SuiteLabel), ' / '), TestLabel), CONCAT(': ', Summary));
+	THIS^.Emit(ADSLOG_MSGTYPE_WARN, Line);
+
+ELSE
+	IF _IncludePasses THEN
+		Line := CONCAT(CONCAT(CONCAT(
+				'passed ', SuiteLabel), ' / '), TestLabel);
+		THIS^.Emit(ADSLOG_MSGTYPE_HINT, Line);
+	END_IF
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TestsSeen" Id="{579577c2-506f-4591-99b8-148cda51a1ce}">
+      <Declaration><![CDATA[// Every test notified, whether or not it produced a line.
+PROPERTY TestsSeen : UDINT]]></Declaration>
+      <Get Name="Get" Id="{43b5808b-1388-4425-bb13-c5035e9f1303}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TestsSeen := _TestsSeen;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

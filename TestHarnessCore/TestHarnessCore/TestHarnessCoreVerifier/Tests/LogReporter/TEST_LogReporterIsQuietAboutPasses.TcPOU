@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_LogReporterIsQuietAboutPasses" Id="{b0ecad70-b177-4918-a89a-cbf448e75b6d}" SpecialFunc="None">
+    <Declaration><![CDATA[// Quiet by default. Eighty green lines hide the two that matter, and the counts
+// are already available through I_TestRunStatus for anyone who wants them.//
+// WHAT THIS CANNOT CHECK: whether the line actually reached the TwinCAT log, or
+// what it says. ADSLOGSTR gives no answer back. The counters prove which BRANCH
+// was taken; the wording has to be read once, by eye, in the Logged Events window.
+// Saying so is better than a test that implies more than it establishes.
+FUNCTION_BLOCK TEST_LogReporterIsQuietAboutPasses IMPLEMENTS I_Test
+VAR
+	Sink : TestLogReporter;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{53ca0e76-f289-4f4a-85a6-1fbea1d801da}" />
+    <Method Name="Run" Id="{0974ceec-23d5-4b42-aa48-210f602a73a8}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'a pass', Location := '',
+				  Status := E_TestStatus.Passed, Kind := E_FailureKind.None,
+				  Summary := '', ElapsedTime := 0.0, ElapsedCycles := 1, Assertions := 1);
+
+Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'a skip', Location := '',
+				  Status := E_TestStatus.Skipped, Kind := E_FailureKind.None,
+				  Summary := '', ElapsedTime := 0.0, ElapsedCycles := 0, Assertions := 0);
+
+ExpectedCount := 0;
+ActualCount	  := Sink.LinesWritten;
+Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was written');
+
+// Seen but not narrated - the distinction that makes the quiet default safe.
+ExpectedCount := 2;
+ActualCount	  := Sink.TestsSeen;
+Test.AssertEqual(ExpectedCount, ActualCount, 'but both were seen');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

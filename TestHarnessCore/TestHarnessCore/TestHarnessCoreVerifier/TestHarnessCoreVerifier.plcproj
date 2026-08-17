@@ -138,6 +138,21 @@
     <Compile Include="Tests\Journal\TEST_JournalZeroBudgetDisablesTheDeadline.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\LogReporter\TEST_LogReporterAlwaysWritesFrameworkErrors.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\LogReporter\TEST_LogReporterIsQuietAboutPasses.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\LogReporter\TEST_LogReporterNarratesWhenAsked.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\LogReporter\TEST_LogReporterSummarisesASuite.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\LogReporter\TEST_LogReporterWritesFailuresAndErrors.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Registry\TEST_RegistryCapacityAndOverflow.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -259,6 +274,7 @@
     <Folder Include="Tests\Arbiter" />
     <Folder Include="Tests\Journal" />
     <Folder Include="Tests\Fanout" />
+    <Folder Include="Tests\LogReporter" />
     <Folder Include="Tests\Suite" />
     <Folder Include="Tests\Runner" />
     <Folder Include="Tests\Verdict" />

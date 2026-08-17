@@ -133,6 +133,9 @@
     <Compile Include="POUs\TestJournal.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\TestLogReporter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\TestRegistry.TcPOU">
       <SubType>Code</SubType>
     </Compile>

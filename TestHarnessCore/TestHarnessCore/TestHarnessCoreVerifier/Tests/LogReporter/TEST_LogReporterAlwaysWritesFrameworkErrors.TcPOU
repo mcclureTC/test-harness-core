@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_LogReporterAlwaysWritesFrameworkErrors" Id="{1990be99-3232-4ce2-8b80-28bd205eb723}" SpecialFunc="None">
+    <Declaration><![CDATA[// A framework error is never silent and is never affected by verbosity. It is the
+// framework saying it could not do something - a rejected registration, a teardown
+// that overran - and none of those is a test result that can be suppressed.//
+// WHAT THIS CANNOT CHECK: whether the line actually reached the TwinCAT log, or
+// what it says. ADSLOGSTR gives no answer back. The counters prove which BRANCH
+// was taken; the wording has to be read once, by eye, in the Logged Events window.
+// Saying so is better than a test that implies more than it establishes.
+FUNCTION_BLOCK TEST_LogReporterAlwaysWritesFrameworkErrors IMPLEMENTS I_Test
+VAR
+	Sink	  : TestLogReporter;
+	Fanout	  : TestReporterFanout;
+	Attached  : BOOL;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{7ab862a4-672f-4fbf-9b5b-db0dc5c9e1dc}" />
+    <Method Name="Run" Id="{1a32b106-9f8b-4390-ad7c-5a00ba7edb83}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Quiet mode is the default, and must not silence this.
+Sink.FrameworkError(Source := 'a suite', Message := 'registration was rejected');
+
+ExpectedCount := 1;
+ActualCount	  := Sink.FrameworkErrorsLogged;
+Test.AssertEqual(ExpectedCount, ActualCount, 'logged despite the quiet default');
+
+ActualCount := Sink.LinesWritten;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and it produced a line');
+
+// It is a real I_TestReporter, so the fan-out takes it like any other sink.
+Attached := Fanout.Attach(Sink);
+Test.AssertTrue(Attached, 'the fan-out accepts it');
+
+Fanout.FrameworkError(Source := 'a suite', Message := 'through the fan-out');
+ExpectedCount := 2;
+ActualCount	  := Sink.FrameworkErrorsLogged;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and reaches it that way too');
+
+// Nothing asynchronous, so it never holds a run open.
+Test.AssertTrue(Sink.IsIdle, 'the log sink is always idle');
+Test.AssertTrue(Fanout.IsIdle, 'so the fan-out is too');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
