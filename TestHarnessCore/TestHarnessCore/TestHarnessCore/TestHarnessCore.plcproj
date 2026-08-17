@@ -131,6 +131,9 @@
     <Compile Include="POUs\TestRegistry.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\TestReporterFanout.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\TestRunner.TcPOU">
       <SubType>Code</SubType>
     </Compile>
