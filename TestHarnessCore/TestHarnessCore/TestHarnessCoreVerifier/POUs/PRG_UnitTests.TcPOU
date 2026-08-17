@@ -1,37 +1,38 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{89d2af44-b52b-4203-ab41-4fd6da9deb94}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{6cd4ed7a-a0cf-4271-aed4-b1ee702af985}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      38 - assert this. A test that stops being registered vanishes
+//   Total      48 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //
 // Failed above zero names a real defect in TestHarnessCore. Errors above zero
-// means the framework itself could not do something - a rejected registration,
-// most likely - and no result in the run can be trusted until it is explained.
+// means the framework itself could not do something and no result in the run can
+// be trusted until it is explained.
 //
-// THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests each drive a
-// DELIBERATE failure into a private journal and assert the journal noticed. They
-// pass; what they prove is that failing works. Without them, a wall of green would
-// only show that nothing objected.
+// THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests drive DELIBERATE
+// failures into a private journal and assert the journal noticed; the Suite tests
+// register doubles that fail and error on purpose. They all pass. What they prove
+// is that going red works - without them, a wall of green would only show that
+// nothing objected.
 //
-// THE RUNNER TESTS ARE MULTI-SCAN. Each holds a private TestRunner and steps it one
-// scan per call, returning FALSE until its subject finishes - the same mechanism
-// they are verifying, one level down. Each carries a 200-scan watchdog, so a
-// runner defect that never completes fails its own test instead of hanging the
-// suite and looking like a broken verifier.
+// THE RUNNER AND SUITE TESTS ARE MULTI-SCAN. Each holds a private runner or suite
+// and steps it one scan per call, returning FALSE until it finishes - the same
+// mechanism they are verifying, one level down. Each carries a 200-scan watchdog,
+// so a defect that never completes fails its own test instead of hanging
+// everything and looking like a broken verifier.
 //
 // NO REPORTER IS ATTACHED. Nothing reaches disk or the event log; these counts are
 // the whole result. That is deliberate - the harness is verified before logging is
 // added, so a logging defect cannot be mistaken for a harness defect.
 PROGRAM PRG_UnitTests
 VAR
-	Suite	: TestSuite<60>;
+	Suite	: TestSuite<50>;
 	Budgets : ST_TestBudgets;
 	Wired	: BOOL;
 
@@ -82,6 +83,18 @@ VAR
 	runnerTeardownOverrunKeepsTheVerdict	: TEST_RunnerTeardownOverrunKeepsTheVerdict;
 	runnerAbandonMakesOneFinalCall	: TEST_RunnerAbandonMakesOneFinalCall;
 	runnerRefusesAnEmptySlot	: TEST_RunnerRefusesAnEmptySlot;
+
+	// -- Suite --
+	suiteRunsEveryRegisteredTest	: TEST_SuiteRunsEveryRegisteredTest;
+	suiteSeparatesFailuresFromErrors	: TEST_SuiteSeparatesFailuresFromErrors;
+	suiteClosesRegistrationOnFirstEnable	: TEST_SuiteClosesRegistrationOnFirstEnable;
+	suiteRejectedRegistrationIsNeverSilent	: TEST_SuiteRejectedRegistrationIsNeverSilent;
+	suiteSkipMarksEverythingSkipped	: TEST_SuiteSkipMarksEverythingSkipped;
+	suiteReRunRepeatsTheRegisteredSet	: TEST_SuiteReRunRepeatsTheRegisteredSet;
+	suiteReRunSingleRecordsNothing	: TEST_SuiteReRunSingleRecordsNothing;
+	suiteWithNothingRegisteredIsComplete	: TEST_SuiteWithNothingRegisteredIsComplete;
+	suiteWithNoLabelIsAFrameworkError	: TEST_SuiteWithNoLabelIsAFrameworkError;
+	suiteDefaultsReachTheTests	: TEST_SuiteDefaultsReachTheTests;
 
 	// -- the result, for the watch window ---------------------------------------
 	Complete : BOOL;
@@ -146,6 +159,18 @@ END_VAR]]></Declaration>
 	Suite.Register(runnerTeardownOverrunKeepsTheVerdict, 'Runner: a teardown overrun does not change the verdict', Budgets);
 	Suite.Register(runnerAbandonMakesOneFinalCall, 'Runner: abandon makes one final call and skips teardown', Budgets);
 	Suite.Register(runnerRefusesAnEmptySlot, 'Runner: an empty slot is refused', Budgets);
+
+	// Suite
+	Suite.Register(suiteRunsEveryRegisteredTest, 'Suite: runs every registered test, once', Budgets);
+	Suite.Register(suiteSeparatesFailuresFromErrors, 'Suite: failures and errors are counted apart', Budgets);
+	Suite.Register(suiteClosesRegistrationOnFirstEnable, 'Suite: registration closes on first enable', Budgets);
+	Suite.Register(suiteRejectedRegistrationIsNeverSilent, 'Suite: a rejected registration is never silent', Budgets);
+	Suite.Register(suiteSkipMarksEverythingSkipped, 'Suite: Skip marks everything skipped and completes', Budgets);
+	Suite.Register(suiteReRunRepeatsTheRegisteredSet, 'Suite: a re-run repeats the registered set', Budgets);
+	Suite.Register(suiteReRunSingleRecordsNothing, 'Suite: an individual re-run records nothing', Budgets);
+	Suite.Register(suiteWithNothingRegisteredIsComplete, 'Suite: an empty suite is complete, not red', Budgets);
+	Suite.Register(suiteWithNoLabelIsAFrameworkError, 'Suite: an unnamed suite is a framework error', Budgets);
+	Suite.Register(suiteDefaultsReachTheTests, 'Suite: suite defaults reach every unclaimed test', Budgets);
 
 END_IF
 

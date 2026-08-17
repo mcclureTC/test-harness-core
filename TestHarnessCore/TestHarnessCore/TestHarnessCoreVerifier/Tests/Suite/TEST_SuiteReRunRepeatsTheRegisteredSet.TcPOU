@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteReRunRepeatsTheRegisteredSet" Id="{438dfeb5-605d-4adc-b083-0b1edb43c808}" SpecialFunc="None">
+    <Declaration><![CDATA[// A re-run re-executes what was registered; it does not redefine it. The counts
+// start again from nothing, every body runs a second time, and the window stays
+// shut.
+FUNCTION_BLOCK TEST_SuiteReRunRepeatsTheRegisteredSet IMPLEMENTS I_Test
+VAR
+	// A private suite, driven one scan per call. The outer test spans scans by
+	// returning FALSE - which is the mechanism the inner suite is being asked to
+	// drive, one level down.
+	Inner	: TestSuite<4>;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	A : PassingTest;
+	B : PassingTest;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{78830f5c-4422-4da4-a931-6a2289370930}" />
+    <Method Name="Run" Id="{bbaf09d7-98d9-44a7-9cb8-f5f91c823a29}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('inner');
+	Inner.Register(A, 'first', Budgets);
+	Inner.Register(B, 'second', Budgets);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 2;
+	ActualCount	  := Inner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the first run passed both');
+
+	Inner.ReRun();
+	Test.AssertFalse(Inner.IsComplete, 'a re-run clears completion');
+	Test.AssertFalse(Inner.IsOpen, 'and does not reopen registration');
+	Phase := 3;
+	Run	  := FALSE;
+
+3:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 4;
+	END_IF
+	Run := FALSE;
+
+4:
+	ExpectedCount := 2;
+	ActualCount	  := Inner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the counts started again, not doubled');
+
+	ActualCount := Inner.TestCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the registered set is unchanged');
+
+	// The bodies, however, really did run twice.
+	ActualCount := A.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the first test ran twice');
+	ActualCount := B.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and so did the second');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

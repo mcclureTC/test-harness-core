@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteSeparatesFailuresFromErrors" Id="{7f41ce55-d4fe-4c76-b029-32861243cc59}" SpecialFunc="None">
+    <Declaration><![CDATA[// Failed and Errored are different signals and are counted apart.
+//
+// A failure means the code is wrong. An error means the run cannot be trusted -
+// and Errored outranks Failed in the aggregate, because a framework or environment
+// problem casts doubt on every other result.
+FUNCTION_BLOCK TEST_SuiteSeparatesFailuresFromErrors IMPLEMENTS I_Test
+VAR
+	// A private suite, driven one scan per call. The outer test spans scans by
+	// returning FALSE - which is the mechanism the inner suite is being asked to
+	// drive, one level down.
+	Inner	: TestSuite<4>;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	Good : PassingTest;
+	Bad	 : FailingTest;
+	Ugly : ErroringTest;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{95d8280a-36ec-4729-b6a6-2d80d1b07649}" />
+    <Method Name="Run" Id="{de0258c0-e23d-4c0c-ac9f-36c62c413f4b}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('inner');
+	Inner.Register(Good, 'passes', Budgets);
+	Inner.Register(Bad, 'fails', Budgets);
+	Inner.Register(Ugly, 'errors', Budgets);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 1;
+
+	ActualCount := Inner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'one passed');
+
+	ActualCount := Inner.FailedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'one failed');
+
+	ActualCount := Inner.ErrorCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'one errored');
+
+	ExpectedCount := 3;
+	ActualCount	  := Inner.TestCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and they add up to the registered count');
+
+	// Errored outranks Failed.
+	ExpectedOutcome := E_RunOutcome.Errored;
+	ActualOutcome	:= Inner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'an error outranks a failure');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

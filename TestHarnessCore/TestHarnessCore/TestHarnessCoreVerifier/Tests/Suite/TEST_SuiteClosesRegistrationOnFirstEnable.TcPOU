@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteClosesRegistrationOnFirstEnable" Id="{4cc643ba-c656-4d17-882d-eb5371984390}" SpecialFunc="None">
+    <Declaration><![CDATA[// Registration is open until the suite is first enabled, and not after. A late
+// registration is refused AND reported - a test that vanished silently would leave
+// CI seeing fewer passes rather than a failure.
+FUNCTION_BLOCK TEST_SuiteClosesRegistrationOnFirstEnable IMPLEMENTS I_Test
+VAR
+	// A private suite, driven one scan per call. The outer test spans scans by
+	// returning FALSE - which is the mechanism the inner suite is being asked to
+	// drive, one level down.
+	Inner	: TestSuite<4>;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	Early : PassingTest;
+	Late  : PassingTest;
+
+	AcceptedEarly : BOOL;
+	AcceptedLate  : BOOL;
+	OpenAtStart	  : BOOL;
+	OpenAfter	  : BOOL;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{bcf2de29-d57a-4b1c-9d03-7c85cde37d8b}" />
+    <Method Name="Run" Id="{2114377d-b668-404a-a811-c4a7a7b68687}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('inner');
+	OpenAtStart	  := Inner.IsOpen;
+	AcceptedEarly := Inner.Register(Early, 'in time', Budgets);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	// One scan of the suite closes the window.
+	Inner.Run(Enable := TRUE);
+	OpenAfter	 := Inner.IsOpen;
+	AcceptedLate := Inner.Register(Late, 'too late', Budgets);
+	Phase := 2;
+	Run	  := FALSE;
+
+2:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 3;
+	END_IF
+	Run := FALSE;
+
+3:
+	Test.AssertTrue(OpenAtStart, 'open before the first enable');
+	Test.AssertTrue(AcceptedEarly, 'the early registration was taken');
+	Test.AssertFalse(OpenAfter, 'closed once enabled');
+	Test.AssertFalse(AcceptedLate, 'the late one was refused');
+
+	ExpectedCount := 1;
+	ActualCount	  := Inner.TestCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and took no slot');
+
+	ExpectedCount := 0;
+	ActualCount	  := Late.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the late test never ran');
+
+	// Refused, and said so.
+	Test.AssertTrue(Inner.ErrorCount > 0, 'the rejection was reported, not silent');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

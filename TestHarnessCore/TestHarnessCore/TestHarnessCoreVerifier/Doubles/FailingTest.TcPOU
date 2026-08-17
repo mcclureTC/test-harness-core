@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FailingTest" Id="{8e1465db-c428-455d-a23f-9c83b7e7d966}" SpecialFunc="None">
+    <Declaration><![CDATA[// Fails in one scan, on purpose. Proves FailedCount moves and that a failure
+// carries the run's outcome with it.
+FUNCTION_BLOCK FailingTest IMPLEMENTS I_Test
+VAR
+	_BodyCalls : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{9779d519-dbd6-4039-940b-e9b84d433ea7}" />
+    <Property Name="BodyCalls" Id="{abf13e5e-c66f-4804-a4f4-c2993fb223b0}">
+      <Declaration><![CDATA[// How many times a suite has run this. A re-run doubles it; an individual re-run
+// raises it without touching any count the suite reports.
+PROPERTY BodyCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{e7807a32-91de-454d-8da5-2e0fd40ae3ed}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{3e17d7c5-bf22-4c5f-ae13-164cd2ec9a3a}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	Run := TRUE;
+	RETURN;
+END_IF
+
+_BodyCalls := _BodyCalls + 1;
+Test.Fail('this one fails, deliberately');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteRunsEveryRegisteredTest" Id="{73e52500-4aba-499f-85af-57d22f89bf42}" SpecialFunc="None">
+    <Declaration><![CDATA[// The whole loop: register three, drive to completion, and every one of them ran
+// exactly once and was counted.
+FUNCTION_BLOCK TEST_SuiteRunsEveryRegisteredTest IMPLEMENTS I_Test
+VAR
+	// A private suite, driven one scan per call. The outer test spans scans by
+	// returning FALSE - which is the mechanism the inner suite is being asked to
+	// drive, one level down.
+	Inner	: TestSuite<4>;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	A : PassingTest;
+	B : PassingTest;
+	C : PassingTest;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{757c8e2a-bf3a-4340-a0c0-13b4723a7af8}" />
+    <Method Name="Run" Id="{7130a5d4-4f41-48e5-9814-c9f6a09cf45a}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('inner');
+	Inner.Register(A, 'first', Budgets);
+	Inner.Register(B, 'second', Budgets);
+	Inner.Register(C, 'third', Budgets);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(Inner.IsComplete, 'the run finished');
+
+	ExpectedCount := 3;
+	ActualCount	  := Inner.TestCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'three registered');
+
+	ActualCount := Inner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'three passed');
+
+	ExpectedCount := 0;
+	ActualCount	  := Inner.FailedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'none failed');
+
+	ExpectedCount := 1;
+	ActualCount	  := A.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the first ran once');
+	ActualCount := C.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and so did the last');
+
+	ExpectedOutcome := E_RunOutcome.Passed;
+	ActualOutcome	:= Inner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'the run passed');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

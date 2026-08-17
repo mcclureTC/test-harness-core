@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="ErroringTest" Id="{f68e3fa6-263c-4b5e-8986-0b856d8d6e50}" SpecialFunc="None">
+    <Declaration><![CDATA[// Reports an environmental problem rather than a failure. The code under test was
+// never exercised, so the run cannot be trusted - which is a different signal from
+// the code being wrong, and must be counted separately.
+FUNCTION_BLOCK ErroringTest IMPLEMENTS I_Test
+VAR
+	_BodyCalls : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{9ccff4c3-87c3-4fa2-8f2b-cbbfef052170}" />
+    <Property Name="BodyCalls" Id="{97252434-5b9f-46c6-a09d-981745a427b5}">
+      <Declaration><![CDATA[// How many times a suite has run this. A re-run doubles it; an individual re-run
+// raises it without touching any count the suite reports.
+PROPERTY BodyCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{372b5551-e04c-464f-b0a0-105096bb6a63}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{16df6d6f-b661-4297-b3d5-a7310e95a977}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	Run := TRUE;
+	RETURN;
+END_IF
+
+_BodyCalls := _BodyCalls + 1;
+Test.ReportError('the fixture was not available');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteReRunSingleRecordsNothing" Id="{85bd8373-d1d3-439b-8e48-645faef89179}" SpecialFunc="None">
+    <Declaration><![CDATA[// Re-running one test is a debugging aid, not a result. It really runs the test -
+// otherwise it would be useless - and records NOTHING: no count moves, and with
+// reporters attached nothing would reach them either.
+//
+// Without that, a session at the keyboard would pollute the CI artifact with
+// duplicate entries.
+FUNCTION_BLOCK TEST_SuiteReRunSingleRecordsNothing IMPLEMENTS I_Test
+VAR
+	// A private suite, driven one scan per call. The outer test spans scans by
+	// returning FALSE - which is the mechanism the inner suite is being asked to
+	// drive, one level down.
+	Inner	: TestSuite<4>;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	A : PassingTest;
+	B : PassingTest;
+
+	Accepted  : BOOL;
+	Unknown	  : BOOL;
+	PassedBefore : UDINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{0a6d6498-18d0-4737-aa16-fb5f26054343}" />
+    <Method Name="Run" Id="{87b9aafc-9197-44ee-9748-27e6d2d89cb1}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('inner');
+	Inner.Register(A, 'first', Budgets);
+	Inner.Register(B, 'second', Budgets);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		PassedBefore := Inner.PassedCount;
+		Phase		 := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Unknown	 := Inner.ReRunSingle('no such label');
+	Accepted := Inner.ReRunSingle('first');
+	Phase	 := 3;
+	Run		 := FALSE;
+
+3:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 4;
+	END_IF
+	Run := FALSE;
+
+4:
+	Test.AssertFalse(Unknown, 'an unknown label is refused');
+	Test.AssertTrue(Accepted, 'a known one is accepted');
+
+	// It ran for real.
+	ExpectedCount := 2;
+	ActualCount	  := A.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the chosen test ran a second time');
+
+	ExpectedCount := 1;
+	ActualCount	  := B.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing else did');
+
+	// And recorded nothing.
+	ExpectedCount := PassedBefore;
+	ActualCount	  := Inner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the pass count did not move');
+
+	ExpectedCount := 0;
+	ActualCount	  := Inner.ErrorCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and no error was invented');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

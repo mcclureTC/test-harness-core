@@ -18,6 +18,12 @@
     <LibraryReferences>{6abf61ae-34ec-45df-bd14-d379bcefd349}</LibraryReferences>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Doubles\ErroringTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\FailingTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Doubles\FakeTest.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -40,6 +46,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Doubles\OrderedHooksTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\PassingTest.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Doubles\SetupFailsTest.TcPOU">
@@ -156,6 +165,36 @@
     <Compile Include="Tests\Runner\TEST_RunnerTeardownOverrunKeepsTheVerdict.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteClosesRegistrationOnFirstEnable.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteDefaultsReachTheTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteRejectedRegistrationIsNeverSilent.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteReRunRepeatsTheRegisteredSet.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteReRunSingleRecordsNothing.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteRunsEveryRegisteredTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteSeparatesFailuresFromErrors.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteSkipMarksEverythingSkipped.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteWithNoLabelIsAFrameworkError.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteWithNothingRegisteredIsComplete.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Verdict\TEST_VerdictFailIsAPlainFailure.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -188,6 +227,7 @@
     <Folder Include="POUs" />
     <Folder Include="Tests\Arbiter" />
     <Folder Include="Tests\Journal" />
+    <Folder Include="Tests\Suite" />
     <Folder Include="Tests\Runner" />
     <Folder Include="Tests\Verdict" />
     <Folder Include="Tests\Registry" />

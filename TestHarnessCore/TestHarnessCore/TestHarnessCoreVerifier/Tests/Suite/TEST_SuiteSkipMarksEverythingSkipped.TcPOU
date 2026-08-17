@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteSkipMarksEverythingSkipped" Id="{ff09d756-27a7-45b4-a3af-919ca9808924}" SpecialFunc="None">
+    <Declaration><![CDATA[// A skipped suite is COMPLETE, not stuck. If it reported otherwise, any sequencer
+// aggregating it would wait for it forever.
+//
+// No body runs, nothing is a failure, and Skip closes the registration window -
+// the suite has reached a terminal state, so registration cannot reopen.
+FUNCTION_BLOCK TEST_SuiteSkipMarksEverythingSkipped IMPLEMENTS I_Test
+VAR
+	// A private suite, driven one scan per call. The outer test spans scans by
+	// returning FALSE - which is the mechanism the inner suite is being asked to
+	// drive, one level down.
+	Inner	: TestSuite<4>;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	A : PassingTest;
+	B : FailingTest;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{1749340d-7718-4e5d-a57c-50940dacd58e}" />
+    <Method Name="Run" Id="{3fb543ca-6d96-428c-a0af-00f19661bc29}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('inner');
+	Inner.Register(A, 'would pass', Budgets);
+	Inner.Register(B, 'would fail', Budgets);
+	Inner.Skip();
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	// Complete already; Run must not restart anything.
+	Inner.Run(Enable := TRUE);
+	Phase := 2;
+	Run	  := FALSE;
+
+2:
+	Test.AssertTrue(Inner.IsComplete, 'a skipped suite is complete');
+	Test.AssertFalse(Inner.IsOpen, 'and registration is closed');
+
+	ExpectedCount := 2;
+	ActualCount	  := Inner.SkippedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'both are skipped');
+
+	ExpectedCount := 0;
+	ActualCount	  := Inner.FailedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'nothing failed');
+
+	// The one that WOULD have failed never ran.
+	ActualCount := B.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'no body was called');
+	ActualCount := A.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'not even the passing one');
+
+	// Skipped must not turn a build red.
+	ExpectedOutcome := E_RunOutcome.Skipped;
+	ActualOutcome	:= Inner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'the outcome is Skipped');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteWithNoLabelIsAFrameworkError" Id="{6a96af76-0206-45f3-bc2e-e85e381d8900}" SpecialFunc="None">
+    <Declaration><![CDATA[// An unnamed suite produces an unnamed node in the result document, which no CI
+// system can group by. It is caught when the run starts, not silently tolerated.
+//
+// The tests still run - the label is a reporting problem, not a reason to refuse
+// to work - but the run is marked untrustworthy.
+FUNCTION_BLOCK TEST_SuiteWithNoLabelIsAFrameworkError IMPLEMENTS I_Test
+VAR
+	// A private suite, driven one scan per call. The outer test spans scans by
+	// returning FALSE - which is the mechanism the inner suite is being asked to
+	// drive, one level down.
+	Inner	: TestSuite<4>;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	A : PassingTest;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{5e74001f-d9ad-498e-af44-33b096e6afb3}" />
+    <Method Name="Run" Id="{01f6d12a-1d07-469d-998d-3bd9614c8800}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	// Deliberately no SetLabel.
+	Inner.Register(A, 'a test', Budgets);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(Inner.ErrorCount > 0, 'the missing label was reported');
+
+	// The test itself still ran and still passed.
+	ExpectedCount := 1;
+	ActualCount	  := A.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the test still ran');
+
+	ActualCount := Inner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and still passed');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteRejectedRegistrationIsNeverSilent" Id="{08663ea9-6901-4732-9ff5-bfec1eb851ec}" SpecialFunc="None">
+    <Declaration><![CDATA[// A duplicate label is refused and raises a framework error. Labels are the key
+// CI trend history is built on, so two tests cannot share one - and a test that
+// failed to register must not simply disappear.
+FUNCTION_BLOCK TEST_SuiteRejectedRegistrationIsNeverSilent IMPLEMENTS I_Test
+VAR
+	// A private suite, driven one scan per call. The outer test spans scans by
+	// returning FALSE - which is the mechanism the inner suite is being asked to
+	// drive, one level down.
+	Inner	: TestSuite<4>;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	First  : PassingTest;
+	Second : PassingTest;
+
+	AcceptedFirst  : BOOL;
+	AcceptedSecond : BOOL;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{a39768b9-f664-48e1-bba6-2e81cb4b9ae3}" />
+    <Method Name="Run" Id="{5168a632-209c-47a8-a034-9f538e2e39f6}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('inner');
+	AcceptedFirst  := Inner.Register(First, 'same label', Budgets);
+	AcceptedSecond := Inner.Register(Second, 'same label', Budgets);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(AcceptedFirst, 'the first was taken');
+	Test.AssertFalse(AcceptedSecond, 'the duplicate was refused');
+
+	ExpectedCount := 1;
+	ActualCount	  := Inner.TestCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'only one slot used');
+
+	Test.AssertTrue(Inner.ErrorCount > 0, 'the rejection reached the counts');
+
+	// A rejection raised BEFORE the run must survive Tally.Begin, or the run goes
+	// green while a test is missing from it.
+	ExpectedOutcome := E_RunOutcome.Errored;
+	ActualOutcome	:= Inner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'and turned the run red');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
