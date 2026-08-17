@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="TEST_RunnerRunsAMultiScanBody" Id="{90daadcb-d221-413a-98ed-84364fa213cd}" SpecialFunc="None">
+  <POU Name="TEST_RunnerRunsAMultiScanBody" Id="{eb627917-d76e-47db-b583-e30ec7232837}" SpecialFunc="None">
     <Declaration><![CDATA[// A body returning FALSE is called again next scan, and only then. Multi-cycle is
 // the normal case here, not an awkward one.
 //
@@ -28,8 +28,8 @@ END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
-    <Folder Name="I_Test" Id="{0618863e-ca10-4dc5-be0b-18b26535f366}" />
-    <Method Name="Run" Id="{3308a7c3-a278-4fea-a95f-94b7e52add26}" FolderPath="I_Test\">
+    <Folder Name="I_Test" Id="{70a3695f-4c10-4fdb-b7c7-8d4c3251cfc9}" />
+    <Method Name="Run" Id="{a71ddc3b-a02f-4c21-a753-714d30bf9ecf}" FolderPath="I_Test\">
       <Declaration><![CDATA[METHOD Run : BOOL
 VAR_INPUT
 	Enable : BOOL;
@@ -73,8 +73,14 @@ CASE Phase OF
 	// Two Running answers, then the finishing one.
 	Test.AssertTrue(RunningCount = 2, 'and reported Running in between');
 
-	ActualCount := Subject.CyclesAtFinish;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'ElapsedCycles counted the body');
+	// TWO, not three. The journal is ticked AFTER the body runs, so on the body's
+	// Nth call it has consumed N-1 scans. The first call reports 0, which is what
+	// makes IsFirstCycle and ElapsedCycles agree with each other.
+	//
+	// This expectation was wrong on the first run and the library was right.
+	ExpectedCount := 2;
+	ActualCount	  := Subject.CyclesAtFinish;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'ElapsedCycles excludes the call in progress');
 
 	Test.AssertTrue(Subject.FirstCycleAtStart, 'the first call was the first cycle');
 

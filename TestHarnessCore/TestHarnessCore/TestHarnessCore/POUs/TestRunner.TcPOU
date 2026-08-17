@@ -35,6 +35,13 @@ VAR
 	_PhaseDeadline : TestDeadline;
 
 	_TeardownDiagnostic : T_MaxString;
+	// The label of the test most recently loaded. NOT cleared by Unload.
+	//
+	// The suite reports a teardown overrun AFTER the runner has unloaded, so
+	// reading the label off the slot at that point yields an empty string and the
+	// framework error names no test at all. The diagnostic already survived Unload
+	// for the same reason; the label has to as well.
+	_LastLabel : T_MaxString;
 
 	// Never written. Assigned to clear, so "nothing loaded" is one well-defined
 	// value rather than six field assignments to keep in step.
@@ -84,15 +91,18 @@ _Outcome := E_PhaseOutcome.Finished;]]></ST>
       </Implementation>
     </Method>
     <Property Name="ActiveLabel" Id="{8a6bb386-ba58-47e4-9a4e-efae88ce6664}">
-      <Declaration><![CDATA[// The label of the test currently loaded, or empty. Names the source in the
-// framework error the suite raises.
+      <Declaration><![CDATA[// The label of the test most recently loaded. Survives Unload deliberately.
+//
+// The suite raises its framework error for a teardown overrun on the scan AFTER
+// the runner unloaded, so a label cleared at Unload would leave that error naming
+// nothing. Empty only before the first Load.
 PROPERTY ActiveLabel : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{d39e097f-0eec-4052-9935-d961a8d304df}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>
         <Implementation>
-          <ST><![CDATA[ActiveLabel := _Slot.Label;]]></ST>
+          <ST><![CDATA[ActiveLabel := _LastLabel;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -269,7 +279,8 @@ IF (Slot.Test = 0) OR (_Roster = 0) OR NOT __ISVALIDREF(_Verdict) THEN
 	RETURN;
 END_IF
 
-_Slot	 := Slot;
+_Slot	   := Slot;
+_LastLabel := Slot.Label;
 _Journal REF= _Roster.Journal(Slot.Index);
 
 IF NOT __ISVALIDREF(_Journal) THEN
