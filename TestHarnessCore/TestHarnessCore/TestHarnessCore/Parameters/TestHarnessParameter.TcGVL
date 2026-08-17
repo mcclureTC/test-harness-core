@@ -20,6 +20,10 @@ VAR_GLOBAL CONSTANT
 	// attaches the same set of sinks to every suite it owns, so per-instance
 	// variation would cost every declaration site a second argument to buy nothing.
 	ReporterCapacity : UDINT := 4;
+	// Suites a TestRun can hold. A project usually has a handful - unit, motion,
+	// I/O - so this is small on purpose, and overridable per instance as a generic
+	// argument like Capacity.
+	SuiteCapacity	 : UDINT := 8;
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{18f2ab95-e103-4ad6-aba6-6cad4a51f263}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{591fca1f-6aea-47ac-b79e-07457710159a}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      68 - assert this. A test that stops being registered vanishes
+//   Total      75 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //
@@ -21,15 +21,21 @@
 // all pass. What they prove is that going wrong works - without them, a wall of
 // green would only show that nothing objected.
 //
-// THE RUNNER, SUITE AND JUNIT TESTS ARE MULTI-SCAN. Each holds a private object and
-// steps it one scan per call, returning FALSE until it finishes - the same
-// mechanism they are verifying, one level down. Each carries a watchdog, so a
-// defect that never completes fails its own test instead of hanging everything and
-// looking like a broken verifier.
+// THE CHARACTERIZATION TESTS ARE THE ACCEPTANCE CONTRACT: seven of the eight the
+// original library was pinned by. They are the only tests that ask questions of
+// the ARTIFACT - how many cases, what failure type, whether a timeout message
+// names the wall clock - which is what RecordingReporter exists for. Where one
+// changed shape, its own comment says what the original asserted and why.
 //
-// THIS SUITE STILL ATTACHES NO REPORTER, though three now exist. The reporter tests
-// drive their own instances, so a reporting defect cannot be mistaken for a harness
-// defect and the counts below remain the whole result.
+// THE RUNNER, SUITE, JUNIT AND CHARACTERIZATION TESTS ARE MULTI-SCAN. Each holds a
+// private object and steps it one scan per call, returning FALSE until it
+// finishes - the same mechanism they are verifying, one level down. Each carries a
+// watchdog, so a defect that never completes fails its own test instead of hanging
+// everything and looking like a broken verifier.
+//
+// THIS SUITE ATTACHES NO REPORTER. The reporter tests drive their own instances, so
+// a reporting defect cannot be mistaken for a harness defect and the counts below
+// remain the whole result.
 //
 // TWO THINGS NO TEST HERE CAN ESTABLISH, both needing one look by eye:
 //   - the wording of log lines and events, in the Logged Events window
@@ -37,7 +43,7 @@
 //     C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier.xml
 PROGRAM PRG_UnitTests
 VAR
-	Suite	: TestSuite<80>;
+	Suite	: TestSuite<90>;
 	Budgets : ST_TestBudgets;
 	Wired	: BOOL;
 
@@ -128,6 +134,15 @@ VAR
 	jUnitReporterReportsAFailedWrite	: TEST_JUnitReporterReportsAFailedWrite;
 	jUnitReporterRefusesWithNoPath	: TEST_JUnitReporterRefusesWithNoPath;
 	jUnitReporterWritesNothingWhenNothingRan	: TEST_JUnitReporterWritesNothingWhenNothingRan;
+
+	// -- Characterization: the acceptance contract --
+	cHAR_Capacity	: CHAR_Capacity;
+	cHAR_OverflowStatistics	: CHAR_OverflowStatistics;
+	cHAR_ReRunTests	: CHAR_ReRunTests;
+	cHAR_ReRunIndividual	: CHAR_ReRunIndividual;
+	cHAR_WallClockTimeout	: CHAR_WallClockTimeout;
+	cHAR_TimeoutPrecedence	: CHAR_TimeoutPrecedence;
+	cHAR_SerialExecution	: CHAR_SerialExecution;
 
 	// -- the result, for the watch window ---------------------------------------
 	Complete : BOOL;
@@ -233,6 +248,16 @@ END_VAR]]></Declaration>
 	Suite.Register(jUnitReporterRefusesWithNoPath, 'JUnitReporter: no path set is a failure, not silence', Budgets);
 	Suite.Register(jUnitReporterWritesNothingWhenNothingRan, 'JUnitReporter: an empty run produces no document', Budgets);
 
+	// Characterization - seven of the eight the ORIGINAL library was pinned by.
+	// CHAR_Watchdog is not among them: it retires, because the suite driving the
+	// tests makes an orphaned slot impossible. Plan.md section 10 records that.
+	Suite.Register(cHAR_Capacity, 'Contract: capacity holds what it says; overflow is reported', Budgets);
+	Suite.Register(cHAR_OverflowStatistics, 'Contract: errors are counted apart from failures', Budgets);
+	Suite.Register(cHAR_ReRunTests, 'Contract: one suite node per run; a re-run produces a fresh document', Budgets);
+	Suite.Register(cHAR_ReRunIndividual, 'Contract: an individual re-run records nothing', Budgets);
+	Suite.Register(cHAR_WallClockTimeout, 'Contract: the wall-clock deadline fires and names itself', Budgets);
+	Suite.Register(cHAR_TimeoutPrecedence, 'Contract: suite default, per-test override, per-unit tracking', Budgets);
+	Suite.Register(cHAR_SerialExecution, 'Contract: no test body runs while another is running', Budgets);
 END_IF
 
 Suite.Run(Enable := TRUE);

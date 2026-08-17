@@ -1,0 +1,107 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="CHAR_SerialExecution" Id="{d1d56516-d3ca-454e-a921-402bfbd76ed4}" SpecialFunc="None">
+    <Declaration><![CDATA[// PORTED, and weaker than the original by design.
+//
+// The original detected overlap by having each test fetch another and read its
+// State. A test cannot do that now - it is handed nothing but its own assertion
+// handle, which is the founding constraint working as intended. So the tests
+// report in and out of a shared witness and the contract becomes one number.
+//
+// It is also no longer possible to FAIL the way it once could. The original
+// tracked an active-test index and handed every other caller a no-op sentinel;
+// index 0 doubling as "none" would have let a test in the first slot run
+// alongside the next. There is no index and no sentinel now - the arbiter hands
+// out one test and the runner drives one - so serial execution is structural.
+//
+// Pinned anyway. A future change that made the runner concurrent would be caught
+// here and nowhere else, and TotalEntries stops a MaxConcurrent of 1 being
+// achieved by nothing running at all.
+FUNCTION_BLOCK CHAR_SerialExecution IMPLEMENTS I_Test
+VAR
+	Inner	 : TestSuite<4>;
+	Recorder : RecordingReporter;
+	Budgets	 : ST_TestBudgets;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	Witness : ConcurrencyWitness;
+	Long	: WitnessedTest;
+	Second	: WitnessedTest;
+	Third	: WitnessedTest;
+
+	ExpectedConcurrent : DINT;
+	ActualConcurrent   : DINT;
+	ExpectedEntries	   : DINT;
+	ActualEntries	   : DINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{6ac81c4d-3485-4732-a8f2-5af9c2a6806e}" />
+    <Method Name="Run" Id="{517a13ea-d180-4fe8-b00a-699ac3eae504}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 500 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('CHAR_Serial_Subject');
+	Inner.AddReporter(Recorder);
+
+	// Multi-scan deliberately: a single-scan test could never overlap anything, so
+	// a suite of them would prove this by accident rather than by design.
+	Long.Attach(Scans := 8, Witness := Witness);
+	Second.Attach(Scans := 4, Witness := Witness);
+	Third.Attach(Scans := 4, Witness := Witness);
+
+	Inner.Register(Long, 'Long', Budgets);
+	Inner.Register(Second, 'Second', Budgets);
+	Inner.Register(Third, 'Third', Budgets);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedConcurrent := 1;
+	ActualConcurrent   := Witness.MaxConcurrent;
+	Test.AssertEqual(ExpectedConcurrent, ActualConcurrent,
+					 'no test body ran while another was running');
+
+	// Without this, nothing running at all would satisfy the line above.
+	ExpectedEntries := 3;
+	ActualEntries	:= Witness.TotalEntries;
+	Test.AssertEqual(ExpectedEntries, ActualEntries, 'and all three really ran');
+
+	ExpectedCount := 3;
+	ActualCount	  := Recorder.StatTests;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'all three were registered');
+
+	ExpectedCount := 0;
+	ActualCount	  := Recorder.StatFailures;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and all three passed');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

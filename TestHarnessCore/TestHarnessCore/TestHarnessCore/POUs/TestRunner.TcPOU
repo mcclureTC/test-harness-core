@@ -126,6 +126,19 @@ END_VAR]]></Declaration>
         <ST><![CDATA[Advance := _Outcome;
 
 IF _Outcome <> E_PhaseOutcome.Running THEN
+	// A TERMINAL OUTCOME IS REPORTED EXACTLY ONCE, on the scan it happens - the
+	// CASE below returns it directly. Every call after that says Idle.
+	//
+	// Returning the stored value again republishes the last test of the PREVIOUS
+	// run: a re-run's first Advance happens before anything is loaded, so the suite
+	// sees Finished, publishes _LastJournal, and records a case that already
+	// existed. It never shows in a single run, because the suite stops calling once
+	// complete - only a re-run reaches it, which is why CHAR_ReRunTests is the only
+	// thing that found it.
+	//
+	// The Outcome PROPERTY still reports the real terminal value for anyone
+	// inspecting the runner; it is only the driving call that goes quiet.
+	Advance := E_PhaseOutcome.Idle;
 	RETURN;
 END_IF
 

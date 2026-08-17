@@ -1,0 +1,474 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="RecordingReporter" Id="{39557bc7-0687-4006-839b-2968d35783cd}" SpecialFunc="None">
+    <Declaration><![CDATA[// Captures results in memory instead of writing them, so a test can ask questions
+// of the ARTIFACT rather than of a counter.
+//
+// This is the new equivalent of the original library's RecordingResultFile, and
+// every characterization test depends on it. Those tests do not ask "did a failure
+// happen" - the existing 68 already do - they ask how many cases the document
+// would carry, what type attribute a failure got, and whether a timeout message
+// names the wall clock. None of that is answerable from a spy that only counts.
+//
+// Implements both faces. The verdicts build the case list; the detail face is
+// implemented so the fan-out treats this the way it treats the JUnit writer, and
+// so a test can confirm checks arrived at all.
+FUNCTION_BLOCK RecordingReporter IMPLEMENTS I_TestReporter, I_TestDetailSink
+VAR
+	// Twenty is well past what any characterization test registers. A test that
+	// overflows this is miscounting, which is why the overflow is not silent.
+	_Cases	   : ARRAY[0..19] OF ST_RecordedCase;
+	_CaseCount : UDINT;
+
+	_SuiteCount : UDINT;
+	_SaveCount	: UDINT;
+
+	_ErrorCount		 : UDINT;
+	_LastErrorSource : T_MaxString;
+	_LastErrorText	 : T_MaxString;
+
+	_StatTests	  : UDINT;
+	_StatFailures : UDINT;
+	_StatErrors	  : UDINT;
+	_StatSkipped  : UDINT;
+
+	_StartedCount	  : UDINT;
+	_CheckCount		  : UDINT;
+	_FailedCheckCount : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+	No cyclic body. Everything happens inside the notification.
+*)]]></ST>
+    </Implementation>
+    <Folder Name="I_Cyclic" Id="{9ef98fe1-d161-477e-a288-3b84d64af386}" />
+    <Folder Name="I_TestDetailSink" Id="{8fe15d3f-6a4b-4607-8122-4432a6cb536b}" />
+    <Folder Name="I_TestReporter" Id="{4cf6685d-bdba-4fb9-89c8-74c4606e5dec}" />
+    <Property Name="CaseCount" Id="{cb425bc3-750d-4dca-8f05-24382a386a06}">
+      <Declaration><![CDATA[// Cases recorded - the <testcase> count of the document that would be written.
+PROPERTY CaseCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{a538b845-4fba-4419-a316-17f7fa3a1ec4}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CaseCount := _CaseCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="CaseExists" Id="{b9cd549c-4bf8-431c-9a4b-f98dfcec69c6}">
+      <Declaration><![CDATA[METHOD CaseExists : BOOL
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CaseExists := (THIS^.IndexOfCase(Label) >= 0);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CaseFailureKind" Id="{f09c6520-064e-4bbc-8919-fb4518aa4bd7}">
+      <Declaration><![CDATA[// The failure kind recorded for this label - what the result document carries in
+// its type attribute. None if the case passed or does not exist.
+METHOD CaseFailureKind : E_FailureKind
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR
+
+VAR
+	Index : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Index := THIS^.IndexOfCase(Label);
+
+IF Index < 0 THEN
+	RETURN;
+END_IF
+
+CaseFailureKind := _Cases[Index].Kind;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CaseStatus" Id="{de2715ab-3985-4176-af96-aae964b1cced}">
+      <Declaration><![CDATA[// The verdict recorded for this label, or NotStarted if there is no such case.
+METHOD CaseStatus : E_TestStatus
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR
+
+VAR
+	Index : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Index := THIS^.IndexOfCase(Label);
+
+IF Index < 0 THEN
+	RETURN;
+END_IF
+
+CaseStatus := _Cases[Index].Status;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="CheckCount" Id="{d7654e80-be24-4dc3-bf9a-b3700bebe4f1}">
+      <Declaration><![CDATA[PROPERTY CheckCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{0cfb6ccb-8e13-4187-98f5-10b894dc470d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CheckCount := _CheckCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="CheckFailed" Id="{db8216c3-efb6-46f9-bb37-0770916e91e8}" FolderPath="I_TestDetailSink\">
+      <Declaration><![CDATA[METHOD CheckFailed
+VAR_INPUT
+	StepLabel  : T_MaxString;
+	Kind	   : E_FailureKind;
+	Expected   : T_MaxString;
+	Actual	   : T_MaxString;
+	Diagnostic : T_MaxString;
+	Message	   : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CheckCount := _CheckCount + 1;
+_FailedCheckCount := _FailedCheckCount + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CheckPassed" Id="{561b6c08-a945-4b43-a128-9c8a99325abd}" FolderPath="I_TestDetailSink\">
+      <Declaration><![CDATA[METHOD CheckPassed
+VAR_INPUT
+	StepLabel : T_MaxString;
+	Detail	  : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_CheckCount := _CheckCount + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CyclicLogic" Id="{9e66c634-80a7-47d4-9e20-9ef75794db9d}" FolderPath="I_Cyclic\">
+      <Declaration><![CDATA[METHOD CyclicLogic]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+	Nothing asynchronous. This sink records into memory and is done.
+*)]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ErrorContains" Id="{523910e6-d6e3-40d0-8a10-60b3a03ace44}">
+      <Declaration><![CDATA[// Does the most recent framework error mention this text? Used where the old
+// tests looked for an overflow case in the document - overflow is a framework
+// error now, not a testcase.
+METHOD ErrorContains : BOOL
+VAR_INPUT
+	Text : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ErrorContains := (FIND(_LastErrorText, Text) > 0);]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ErrorCount" Id="{c4704aff-34fc-46be-beb2-f162d0b66441}">
+      <Declaration><![CDATA[PROPERTY ErrorCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{7d3d1942-3ecc-4c76-a59e-0fbfe9787e63}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ErrorCount := _ErrorCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FailedCheckCount" Id="{de15a060-3da5-498e-a39e-a523065647f8}">
+      <Declaration><![CDATA[PROPERTY FailedCheckCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{e00d768a-2bb1-4e43-ad3e-328ed8d7ec0e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FailedCheckCount := _FailedCheckCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="FailureContains" Id="{5fc733da-25c8-4deb-9cd8-b32cda3d70dc}">
+      <Declaration><![CDATA[// Does the summary recorded for this label contain this text?
+//
+// The characterization tests use this to check that a deadline NAMES itself -
+// "after 5 cycles", "of wall time". A failure that fires for the right reason but
+// says the wrong thing is still a defect: the message is what someone reads at
+// three in the morning.
+METHOD FailureContains : BOOL
+VAR_INPUT
+	Label : T_MaxString;
+	Text  : T_MaxString;
+END_VAR
+
+VAR
+	Index : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Index := THIS^.IndexOfCase(Label);
+
+IF Index < 0 THEN
+	RETURN;
+END_IF
+
+FailureContains := (FIND(_Cases[Index].Summary, Text) > 0);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FrameworkError" Id="{477a707e-4f7d-42ba-85f2-8c61b7075ba4}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[// Where a rejected registration, an overrunning teardown or an unwritable
+// document arrives. Counted apart from cases: none of them is a test result.
+METHOD FrameworkError
+VAR_INPUT
+	Source	: T_MaxString;
+	Message : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_ErrorCount		 := _ErrorCount + 1;
+_LastErrorSource := Source;
+_LastErrorText	 := Message;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="IndexOfCase" Id="{a2002046-1a87-4213-90dd-b6506f6b753e}">
+      <Declaration><![CDATA[// Where a case with this label was recorded, or -1.
+//
+// Not named Find or Lookup by accident: FIND is a standard function and this
+// mirrors TestRegistry.Lookup deliberately.
+METHOD IndexOfCase : DINT
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR
+
+VAR
+	i : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IndexOfCase := -1;
+
+IF Label = '' THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_CaseCount) - 1 DO
+	IF _Cases[i].Label = Label THEN
+		IndexOfCase := i;
+		RETURN;
+	END_IF
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="IsIdle" Id="{a5823aba-80b5-4042-8a33-f49e86d776cd}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[PROPERTY IsIdle : BOOL]]></Declaration>
+      <Get Name="Get" Id="{58cae797-3293-41ef-a503-aea611637570}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsIdle := TRUE;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastErrorSource" Id="{d083ebc9-fef4-4681-b3ae-949fea230d0e}">
+      <Declaration><![CDATA[PROPERTY LastErrorSource : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{e7123963-c2d6-4c4f-abdc-7001f3dbc27a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastErrorSource := _LastErrorSource;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastErrorText" Id="{46651113-19e6-41be-97ab-8b8834caa4e0}">
+      <Declaration><![CDATA[PROPERTY LastErrorText : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{f56f4cc4-b064-48fe-8d41-94d8c0acf571}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastErrorText := _LastErrorText;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Reset" Id="{b53e7440-5eb8-4134-bf50-7894fd8259f8}">
+      <Declaration><![CDATA[// Back to as-declared. Called at the start of each characterization test, which
+// reuses one recorder across several phases.
+METHOD Reset
+VAR
+	i : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR i := 0 TO 19 DO
+	_Cases[i].Label	   := '';
+	_Cases[i].Location := '';
+	_Cases[i].Summary  := '';
+	_Cases[i].Status   := E_TestStatus.NotStarted;
+	_Cases[i].Kind	   := E_FailureKind.None;
+END_FOR
+
+_CaseCount		 := 0;
+_SuiteCount		 := 0;
+_SaveCount		 := 0;
+_ErrorCount		 := 0;
+_LastErrorSource := '';
+_LastErrorText	 := '';
+_StatTests		 := 0;
+_StatFailures	 := 0;
+_StatErrors		 := 0;
+_StatSkipped	 := 0;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RunFinished" Id="{ed48d9d2-6687-42f8-b2e3-8e438ea029d0}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[// Stands in for the document being written. One run, one save - which is what
+// the JUnit writer does, so counting these is counting files.
+METHOD RunFinished
+VAR_INPUT
+	Status	   : I_TestRunStatus;
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SaveCount := _SaveCount + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SaveCount" Id="{7fcb88b9-ac02-4789-829e-51ac17ff030f}">
+      <Declaration><![CDATA[// Documents that would have been written. One per run.
+PROPERTY SaveCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{117d782e-f729-4686-9603-7205889ad649}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SaveCount := _SaveCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StartedCount" Id="{450a7118-31c3-484c-83cb-20fe1ce7bee8}">
+      <Declaration><![CDATA[PROPERTY StartedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{be0aec22-2491-48f2-ad94-c7f01897cbcf}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StartedCount := _StartedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StatErrors" Id="{d16095bf-e5da-41c8-95a5-76287f708801}">
+      <Declaration><![CDATA[// Kept apart from StatFailures on purpose: a framework error and a failed check
+// are different signals and a build should react differently to each.
+PROPERTY StatErrors : UDINT]]></Declaration>
+      <Get Name="Get" Id="{087f2208-ad2a-43e5-be94-0e12f76872c5}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StatErrors := _StatErrors;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StatFailures" Id="{c1a6dcb5-426a-4855-b311-8af9195bcb4c}">
+      <Declaration><![CDATA[PROPERTY StatFailures : UDINT]]></Declaration>
+      <Get Name="Get" Id="{6cd77158-5f0a-4106-a487-cec371447c2d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StatFailures := _StatFailures;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StatSkipped" Id="{4a2a2fe9-5ebd-40b4-8752-838fc93c0d0d}">
+      <Declaration><![CDATA[PROPERTY StatSkipped : UDINT]]></Declaration>
+      <Get Name="Get" Id="{2338c2c3-8ac2-4350-aa4e-a83e9c9fd546}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StatSkipped := _StatSkipped;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StatTests" Id="{5ab645d2-c00c-4d3c-b3cc-c725910d4153}">
+      <Declaration><![CDATA[PROPERTY StatTests : UDINT]]></Declaration>
+      <Get Name="Get" Id="{61adf8a8-cf86-48c5-a4de-2896e30781a4}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StatTests := _StatTests;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="SuiteCount" Id="{fa7198a5-07b3-4ddb-8771-fbb521d948b0}">
+      <Declaration><![CDATA[// Suite nodes. Exactly one per run per suite; more than that was a real defect
+// in this library history, where a reset loop appended one node per array slot.
+PROPERTY SuiteCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{15deab75-2d34-4366-86b3-f8115b487e4a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SuiteCount := _SuiteCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="SuiteFinished" Id="{88d5515e-43a3-4792-8be5-b6617a71b473}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[// One suite node, and the statistics it would carry.
+METHOD SuiteFinished
+VAR_INPUT
+	Status : I_TestRunStatus;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Status = 0 THEN
+	RETURN;
+END_IF
+
+_SuiteCount	  := _SuiteCount + 1;
+_StatTests	  := Status.TestCount;
+_StatFailures := Status.FailedCount;
+_StatErrors	  := Status.ErrorCount;
+_StatSkipped  := Status.SkippedCount;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="TestFinished" Id="{99a560cd-1064-4da0-93a0-b2ec5dd487be}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD TestFinished
+VAR_INPUT
+	SuiteLabel	  : T_MaxString;
+	TestLabel	  : T_MaxString;
+	Location	  : T_MaxString;
+	Status		  : E_TestStatus;
+	Kind		  : E_FailureKind;
+	Summary		  : T_MaxString;
+	ElapsedTime	  : LREAL;
+	ElapsedCycles : UDINT;
+	Assertions	  : UDINT;
+END_VAR
+
+VAR
+	Index : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _CaseCount > 19 THEN
+	// Silently dropping would make a miscounting test look like a passing one.
+	RETURN;
+END_IF
+
+Index := TO_DINT(_CaseCount);
+
+_Cases[Index].Label	   := TestLabel;
+_Cases[Index].Location := Location;
+_Cases[Index].Status   := Status;
+_Cases[Index].Kind	   := Kind;
+_Cases[Index].Summary  := Summary;
+
+_CaseCount := _CaseCount + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="TestStarted" Id="{fc50eedb-2fa7-4ed8-9148-eea1fcd55375}" FolderPath="I_TestDetailSink\">
+      <Declaration><![CDATA[METHOD TestStarted
+VAR_INPUT
+	SuiteLabel : T_MaxString;
+	TestLabel  : T_MaxString;
+	Location   : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_StartedCount := _StartedCount + 1;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

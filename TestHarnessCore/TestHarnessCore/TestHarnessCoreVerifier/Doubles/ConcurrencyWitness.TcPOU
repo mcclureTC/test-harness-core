@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="ConcurrencyWitness" Id="{ca0af444-af45-44d7-a1a9-f6350d96227d}" SpecialFunc="None">
+    <Declaration><![CDATA[// Counts how many tests are inside their body at the same moment.
+//
+// Serial execution used to be observable test-to-test: a test could fetch another
+// and read its State. It cannot now - a test is handed nothing but its own
+// assertion handle, which is the founding constraint working as intended.
+//
+// So the tests report in and out of a shared witness instead, and the contract
+// becomes one number: MaxConcurrent must never exceed 1.
+FUNCTION_BLOCK ConcurrencyWitness
+VAR
+	_Active		   : DINT;
+	_MaxConcurrent : DINT;
+	_TotalEntries  : DINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="Enter" Id="{5cfb1517-20d5-4773-8606-e602988522bd}">
+      <Declaration><![CDATA[// A test body has started. Called on its FIRST scan only.
+METHOD Enter]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Active		  := _Active + 1;
+_TotalEntries := _TotalEntries + 1;
+
+IF _Active > _MaxConcurrent THEN
+	_MaxConcurrent := _Active;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Leave" Id="{08f97010-fe51-484a-b857-a68bad225dda}">
+      <Declaration><![CDATA[// A test body has finished. Called on its LAST scan only.
+METHOD Leave]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Active := _Active - 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="MaxConcurrent" Id="{e7c61d99-c4e2-4932-ba6b-304b230937c6}">
+      <Declaration><![CDATA[// The most tests ever inside a body at once. Must be 1: tests share the scan and
+// usually share fixtures, so predictable and slow beats fast and flaky.
+PROPERTY MaxConcurrent : DINT]]></Declaration>
+      <Get Name="Get" Id="{6cac1f46-a67c-4608-89bf-0d1f9671d8e2}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[MaxConcurrent := _MaxConcurrent;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Reset" Id="{4412c1dc-590d-4427-ac9d-401dff8e854f}">
+      <Declaration><![CDATA[METHOD Reset]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Active		   := 0;
+_MaxConcurrent := 0;
+_TotalEntries  := 0;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TotalEntries" Id="{f22b6435-2944-4456-ab93-2435271813ba}">
+      <Declaration><![CDATA[// How many bodies started. Proves every test really ran, so a MaxConcurrent of 1
+// cannot be achieved by nothing running at all.
+PROPERTY TotalEntries : DINT]]></Declaration>
+      <Get Name="Get" Id="{a8027ec6-9d5d-4d25-954c-9a2c4740c9f1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TotalEntries := _TotalEntries;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

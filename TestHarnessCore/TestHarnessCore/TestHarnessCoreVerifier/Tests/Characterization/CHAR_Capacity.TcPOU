@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="CHAR_Capacity" Id="{f49e65f2-870d-4a08-a9a3-792a986c870d}" SpecialFunc="None">
+    <Declaration><![CDATA[// PORTED from the original library's acceptance contract.
+//
+// Two behaviours: capacity holds what it says, and overflow is REPORTED rather
+// than suppressed. An earlier version of the original marked the suite complete on
+// overflow, leaving CI with no artifact at all.
+//
+// CHANGED FROM THE ORIGINAL, deliberately, and both changes are recorded in
+// Plan.md:
+//
+//  - TestSuite<2> became TestSuite<3>. The original array was ARRAY[0..N], so a
+//    suite declared <2> held THREE. Section 2.1 made capacity mean capacity. The
+//    assertion text is unchanged - three fit, the fourth overflows - because it
+//    is still true.
+//
+//  - Overflow is a FRAMEWORK ERROR, not a testcase with type CapacityError.
+//    Registration is explicit now, so a rejected one is refused at the call and
+//    never becomes a case. The contract it protects is the same: never silent.
+FUNCTION_BLOCK CHAR_Capacity IMPLEMENTS I_Test
+VAR
+	Inner	 : TestSuite<3>;
+	Recorder : RecordingReporter;
+	// A run, not just a suite. RunFinished is a run-level event and only a TestRun
+	// raises it - which is what produces a result document at all. Without one, a
+	// single-suite project writes nothing, and this test is what found that.
+	Runner	 : TestRun<2>;
+	Budgets	 : ST_TestBudgets;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	A : PassingTest;
+	B : PassingTest;
+	C : PassingTest;
+	D : PassingTest;
+
+	AcceptedA : BOOL;
+	AcceptedB : BOOL;
+	AcceptedC : BOOL;
+	AcceptedD : BOOL;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{d8390b0a-8de5-441e-9828-6ee1c6bb98d8}" />
+    <Method Name="Run" Id="{4d9ea2bb-59e3-4fa2-97a9-48420a3b8a47}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 500 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('CHAR_Capacity_Subject');
+
+	Runner.SetLabel('CHAR_Capacity_Subject_Run');
+	// Attached to the RUN, which pushes it into every suite. One attachment point.
+	Runner.AddReporter(Recorder);
+	Runner.AddSuite(Inner);
+
+	AcceptedA := Inner.Register(A, 'A', Budgets);
+	AcceptedB := Inner.Register(B, 'B', Budgets);
+	AcceptedC := Inner.Register(C, 'C', Budgets);
+	// One too many.
+	AcceptedD := Inner.Register(D, 'D', Budgets);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(AcceptedA, 'the first fits');
+	Test.AssertTrue(AcceptedB, 'the second fits');
+	Test.AssertTrue(AcceptedC, 'three tests fit a TestSuite<3>');
+	Test.AssertFalse(AcceptedD, 'the fourth overflows');
+
+	// Never silent.
+	Test.AssertTrue(Recorder.ErrorCount > 0, 'the overflow was reported');
+	Test.AssertTrue(Recorder.ErrorContains('D'), 'and named the test it refused');
+
+	ExpectedCount := 3;
+	ActualCount	  := Recorder.CaseCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'three cases were recorded');
+
+	// The point of the original: overflow does not suppress the artifact.
+	ExpectedCount := 1;
+	ActualCount	  := Recorder.SaveCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and the document was still written');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

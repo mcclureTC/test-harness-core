@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_RecordedCase" Id="{bb79f644-f93b-43d8-87c5-065b82a684b5}">
+    <Declaration><![CDATA[// One testcase as a recording sink captured it - the in-memory equivalent of a
+// <testcase> node in the result document.
+//
+// The characterization tests ask questions of the ARTIFACT, not of the counters:
+// how many cases, what failure type, does the message name the wall clock. This
+// is what lets them, without a file to read back.
+TYPE ST_RecordedCase :
+STRUCT
+	Label	 : T_MaxString;
+	Location : T_MaxString;
+	Status	 : E_TestStatus;
+	Kind	 : E_FailureKind;
+	Summary	 : T_MaxString;
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

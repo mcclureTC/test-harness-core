@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="CHAR_OverflowStatistics" Id="{2d5c2b67-25ba-498d-a810-451ab94c8e15}" SpecialFunc="None">
+    <Declaration><![CDATA[// PORTED. Pins the Errors figure as distinct from Failures.
+//
+// The overflow is a framework error, not a failed assertion, and conflating them
+// sends whoever reads the report hunting a defect that is not there. Three tests
+// registered and passing, one refused, and the statistics must say exactly that.
+//
+// ONE BEHAVIOUR DID NOT SURVIVE, and it did not need to. The original also pinned
+// that overflow was reported ONCE rather than once per cycle, because Test('D')
+// was called every scan and the latch was what stopped duplicates. Registration
+// happens once at startup now, so the scenario cannot arise - the latch has
+// nothing to latch. That is a structural removal, not a lost check.
+FUNCTION_BLOCK CHAR_OverflowStatistics IMPLEMENTS I_Test
+VAR
+	Inner	 : TestSuite<3>;
+	Recorder : RecordingReporter;
+	// A run, not just a suite. RunFinished is a run-level event and only a TestRun
+	// raises it - which is what produces a result document at all. Without one, a
+	// single-suite project writes nothing, and this test is what found that.
+	Runner	 : TestRun<2>;
+	Budgets	 : ST_TestBudgets;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	A : PassingTest;
+	B : PassingTest;
+	C : PassingTest;
+	D : PassingTest;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{7c3e5c55-8584-4e0d-a310-b5b1e4734d61}" />
+    <Method Name="Run" Id="{d5bf1a03-163e-4af9-894e-2db0acedfaaa}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 500 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('CHAR_Overflow_Subject');
+
+	Runner.SetLabel('CHAR_Overflow_Subject_Run');
+	// Attached to the RUN, which pushes it into every suite. One attachment point.
+	Runner.AddReporter(Recorder);
+	Runner.AddSuite(Inner);
+
+	Inner.Register(A, 'A', Budgets);
+	Inner.Register(B, 'B', Budgets);
+	Inner.Register(C, 'C', Budgets);
+	Inner.Register(D, 'D', Budgets);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 3;
+	ActualCount	  := Recorder.StatTests;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'three tests registered');
+
+	ExpectedCount := 1;
+	ActualCount	  := Recorder.StatErrors;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'overflow counted as an error');
+
+	ExpectedCount := 0;
+	ActualCount	  := Recorder.StatFailures;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and not as a failure');
+
+	ExpectedCount := 1;
+	ActualCount	  := Recorder.SaveCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the result document was still written');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

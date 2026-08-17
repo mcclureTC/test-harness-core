@@ -1,0 +1,466 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestRun" Id="{65ebe366-23e8-4229-919e-a66ab187ad0d}" SpecialFunc="None">
+    <Declaration><![CDATA[// A RUN: the boundary around one or more suites, and the only thing that says a
+// run has ended.
+//
+// It exists because a suite is not a run. RunFinished is a run-level event, and
+// having a suite raise it means the suite must know whether something above it
+// exists - which was the flag-shaped design this replaced. Here the answer is
+// structural: a single suite is composed with one TestRun, a sequencer IS one, and
+// exactly one object is ever in a position to announce the end.
+//
+// The practical consequence is the defect this was built for: without it, a
+// project with one suite and no sequencer produced NO result document at all,
+// because the JUnit writer only writes on RunFinished.
+//
+// Implements I_TestRunStatus, so runs nest: a consumer polls one symbol regardless
+// of how many suites exist, and an outer run absorbs an inner one exactly as this
+// absorbs a suite. Counts are TESTS at every level.
+//
+// A RE-RUN is a run-level operation too, for the same reason: it must produce a
+// fresh document, and only this object can announce one.
+//
+// Suites run ONE AT A TIME, in the order they were added. That is where coarse
+// exclusion comes from - two suites touching the same axis cannot overlap, because
+// only one is ever enabled.
+FUNCTION_BLOCK TestRun
+VAR_GENERIC CONSTANT
+	Capacity : UDINT := TestHarnessParameter.SuiteCapacity;
+END_VAR IMPLEMENTS I_TestRunRegistration, I_TestConfiguration, I_TestExecution, I_TestRunStatus
+VAR
+	_Suites : ARRAY[0..Capacity - 1] OF I_TestSuite;
+	_Count	: UDINT;
+	_Index	: DINT;
+
+	_Tally	: TestRunTally;
+	_Fanout : TestReporterFanout;
+
+	// Held so a suite added AFTER a reporter still receives it.
+	_Reporters	   : ARRAY[0..TestHarnessParameter.ReporterCapacity - 1] OF I_TestReporter;
+	_ReporterCount : UDINT;
+
+	_Label		: T_MaxString;
+	_TargetInfo : T_MaxString;
+	_IsOpen		: BOOL := TRUE;
+
+	_PendingErrors : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+	No cyclic body. This object is driven through Run, like a suite.
+*)]]></ST>
+    </Implementation>
+    <Folder Name="I_Labelled" Id="{781aee51-7d44-40c1-b027-b750dff380c5}" />
+    <Folder Name="I_TestConfiguration" Id="{ad5456e8-6410-4198-be78-852dfdc331b7}" />
+    <Folder Name="I_TestExecution" Id="{14f829ae-0369-4bed-bfe8-6ea48ae9bb92}" />
+    <Folder Name="I_TestRunRegistration" Id="{696235f4-17dd-4615-96e3-6ea6fa4cc9ea}" />
+    <Folder Name="I_TestRunStatus" Id="{eb7cbfe9-f248-4f2e-84eb-8b9c505eab40}" />
+    <Method Name="AddReporter" Id="{0682604a-2221-4df2-a6fb-09a2cca81afc}" FolderPath="I_TestConfiguration\">
+      <Declaration><![CDATA[// Attach a sink to the run AND to every suite in it.
+//
+// One attachment point. A composition root that had to attach the same reporter to
+// the run and to each suite separately would eventually miss one, and a suite whose
+// results reach no sink is invisible rather than wrong.
+METHOD AddReporter : BOOL
+VAR_INPUT
+	Reporter : I_TestReporter;
+END_VAR
+
+VAR
+	i : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AddReporter := FALSE;
+
+IF Reporter = 0 THEN
+	RETURN;
+END_IF
+
+IF _ReporterCount >= TestHarnessParameter.ReporterCapacity THEN
+	THIS^.RaiseFrameworkError('the run cannot hold another reporter');
+	RETURN;
+END_IF
+
+_Reporters[TO_DINT(_ReporterCount)] := Reporter;
+_ReporterCount := _ReporterCount + 1;
+
+_Fanout.Attach(Reporter);
+
+// Suites added before this reporter was.
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
+	THIS^.PushReporter(_Suites[i], Reporter);
+END_FOR
+
+AddReporter := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AddSuite" Id="{551f2e8b-957f-4d37-b20f-84796c0c408b}" FolderPath="I_TestRunRegistration\">
+      <Declaration><![CDATA[// Add a suite to the run. Order of addition is order of execution.
+//
+// That ordering is what gives coarse exclusion for free: two integration suites
+// touching the same axis cannot overlap, because only one is ever enabled.
+METHOD AddSuite : BOOL
+VAR_INPUT
+	Suite : I_TestSuite;
+END_VAR
+
+VAR
+	Index : DINT;
+	i	  : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AddSuite := FALSE;
+
+IF Suite = 0 THEN
+	THIS^.RaiseFrameworkError('a null suite was offered');
+	RETURN;
+END_IF
+
+IF NOT _IsOpen THEN
+	THIS^.RaiseFrameworkError('suites cannot be added once the run has started');
+	RETURN;
+END_IF
+
+IF _Count >= Capacity THEN
+	THIS^.RaiseFrameworkError('the run is full - raise its capacity argument');
+	RETURN;
+END_IF
+
+Index		 := TO_DINT(_Count);
+_Suites[Index] := Suite;
+_Count		 := _Count + 1;
+
+// Reporters already attached reach this suite too, so the composition root
+// attaches once - to the run - whatever order it does things in.
+FOR i := 0 TO TO_DINT(_ReporterCount) - 1 DO
+	THIS^.PushReporter(Suite, _Reporters[i]);
+END_FOR
+
+AddSuite := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ErrorCount" Id="{4de1e66d-a44c-4731-943a-d9b36bff4ac7}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY ErrorCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{35d4b358-7bfc-4d93-aa40-878b4c494207}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ErrorCount := _Tally.ErrorCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FailedCount" Id="{7220bc38-fd79-4bad-8d33-4759589b894c}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY FailedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{717c4f2c-add7-404a-b92e-62815edf6870}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FailedCount := _Tally.FailedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Finish" Id="{9cfdf8a1-efe2-42a9-9857-d9bc97ed8226}">
+      <Declaration><![CDATA[// Terminal. Settles the aggregate and raises RunFinished - ONCE, whatever the
+// topology.
+//
+// THIS IS WHY THIS OBJECT EXISTS. A suite cannot raise it: a suite is not a run,
+// and asking one to announce the end of something above itself is what forced a
+// "am I being sequenced" flag in an earlier design. Here a single suite is
+// composed with one TestRun and a sequencer IS one, so exactly one object is ever
+// in a position to say the run is over.
+METHOD Finish]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _Tally.IsComplete THEN
+	RETURN;
+END_IF
+
+_Tally.Finish();
+_Fanout.RunFinished(Status := THIS^, TargetInfo := _TargetInfo);]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="IsComplete" Id="{af1a25b4-a885-4a2a-b2c0-7b18524c7ce0}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY IsComplete : BOOL]]></Declaration>
+      <Get Name="Get" Id="{fd427d1f-6715-4ac5-8b07-f005d9ebebb5}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsComplete := _Tally.IsComplete;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Label" Id="{eee66736-eb32-4a50-b294-f5b4872da11f}" FolderPath="I_Labelled\">
+      <Declaration><![CDATA[PROPERTY Label : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{5d597392-f496-4919-b4e1-8258a850af3c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Label := _Label;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Outcome" Id="{275571eb-16d4-487d-be54-3af0acca3464}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY Outcome : E_RunOutcome]]></Declaration>
+      <Get Name="Get" Id="{37c15751-03c5-4306-8eec-f82839638e32}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Outcome := _Tally.Outcome;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PassedCount" Id="{850800f4-f7be-46c0-bc52-45aa1538a472}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY PassedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{1b0f2c6e-b90b-4033-b291-f100a6ee5f0d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PassedCount := _Tally.PassedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="PushReporter" Id="{7f89964c-571e-49a8-a203-e5abeaad3187}">
+      <Declaration><![CDATA[// Hand a reporter to a suite through its configuration face.
+//
+// A suite is held as I_TestSuite - the driving surface - which deliberately does
+// not carry AddReporter. The configuration face is reached with __QUERYINTERFACE,
+// the same way every optional face in this library is.
+METHOD PushReporter
+VAR_INPUT
+	Suite	 : I_TestSuite;
+	Reporter : I_TestReporter;
+END_VAR
+
+VAR
+	ConfigFace : I_TestConfiguration;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Suite = 0 THEN
+	RETURN;
+END_IF
+
+IF __QUERYINTERFACE(Suite, ConfigFace) THEN
+	ConfigFace.AddReporter(Reporter);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RaiseFrameworkError" Id="{a69b1dd5-8b9f-432c-a2dd-923390601b84}">
+      <Declaration><![CDATA[// One place run-level framework errors are named.
+METHOD RaiseFrameworkError
+VAR_INPUT
+	Message : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _IsOpen THEN
+	// Before the tally exists. Held and re-applied when the run starts, or a run
+	// that could not be composed properly would still report green.
+	_PendingErrors := _PendingErrors + 1;
+ELSE
+	_Tally.RecordFrameworkError();
+END_IF
+
+_Fanout.FrameworkError(Source := _Label, Message := Message);]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ReporterCount" Id="{9576eb5e-0dea-4e4d-83e8-b27ccc00e970}" FolderPath="I_TestConfiguration\">
+      <Declaration><![CDATA[PROPERTY ReporterCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{c0bef58d-e3c1-4d33-a3b9-f4a69a720d27}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ReporterCount := _Fanout.Count;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="ReRun" Id="{a01ee304-4229-4307-9a7e-8452ccc0c354}">
+      <Declaration><![CDATA[// Re-execute every suite in the run, and produce a FRESH document.
+//
+// It lives here rather than on a suite because the document boundary does. A
+// suite re-running on its own re-executes its tests and raises SuiteFinished
+// again, but nothing announces the end of a run - so no new artifact is written,
+// and the re-run is invisible to CI. That gap is what CHAR_ReRunTests found.
+//
+// The registered set is not redefined, at either level. A re-run re-executes what
+// was composed; it does not recompose it.
+//
+// There is no ReRunSingle here. Re-running ONE thing is a debugging aid scoped to
+// a test, and the suite already offers it - a run-level equivalent would be a
+// second way to spell the same intention.
+METHOD ReRun
+VAR
+	i		: DINT;
+	ReRunFace : I_TestReRun;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _IsOpen THEN
+	// Never started. There is nothing to repeat.
+	RETURN;
+END_IF
+
+IF NOT _Tally.IsComplete THEN
+	// Mid-run. Restarting now would leave suites half-executed and the counts
+	// meaningless.
+	THIS^.RaiseFrameworkError('ReRun was called while the run was still going');
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
+	IF __QUERYINTERFACE(_Suites[i], ReRunFace) THEN
+		ReRunFace.ReRun();
+	END_IF
+END_FOR
+
+// Counts start again from nothing, and Finish will raise RunFinished a second
+// time - which is what produces the fresh document.
+_Tally.Begin(0);
+_Index := 0;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Run" Id="{50d69b9b-e2c5-4ab8-a121-14a2d7281f35}" FolderPath="I_TestExecution\">
+      <Declaration><![CDATA[// Drive the run. One suite at a time, in the order they were added.
+//
+// Returns TRUE once every suite has reached a terminal state.
+METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+END_VAR
+
+VAR
+	Index : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Fanout.CyclicLogic();
+
+Run := _Tally.IsComplete;
+
+IF NOT Enable THEN
+	RETURN;
+END_IF
+
+IF _IsOpen THEN
+	_IsOpen := FALSE;
+	_Tally.Begin(0);
+
+	IF _Label = '' THEN
+		THIS^.RaiseFrameworkError('the run was started with no label');
+	END_IF
+END_IF
+
+IF _Tally.IsComplete THEN
+	RETURN;
+END_IF
+
+IF _Index >= TO_DINT(_Count) THEN
+	THIS^.Finish();
+	Run := _Tally.IsComplete;
+	RETURN;
+END_IF
+
+Index := _Index;
+
+// Serial by construction. Only one suite is ever enabled, which is what makes two
+// suites touching the same axis unable to overlap.
+IF _Suites[Index].Run(Enable := TRUE) THEN
+	// Counts TESTS, not suites, so the figures mean the same thing at every level
+	// of a nest.
+	_Tally.Absorb(_Suites[Index]);
+	_Index := _Index + 1;
+END_IF
+
+Run := _Tally.IsComplete;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetLabel" Id="{db5975b1-9e23-452b-8fd0-22cddc92dbe3}" FolderPath="I_TestConfiguration\">
+      <Declaration><![CDATA[METHOD SetLabel
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Label := Label;
+_Tally.SetLabel(Label);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetTargetInfo" Id="{12464ece-883d-4f80-bfbb-dc47a1a41170}">
+      <Declaration><![CDATA[// Where this run happened - NetId, platform, TwinCAT version, whatever
+// identifies the machine.
+//
+// Without it a matrix run across several targets produces result documents that
+// cannot be told apart.
+METHOD SetTargetInfo
+VAR_INPUT
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_TargetInfo := TargetInfo;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Skip" Id="{6dd1433a-3977-491c-a70e-5b53462a5dae}" FolderPath="I_TestExecution\">
+      <Declaration><![CDATA[// Nothing to run. The run reports complete rather than waiting, so anything
+// aggregating it is not held open.
+METHOD Skip]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT _IsOpen THEN
+	RETURN;
+END_IF
+
+_IsOpen := FALSE;
+_Tally.Begin(0);
+_Index	:= TO_DINT(_Count);
+THIS^.Finish();]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SkippedCount" Id="{596e7856-a60f-491e-9bfa-7ae11bdbbc83}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY SkippedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{e9ab9b69-1cab-4dc8-8faa-4fe108fb1d5c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SkippedCount := _Tally.SkippedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="SuiteCount" Id="{94d14fd0-1ee9-4f42-8bd9-70e6bf81711a}" FolderPath="I_TestRunRegistration\">
+      <Declaration><![CDATA[// Suites added. Assert it in CI: a suite that silently stops being added takes
+// its tests with it, and the totals simply come out smaller.
+PROPERTY SuiteCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{77242349-3c38-486d-85cb-4e3a0cf9c122}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SuiteCount := _Count;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TestCount" Id="{fd5ed16d-a513-4ef4-beae-3d4c240f05d5}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY TestCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{e0ba7673-4012-4597-8c51-8fd3de65b41b}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TestCount := _Tally.TestCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TotalDuration" Id="{4b0a7bfe-6547-4486-9104-171b3b205d3c}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY TotalDuration : LREAL]]></Declaration>
+      <Get Name="Get" Id="{c5a69537-0316-444e-8d10-73cc8bf998f8}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TotalDuration := _Tally.TotalDuration;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

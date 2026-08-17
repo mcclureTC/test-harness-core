@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="WitnessedTest" Id="{b429e216-5449-4d50-8dc3-b392b2841915}" SpecialFunc="None">
+    <Declaration><![CDATA[// A multi-scan test that reports its entry and exit to a shared witness.
+//
+// Takes several scans deliberately: a single-scan test could never overlap
+// anything, so a suite of them would prove serial execution by accident rather
+// than by design.
+FUNCTION_BLOCK WitnessedTest IMPLEMENTS I_Test
+VAR
+	// A REFERENCE TO, not an instance: every test in the suite must report to the
+	// SAME witness, or each would see itself alone and MaxConcurrent would be 1 by
+	// construction rather than by the suite behaving.
+	_Witness  : REFERENCE TO ConcurrencyWitness;
+	_Scans	  : UDINT := 4;
+	_Calls	  : UDINT;
+	_HasEntered : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{d9dc9f86-ff24-4e5a-bf49-64f46ebeef17}" />
+    <Method Name="Attach" Id="{2bce4e1e-8f19-423d-9218-86c2311011a6}">
+      <Declaration><![CDATA[// The shared witness, and how many scans this test should take.
+METHOD Attach
+VAR_INPUT
+	Scans : UDINT;
+END_VAR
+
+VAR_IN_OUT
+	Witness : ConcurrencyWitness;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Witness REF= Witness;
+_Scans	 := Scans;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Run" Id="{dd5842b8-5047-4029-9caf-dadb50b6fca3}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	Run := TRUE;
+	RETURN;
+END_IF
+
+IF NOT __ISVALIDREF(_Witness) THEN
+	Test.ReportError('no witness was attached');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+IF NOT _HasEntered THEN
+	_HasEntered := TRUE;
+	_Witness.Enter();
+END_IF
+
+_Calls := _Calls + 1;
+
+IF _Calls < _Scans THEN
+	Run := FALSE;
+	RETURN;
+END_IF
+
+Test.AssertTrue(TRUE, 'ran to completion');
+_Witness.Leave();
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

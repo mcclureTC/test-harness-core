@@ -29,6 +29,35 @@ END_VAR]]></Declaration>
     </Implementation>
     <Folder Name="I_Labelled" Id="{837b0e49-64c8-469e-8a18-e0a21261e5b2}" />
     <Folder Name="I_TestRunStatus" Id="{ccdd21b7-83ad-4b88-9743-80bd7567ae85}" />
+    <Method Name="Absorb" Id="{3d436ab5-a472-4102-8bdc-ee3fd939629c}">
+      <Declaration><![CDATA[// Fold a whole nested result into these totals - one suite into a run, or one run
+// into a larger one.
+//
+// Counts TESTS, not suites. A consumer polling the top of a nest wants to know
+// how many tests passed, not how many containers did; Plan.md section 6 is what
+// makes nesting worth having, and it only works if the figures mean the same
+// thing at every level.
+METHOD Absorb
+VAR_INPUT
+	Status : I_TestRunStatus;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Status = 0 THEN
+	RETURN;
+END_IF
+
+_Status.TestCount	  := _Status.TestCount + Status.TestCount;
+_Status.PassedCount	  := _Status.PassedCount + Status.PassedCount;
+_Status.FailedCount	  := _Status.FailedCount + Status.FailedCount;
+_Status.ErrorCount	  := _Status.ErrorCount + Status.ErrorCount;
+_Status.SkippedCount  := _Status.SkippedCount + Status.SkippedCount;
+_Status.TotalDuration := _Status.TotalDuration + Status.TotalDuration;
+
+// Recorded so an aggregate of nothing but skips still reports Skipped rather
+// than Passed.
+_Recorded := _Recorded + 1;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="Begin" Id="{afd6b0bf-b5a7-48a3-bf34-1a0532d907bf}">
       <Declaration><![CDATA[// Start a run over Count tests. Clears every figure but the label.
 //

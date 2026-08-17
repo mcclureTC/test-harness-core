@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="CHAR_ReRunTests" Id="{ed97615e-156f-42c7-aa0d-5c77542f2f32}" SpecialFunc="None">
+    <Declaration><![CDATA[// PORTED. The assertion that matters most is the suite-node count.
+//
+// A defect in this library's history had the reset loop appending one testsuite
+// node per array element to the existing document - five nodes per re-run for a
+// suite declared <4>, not one. Counting them is how a reintroduction gets caught,
+// and nothing else in the verifier counts them.
+//
+// Also pinned: a re-run produces a fresh document and a second save, and every
+// test really runs again.
+FUNCTION_BLOCK CHAR_ReRunTests IMPLEMENTS I_Test
+VAR
+	Inner	 : TestSuite<4>;
+	Recorder : RecordingReporter;
+	// A run, not just a suite. The DOCUMENT boundary belongs to the run, so a
+	// re-run that is to produce a fresh artifact has to be re-run at this level -
+	// which is the gap this test found.
+	Runner	 : TestRun<2>;
+	Budgets	 : ST_TestBudgets;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	X : PassingTest;
+	Y : PassingTest;
+
+	CasesAfterRun1  : UDINT;
+	SuitesAfterRun1 : UDINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{865e1bc0-3feb-497a-adaa-8b67ffe8da60}" />
+    <Method Name="Run" Id="{01a999c9-4728-4736-86fd-0d160ba13c60}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 500 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('CHAR_ReRun_Subject');
+	Inner.Register(X, 'X', Budgets);
+	Inner.Register(Y, 'Y', Budgets);
+
+	Runner.SetLabel('CHAR_ReRun_Run');
+	Runner.AddReporter(Recorder);
+	Runner.AddSuite(Inner);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		CasesAfterRun1	:= Recorder.CaseCount;
+		SuitesAfterRun1 := Recorder.SuiteCount;
+		// At the RUN, not the suite. Re-running the suite alone re-executes its
+		// tests but announces no run, so no second document is produced.
+		Runner.ReRun();
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 3;
+	END_IF
+	Run := FALSE;
+
+3:
+	ExpectedCount := 2;
+	ActualCount	  := CasesAfterRun1;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'two cases in the first run');
+
+	ExpectedCount := 1;
+	ActualCount	  := SuitesAfterRun1;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'one suite node in the first run');
+
+	ExpectedCount := 4;
+	ActualCount	  := Recorder.CaseCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'two more cases after the re-run');
+
+	// The one that catches the historical defect.
+	ExpectedCount := 2;
+	ActualCount	  := Recorder.SuiteCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'exactly one suite node per run');
+
+	ActualCount := Recorder.SaveCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the re-run produced a second document');
+
+	// And the tests really ran twice, rather than the counts being replayed.
+	ActualCount := X.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the first test ran twice');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

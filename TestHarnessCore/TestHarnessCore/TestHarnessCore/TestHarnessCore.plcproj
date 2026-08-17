@@ -109,6 +109,9 @@
     <Compile Include="Interfaces\I_TestRoster.TcIO">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Interfaces\I_TestRunRegistration.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Interfaces\I_TestRunStatus.TcIO">
       <SubType>Code</SubType>
     </Compile>
@@ -122,6 +125,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Interfaces\I_TestTiming.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Parameters\TestHarnessParameter.TcGVL">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\TestArbiter.TcPOU">
@@ -146,6 +152,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\TestReporterFanout.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestRun.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\TestRunner.TcPOU">
@@ -182,9 +191,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\TestValueString.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Parameters\TestHarnessParameter.TcGVL">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\TestVerdict.TcPOU">

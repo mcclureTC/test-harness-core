@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <Itf Name="I_TestRunRegistration" Id="{6f54381d-ac31-4ad8-a36c-22ea0a1c91b5}">
+    <Declaration><![CDATA[// Adding suites to a run. The composition root holds this and nothing else does.
+//
+// Separate from the driving surface for the reason every face in this library is:
+// something that only drives a run must not be able to change what is in it, and
+// cyclic code must not be able to reach this at all.
+INTERFACE I_TestRunRegistration EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Method Name="AddSuite" Id="{e6b28226-8e8f-4bc1-b430-5545ee938187}">
+      <Declaration><![CDATA[// Add a suite. Order of addition is order of execution, which is where coarse
+// exclusion comes from: two suites touching the same axis cannot overlap because
+// only one is ever enabled.
+//
+// Returns FALSE, and raises a framework error, when the run is full, the suite is
+// null, or the run has already started. Never silent - a suite that failed to be
+// added takes all its tests with it, and the totals simply come out smaller.
+METHOD AddSuite : BOOL
+VAR_INPUT
+	Suite : I_TestSuite;
+END_VAR]]></Declaration>
+    </Method>
+    <Property Name="SuiteCount" Id="{402385b0-c3cd-4d03-a356-072e22b11595}">
+      <Declaration><![CDATA[// Assert this in CI against an expected number, for the same reason
+// I_TestRegistration.RegisteredCount exists one level down.
+PROPERTY SuiteCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{40dbe9a6-e5a2-45dd-b5fa-1c446db54179}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>
