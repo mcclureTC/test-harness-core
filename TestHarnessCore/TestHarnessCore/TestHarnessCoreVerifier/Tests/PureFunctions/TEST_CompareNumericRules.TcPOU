@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_CompareNumericRules" Id="{126412d7-53d8-4481-9abb-dba4df113685}" SpecialFunc="None">
+    <Declaration><![CDATA[// PORTED from the old verifier. TestValueCompare, numeric rules.
+//
+// Nothing in the object-level tests pins these: they exercise AssertEqual
+// incidentally, which is not the same as pinning what equality MEANS.
+//
+// Numerics compare BY VALUE across widths - INT#5 equals DINT#5, because the
+// storage width is incidental to what the author is checking.
+//
+// Floats compare EXACTLY. The original hid an epsilon of 1E-6 inside AssertEqual,
+// so a test passing at 1E-7 looked identical to one passing exactly. Tolerance has
+// its own methods now and choosing it is visible at the call site. Because exact
+// float equality is a well-known trap, a near miss appends a hint naming those
+// methods - and a hint nobody sees is worth nothing, so that is pinned too.
+FUNCTION_BLOCK TEST_CompareNumericRules IMPLEMENTS I_Test
+VAR
+	Result : ST_CompareResult;
+
+	SmallFive : INT := 5;
+	BigFive	  : DINT := 5;
+	UnsignedFive : UDINT := 5;
+	Six		  : DINT := 6;
+
+	OnePointFive  : LREAL := 1.5;
+	OnePointFive2 : LREAL := 1.5;
+	NearMissA	  : LREAL := 1.0;
+	NearMissB	  : LREAL := 1.0000001;
+	SumOfTenths	  : LREAL;
+	ThreeTenths	  : LREAL := 0.3;
+
+	SomeText : STRING(20) := 'five';
+
+	ExpectTrue	: BOOL := TRUE;
+	ExpectFalse : BOOL := FALSE;
+	ActualEqual : BOOL;
+	ExpectType	: E_FailureKind := E_FailureKind.TypeMismatch;
+	ActualKind	: E_FailureKind;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{684c0a61-8e08-4e11-abb5-f327fa2b2c05}" />
+    <Method Name="Run" Id="{6747d915-44b6-43fe-9061-90874664d93d}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// --- value across widths ---------------------------------------------------
+Result		:= TestValueCompare(SmallFive, BigFive);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectTrue, ActualEqual, 'INT#5 equals DINT#5');
+
+Result		:= TestValueCompare(SmallFive, UnsignedFive);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectTrue, ActualEqual, 'INT#5 equals UDINT#5');
+
+Result		:= TestValueCompare(BigFive, Six);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectFalse, ActualEqual, '5 does not equal 6');
+
+// --- floats compare exactly ------------------------------------------------
+Result		:= TestValueCompare(OnePointFive, OnePointFive2);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectTrue, ActualEqual, 'identical LREALs are equal');
+
+// The canonical binary-floating-point surprise. If a hidden epsilon ever comes
+// back, this is what notices.
+SumOfTenths := 0.1 + 0.2;
+Result		:= TestValueCompare(SumOfTenths, ThreeTenths);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectFalse, ActualEqual, '0.1 + 0.2 does not exactly equal 0.3');
+
+// --- the hint on a near miss -----------------------------------------------
+Result := TestValueCompare(NearMissA, NearMissB);
+Test.AssertFalse(Result.IsEqual, 'a near miss is still a miss');
+Test.AssertTrue(FIND(Result.Diagnostic, 'AssertNear') > 0,
+				'and the diagnostic names the tolerance methods');
+
+// --- one numeric, one not --------------------------------------------------
+Result		:= TestValueCompare(BigFive, SomeText);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectFalse, ActualEqual, 'a number and a string are not equal');
+
+ActualKind := Result.Kind;
+Test.AssertEqual(ExpectType, ActualKind, 'and that is a type mismatch, not a value one');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

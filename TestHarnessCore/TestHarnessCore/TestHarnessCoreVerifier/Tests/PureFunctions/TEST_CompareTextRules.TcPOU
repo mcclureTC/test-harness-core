@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_CompareTextRules" Id="{df96fe3c-fe7f-4ad5-a6e8-f9260a962ed8}" SpecialFunc="None">
+    <Declaration><![CDATA[// PORTED. TestValueCompare, string rules.
+//
+// Strings compare by CONTENT. The declared capacity is not the subject - an author
+// writing AssertEqual is testing a value, and for a string diSize is the capacity
+// of the variable rather than the length of what is in it.
+//
+// THE WSTRING CASE IS R1, and it is the reason this port matters. Under the
+// original comparison two different WSTRINGs reported EQUAL: the bytes were copied
+// into a STRING buffer and compared with <>, which terminates at the first NUL -
+// and every second byte of ASCII WSTRING content is NUL. Tests went green on values
+// that differed. Nothing in the other 75 tests would notice that returning.
+FUNCTION_BLOCK TEST_CompareTextRules IMPLEMENTS I_Test
+VAR
+	Result : ST_CompareResult;
+
+	ShortText : STRING(20) := 'homed';
+	LongText  : STRING(80) := 'homed';
+	OtherText : STRING(20) := 'homing';
+
+	WideA : WSTRING(20) := "homed";
+	WideB : WSTRING(20) := "homer";
+	WideC : WSTRING(20) := "homed";
+
+	ExpectTrue	 : BOOL := TRUE;
+	ExpectFalse	 : BOOL := FALSE;
+	ActualEqual	 : BOOL;
+	ExpectNone	 : E_FailureKind := E_FailureKind.None;
+	ExpectValue	 : E_FailureKind := E_FailureKind.ValueMismatch;
+	ActualKind	 : E_FailureKind;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{f5e6e1a9-366b-44b5-a1f1-7d347a0c187b}" />
+    <Method Name="Run" Id="{db70b327-18b2-4873-ad38-94f7dbe3b9cb}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// --- capacity is not part of the value -------------------------------------
+Result		:= TestValueCompare(ShortText, LongText);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectTrue, ActualEqual,
+				 'STRING(20) and STRING(80) holding the same text are equal');
+
+ActualKind := Result.Kind;
+Test.AssertEqual(ExpectNone, ActualKind, 'and carry no failure kind');
+
+Result		:= TestValueCompare(ShortText, OtherText);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectFalse, ActualEqual, 'different text is not equal');
+
+// Same declared size, different content - a VALUE difference, not a size one.
+ActualKind := Result.Kind;
+Test.AssertEqual(ExpectValue, ActualKind, 'reported as a value difference');
+
+// --- R1: WSTRING is compared AS WSTRING ------------------------------------
+// "homed" and "homer" differ only at the fifth character. Read as a STRING the
+// comparison stops at the first NUL - the second byte - and reports equal.
+Result		:= TestValueCompare(WideA, WideB);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectFalse, ActualEqual,
+				 'WSTRINGs differing after the first character are not equal');
+
+Result		:= TestValueCompare(WideA, WideC);
+ActualEqual := Result.IsEqual;
+Test.AssertEqual(ExpectTrue, ActualEqual, 'identical WSTRINGs are equal');
+
+// --- the diagnostic carries both values ------------------------------------
+Result := TestValueCompare(ShortText, OtherText);
+Test.AssertTrue(FIND(Result.Diagnostic, 'homed') > 0, 'the diagnostic carries expected');
+Test.AssertTrue(FIND(Result.Diagnostic, 'homing') > 0, 'and actual');
+
+// And in their own fields, in full - which is what the summary cannot hold.
+Test.AssertTrue(FIND(Result.Expected, 'homed') > 0, 'Expected is populated');
+Test.AssertTrue(FIND(Result.Actual, 'homing') > 0, 'and so is Actual');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

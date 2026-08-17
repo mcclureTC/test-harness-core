@@ -1,49 +1,65 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{591fca1f-6aea-47ac-b79e-07457710159a}" SpecialFunc="None">
-    <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
+  <POU Name="PRG_UnitTests" Id="{17363f95-6e14-4af9-bb95-5b77febba5e5}" SpecialFunc="None">
+    <Declaration><![CDATA[// The composition root: what is registered, what reports it, and the run that
+// drives it.
+//
+// This is also a WORKED EXAMPLE. It composes the library the way a real project
+// should - a run, a suite, three sinks - so anything awkward here is awkward for
+// everyone.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      75 - assert this. A test that stops being registered vanishes
+//   Total      81 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
+//   Idle       TRUE once the result document has reached disk. CI MUST WAIT FOR
+//              BOTH Complete AND Idle - a run finishing and its file landing are
+//              different events, and copying between them yields a truncated
+//              artifact that reads as a broken pipeline
 //
-// Failed above zero names a real defect in TestHarnessCore. Errors above zero
-// means the framework itself could not do something and no result in the run can
-// be trusted until it is explained.
+// WHERE A FAILURE SHOWS UP, now that sinks are attached:
+//   - the Logged Events window, as a line and as an event
+//   - C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreResults.xml
+//
+// It used to be neither. The counts below were the whole result and a failing test
+// had to be read out of journal internals in a watch window - which is precisely
+// what this library exists to avoid. Attaching no reporter was the right call while
+// none existed and stale for some time after.
 //
 // THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests drive DELIBERATE
 // failures into a private journal; the Suite tests register doubles that fail and
-// error on purpose; the JUnit tests write to a folder that does not exist. They
-// all pass. What they prove is that going wrong works - without them, a wall of
-// green would only show that nothing objected.
+// error on purpose; the JUnit tests write to a folder that does not exist. They all
+// pass. What they prove is that going wrong works.
 //
 // THE CHARACTERIZATION TESTS ARE THE ACCEPTANCE CONTRACT: seven of the eight the
-// original library was pinned by. They are the only tests that ask questions of
-// the ARTIFACT - how many cases, what failure type, whether a timeout message
-// names the wall clock - which is what RecordingReporter exists for. Where one
-// changed shape, its own comment says what the original asserted and why.
+// original library was pinned by. They are the only tests that ask questions of the
+// ARTIFACT, and they found three defects nothing else did - all of them about runs
+// and re-runs. Plan.md section 10.5 records them.
 //
-// THE RUNNER, SUITE, JUNIT AND CHARACTERIZATION TESTS ARE MULTI-SCAN. Each holds a
-// private object and steps it one scan per call, returning FALSE until it
-// finishes - the same mechanism they are verifying, one level down. Each carries a
-// watchdog, so a defect that never completes fails its own test instead of hanging
-// everything and looking like a broken verifier.
-//
-// THIS SUITE ATTACHES NO REPORTER. The reporter tests drive their own instances, so
-// a reporting defect cannot be mistaken for a harness defect and the counts below
-// remain the whole result.
-//
-// TWO THINGS NO TEST HERE CAN ESTABLISH, both needing one look by eye:
-//   - the wording of log lines and events, in the Logged Events window
-//   - whether the JUnit document is well formed and CI can parse it. Open
-//     C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier.xml
+// MULTI-SCAN TESTS hold a private runner, suite or run and step it one scan per
+// call, returning FALSE until it finishes - the same mechanism they are verifying,
+// one level down. Each carries a watchdog, so a defect that never completes fails
+// its own test rather than hanging everything and looking like a broken verifier.
 PROGRAM PRG_UnitTests
 VAR
-	Suite	: TestSuite<90>;
+	// A RUN, not just a suite. RunFinished is a run-level event and only a TestRun
+	// raises it - which is what produces a document at all.
+	Runner : TestRun<2>;
+	Suite  : TestSuite<90>;
+
+	// All three sinks, which is the realistic composition: a log line to read at a
+	// glance, an event to filter and route, a document for CI.
+	LogSink	  : TestLogReporter;
+	EventSink : TestEventReporter;
+	JUnitSink : TestJUnitReporter;
+
+	// The 4026 boot folder. Named apart from the files the JUnit tests write, so a
+	// stale artifact from either cannot be mistaken for the other.
+	ResultPath : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreResults.xml';
+
 	Budgets : ST_TestBudgets;
 	Wired	: BOOL;
 
@@ -135,6 +151,14 @@ VAR
 	jUnitReporterRefusesWithNoPath	: TEST_JUnitReporterRefusesWithNoPath;
 	jUnitReporterWritesNothingWhenNothingRan	: TEST_JUnitReporterWritesNothingWhenNothingRan;
 
+	// -- Pure functions: the comparison and rendering rules --
+	compareNumericRules	: TEST_CompareNumericRules;
+	compareTextRules	: TEST_CompareTextRules;
+	compareOtherRules	: TEST_CompareOtherRules;
+	summaryLineComposition	: TEST_SummaryLineComposition;
+	valueRendering	: TEST_ValueRendering;
+	valueBriefShortens	: TEST_ValueBriefShortens;
+
 	// -- Characterization: the acceptance contract --
 	cHAR_Capacity	: CHAR_Capacity;
 	cHAR_OverflowStatistics	: CHAR_OverflowStatistics;
@@ -153,6 +177,11 @@ VAR
 	Errors	 : UDINT;
 	Skipped	 : UDINT;
 	Duration : LREAL;
+
+	// -- did the artifact land? -------------------------------------------------
+	Idle		  : BOOL;
+	FilesWritten  : UDINT;
+	WriteFailures : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[IF NOT Wired THEN
@@ -248,6 +277,16 @@ END_VAR]]></Declaration>
 	Suite.Register(jUnitReporterRefusesWithNoPath, 'JUnitReporter: no path set is a failure, not silence', Budgets);
 	Suite.Register(jUnitReporterWritesNothingWhenNothingRan, 'JUnitReporter: an empty run produces no document', Budgets);
 
+	// Pure functions - ported from the OLD verifier. These pin what equality and
+	// rendering MEAN. The object tests exercise them incidentally, which is not the
+	// same thing: nothing else would notice R1 returning.
+	Suite.Register(compareNumericRules, 'Pure: numeric rules: value across widths, exact floats, the hint', Budgets);
+	Suite.Register(compareTextRules, 'Pure: string rules: content not capacity, and WSTRING as WSTRING (R1)', Budgets);
+	Suite.Register(compareOtherRules, 'Pure: structs, arrays and enums; a size difference is a type difference', Budgets);
+	Suite.Register(summaryLineComposition, 'Pure: composition order; the message is dropped whole, not cut', Budgets);
+	Suite.Register(valueRendering, 'Pure: values render as something, including enums', Budgets);
+	Suite.Register(valueBriefShortens, 'Pure: long values are shortened and marked', Budgets);
+
 	// Characterization - seven of the eight the ORIGINAL library was pinned by.
 	// CHAR_Watchdog is not among them: it retires, because the suite driving the
 	// tests makes an orphaned slot impossible. Plan.md section 10 records that.
@@ -258,18 +297,41 @@ END_VAR]]></Declaration>
 	Suite.Register(cHAR_WallClockTimeout, 'Contract: the wall-clock deadline fires and names itself', Budgets);
 	Suite.Register(cHAR_TimeoutPrecedence, 'Contract: suite default, per-test override, per-unit tracking', Budgets);
 	Suite.Register(cHAR_SerialExecution, 'Contract: no test body runs while another is running', Budgets);
+
+	// -- reporting -------------------------------------------------------------
+	JUnitSink.SetPath(ResultPath);
+	// Where a failed write is reported. Deliberately the log sink and not the
+	// fan-out, which would call back into the writer that just failed.
+	JUnitSink.AttachErrorSink(LogSink);
+
+	Runner.SetLabel('TestHarnessCoreVerifier');
+	Runner.SetTargetInfo('TestHarnessCoreVerifier');
+
+	// Attached to the RUN, which pushes each one into every suite. One attachment
+	// point, whatever order suites and sinks are added in.
+	Runner.AddReporter(LogSink);
+	Runner.AddReporter(EventSink);
+	Runner.AddReporter(JUnitSink);
+
+	Runner.AddSuite(Suite);
 END_IF
 
-Suite.Run(Enable := TRUE);
+Runner.Run(Enable := TRUE);
 
-Complete := Suite.IsComplete;
-Outcome	 := Suite.Outcome;
-Total	 := Suite.TestCount;
-Passed	 := Suite.PassedCount;
-Failed	 := Suite.FailedCount;
-Errors	 := Suite.ErrorCount;
-Skipped	 := Suite.SkippedCount;
-Duration := Suite.TotalDuration;]]></ST>
+// Read from the RUN, not the suite: it is the top of the nest, and the figures
+// mean the same thing at every level.
+Complete := Runner.IsComplete;
+Outcome	 := Runner.Outcome;
+Total	 := Runner.TestCount;
+Passed	 := Runner.PassedCount;
+Failed	 := Runner.FailedCount;
+Errors	 := Runner.ErrorCount;
+Skipped	 := Runner.SkippedCount;
+Duration := Runner.TotalDuration;
+
+Idle		  := JUnitSink.IsIdle;
+FilesWritten  := JUnitSink.FilesWritten;
+WriteFailures := JUnitSink.WriteFailures;]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>
