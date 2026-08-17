@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RegistryResolvesOptionalHooks" Id="{9291b6c2-3df6-4853-9333-f24d0b08e7e4}" SpecialFunc="None">
+    <Declaration><![CDATA[// The three optional hooks are resolved once, at registration, and
+// independently. A test implementing one must not appear to implement the others.
+FUNCTION_BLOCK TEST_RegistryResolvesOptionalHooks IMPLEMENTS I_Test
+VAR
+	Registry  : TestRegistry<4>;
+	Bare	  : FakeTest;
+	SetupOnly : FakeTestWithSetup;
+	AllHooks  : FakeTestWithAllHooks;
+	Budgets	  : ST_TestBudgets;
+	Slot	  : ST_TestSlot;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{c936c33d-14dc-417d-860f-1972c6f6bf37}" />
+    <Method Name="Run" Id="{a5974f54-8f94-4d7a-a6e9-9a1f5ff45b7f}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Registry.TryClaim(Bare, 'Implements nothing optional', Budgets);
+Registry.TryClaim(SetupOnly, 'Implements setup only', Budgets);
+Registry.TryClaim(AllHooks, 'Implements everything', Budgets);
+
+Slot := Registry.Slot(0);
+Test.AssertTrue(Slot.Setup = 0, 'bare: no setup');
+Test.AssertTrue(Slot.Teardown = 0, 'bare: no teardown');
+Test.AssertTrue(Slot.Location = 0, 'bare: no location');
+
+Slot := Registry.Slot(1);
+Test.AssertTrue(Slot.Setup <> 0, 'setup only: setup resolved');
+Test.AssertTrue(Slot.Teardown = 0, 'setup only: teardown still null');
+Test.AssertTrue(Slot.Location = 0, 'setup only: location still null');
+
+Slot := Registry.Slot(2);
+Test.AssertTrue(Slot.Setup <> 0, 'all hooks: setup');
+Test.AssertTrue(Slot.Teardown <> 0, 'all hooks: teardown');
+Test.AssertTrue(Slot.Location <> 0, 'all hooks: location');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

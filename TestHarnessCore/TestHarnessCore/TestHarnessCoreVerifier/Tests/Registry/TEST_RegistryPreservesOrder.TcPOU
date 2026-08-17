@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RegistryPreservesOrder" Id="{11000440-a7bb-4b7d-9d43-3c3b2167c8ef}" SpecialFunc="None">
+    <Declaration><![CDATA[// Order of registration is order of execution. Nothing sorts, and a refusal in
+// the middle must not reorder what came before or after it.
+FUNCTION_BLOCK TEST_RegistryPreservesOrder IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<4>;
+	Fakes	 : ARRAY[0..2] OF FakeTest;
+	Rejected : FakeTest;
+	Budgets	 : ST_TestBudgets;
+	Slot	 : ST_TestSlot;
+
+	ExpectedLabel : T_MaxString;
+	ActualLabel	  : T_MaxString;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{1b36ef1c-900a-4164-9a31-94579973ce25}" />
+    <Method Name="Run" Id="{6ff671d7-6dfa-43e7-b65b-bad8d00537ec}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Registry.TryClaim(Fakes[0], 'Zulu', Budgets);
+Registry.TryClaim(Rejected, 'Zulu', Budgets);
+Registry.TryClaim(Fakes[1], 'Yankee', Budgets);
+Registry.TryClaim(Fakes[2], 'Xray', Budgets);
+
+Slot		  := Registry.Slot(0);
+ActualLabel	  := Slot.Label;
+ExpectedLabel := 'Zulu';
+Test.AssertEqual(ExpectedLabel, ActualLabel, 'slot 0');
+
+Slot		  := Registry.Slot(1);
+ActualLabel	  := Slot.Label;
+ExpectedLabel := 'Yankee';
+Test.AssertEqual(ExpectedLabel, ActualLabel, 'slot 1 unaffected by the refusal');
+
+Slot		  := Registry.Slot(2);
+ActualLabel	  := Slot.Label;
+ExpectedLabel := 'Xray';
+Test.AssertEqual(ExpectedLabel, ActualLabel, 'slot 2');
+
+Slot		  := Registry.Slot(3);
+ActualLabel	  := Slot.Label;
+ExpectedLabel := '';
+Test.AssertEqual(ExpectedLabel, ActualLabel, 'unclaimed index is an empty slot');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FakeTestWithSetup" Id="{70261021-5cb0-4802-9968-6b93722ae2a9}" SpecialFunc="None">
+    <Declaration><![CDATA[// Implements ONE optional hook and not the other two.
+//
+// The case that matters for hook resolution: the three are independent, so
+// resolving one must not resolve the others. A registry that queried once and
+// reused the answer would pass with FakeTest and with FakeTestWithAllHooks, and
+// fail only here.
+FUNCTION_BLOCK FakeTestWithSetup IMPLEMENTS I_Test, I_TestSetup
+VAR
+	_RunCount : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{b1ab52ef-e6cf-4e6d-9b25-840944131db1}" />
+    <Folder Name="I_TestSetup" Id="{ce98ef6b-f068-494e-8728-6d4ac57c5bf1}" />
+    <Method Name="Run" Id="{01361277-6ecc-422a-8f31-53d6e3b9ffae}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_RunCount := _RunCount + 1;
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Setup" Id="{d62980d7-1600-4651-bd92-852ac65daa8e}" FolderPath="I_TestSetup\">
+      <Declaration><![CDATA[METHOD Setup : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Setup := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

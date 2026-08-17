@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_ArbiterEmptyPassIsComplete" Id="{72fd5e86-8320-4fa4-8705-583fced5697a}" SpecialFunc="None">
+    <Declaration><![CDATA[// A suite with nothing registered is COMPLETE, not stuck. If it reported
+// otherwise, any sequencer aggregating it would wait for it forever.
+//
+// An arbiter never attached at all is also an empty pass, not a fault: a suite
+// that was never wired up should complete rather than hang what is above it.
+FUNCTION_BLOCK TEST_ArbiterEmptyPassIsComplete IMPLEMENTS I_Test
+VAR
+	Registry   : TestRegistry<3>;
+	Arbiter	   : TestArbiter;
+	Unattached : TestArbiter;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{8a75e4a5-2b18-43c6-b78f-393a3885ab6e}" />
+    <Method Name="Run" Id="{4619891e-387d-474f-bb78-96a0246e9cbd}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Arbiter.Attach(Registry);
+Arbiter.Begin();
+
+Test.AssertTrue(Arbiter.IsExhausted, 'exhausted immediately');
+Test.AssertFalse(Arbiter.HasCurrent, 'nothing active');
+Test.AssertFalse(Arbiter.Advance(), 'nothing to advance to');
+Test.AssertTrue(Arbiter.IsExhausted, 'still exhausted');
+
+Unattached.Begin();
+Test.AssertTrue(Unattached.IsExhausted, 'unattached is exhausted');
+Test.AssertFalse(Unattached.Advance(), 'unattached advances to nothing');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_ArbiterNotExhaustedWhileLastTestRuns" Id="{cc946f1a-41ef-4f9e-b29c-8e537deb37b7}" SpecialFunc="None">
+    <Declaration><![CDATA[// IsExhausted needs BOTH conditions: nothing left to hand out AND nothing
+// running. After the last test is selected there is nothing left to give, but that
+// test is still going - reporting the suite complete there would cut it off
+// mid-run and lose its verdict.
+FUNCTION_BLOCK TEST_ArbiterNotExhaustedWhileLastTestRuns IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<3>;
+	Arbiter	 : TestArbiter;
+	Fakes	 : ARRAY[0..2] OF FakeTest;
+	Budgets	 : ST_TestBudgets;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{c9207a85-93ac-4977-9fea-729210d86f9f}" />
+    <Method Name="Run" Id="{15569373-9586-4e21-8bf3-6c06c272c8be}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Registry.TryClaim(Fakes[0], 'Only one', Budgets);
+
+Arbiter.Attach(Registry);
+Arbiter.Begin();
+Arbiter.Advance();
+
+Test.AssertTrue(Arbiter.HasCurrent, 'the one test is running');
+Test.AssertFalse(Arbiter.IsExhausted, 'NOT exhausted while it runs');
+
+Arbiter.Advance();
+
+Test.AssertFalse(Arbiter.HasCurrent, 'nothing running now');
+Test.AssertTrue(Arbiter.IsExhausted, 'exhausted once it is done');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -18,10 +18,19 @@
     <LibraryReferences>{6abf61ae-34ec-45df-bd14-d379bcefd349}</LibraryReferences>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="DUTs\E_FloorStage.TcDUT">
+    <Compile Include="Doubles\FakeTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\FakeTestWithAllHooks.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\FakeTestWithSetup.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Doubles\FloorTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_FloorStage.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="PlcTask.TcTTO">
@@ -33,11 +42,65 @@
     <Compile Include="POUs\PRG_FloorCheck.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\PRG_UnitTests.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Arbiter\TEST_ArbiterAbandonEndsThePass.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Arbiter\TEST_ArbiterCurrentIsNullWhenNothingActive.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Arbiter\TEST_ArbiterEmptyPassIsComplete.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Arbiter\TEST_ArbiterNotExhaustedWhileLastTestRuns.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Arbiter\TEST_ArbiterRestartsFromTheBeginning.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Arbiter\TEST_ArbiterVisitsEveryTestOnce.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryCapacityAndOverflow.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryClosesRegistration.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryJournalRejectsBadIndex.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryJournalsArePerSlot.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryLookup.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryPreservesOrder.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryRejectsDuplicateLabel.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryRejectsEmptyLabelAndNullTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistryResolvesOptionalHooks.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Registry\TEST_RegistrySlotCarriesItsIndex.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DUTs" />
     <Folder Include="Doubles" />
+    <Folder Include="Tests" />
     <Folder Include="POUs" />
+    <Folder Include="Tests\Arbiter" />
+    <Folder Include="Tests\Registry" />
   </ItemGroup>
   <ItemGroup>
     <PlaceholderReference Include="Tc2_Standard">

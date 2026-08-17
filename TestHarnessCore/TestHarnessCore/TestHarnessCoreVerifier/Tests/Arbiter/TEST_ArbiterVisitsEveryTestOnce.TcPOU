@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_ArbiterVisitsEveryTestOnce" Id="{65db0354-aafc-483b-98bf-474c5af0ee73}" SpecialFunc="None">
+    <Declaration><![CDATA[// Registration order is execution order, every test is visited exactly once, and
+// the pass ends by saying so rather than by wrapping round.
+FUNCTION_BLOCK TEST_ArbiterVisitsEveryTestOnce IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<3>;
+	Arbiter	 : TestArbiter;
+	Fakes	 : ARRAY[0..2] OF FakeTest;
+	Budgets	 : ST_TestBudgets;
+	i	   : DINT;
+	Active : ST_TestSlot;
+
+	ExpectedIndex : DINT;
+	ActualIndex	  : DINT;
+	ExpectedLabel : T_MaxString;
+	ActualLabel	  : T_MaxString;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{17107dc7-45b2-45d7-85f4-7cd760ed52e2}" />
+    <Method Name="Run" Id="{0f9cd046-37bb-4a1a-9519-811570abf07d}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Registry.TryClaim(Fakes[0], 'Alpha', Budgets);
+Registry.TryClaim(Fakes[1], 'Beta', Budgets);
+Registry.TryClaim(Fakes[2], 'Gamma', Budgets);
+
+Arbiter.Attach(Registry);
+Arbiter.Begin();
+
+FOR i := 0 TO 2 DO
+	Test.AssertTrue(Arbiter.Advance(), 'advance to a test');
+	Test.AssertTrue(Arbiter.HasCurrent, 'a test is active');
+
+	Active		  := Arbiter.Current;
+	ExpectedIndex := i;
+	ActualIndex	  := Active.Index;
+	Test.AssertEqual(ExpectedIndex, ActualIndex, 'slot carries its index');
+END_FOR
+
+ActualLabel	  := Active.Label;
+ExpectedLabel := 'Gamma';
+Test.AssertEqual(ExpectedLabel, ActualLabel, 'visited in registration order');
+
+Test.AssertFalse(Arbiter.Advance(), 'no fourth test');
+Test.AssertTrue(Arbiter.IsExhausted, 'exhausted');
+Test.AssertFalse(Arbiter.Advance(), 'and stays exhausted');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

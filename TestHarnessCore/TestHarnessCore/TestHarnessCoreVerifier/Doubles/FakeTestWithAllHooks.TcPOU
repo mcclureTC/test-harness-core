@@ -1,0 +1,59 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FakeTestWithAllHooks" Id="{9eaf8400-c6d8-4d30-9476-6c249e22ec03}" SpecialFunc="None">
+    <Declaration><![CDATA[// Implements every optional hook, so all three must resolve non-null.
+FUNCTION_BLOCK FakeTestWithAllHooks IMPLEMENTS I_Test, I_TestSetup, I_TestTeardown, I_TestLocation
+VAR
+	_RunCount : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{0559658c-8045-46da-9cbd-656683aa0633}" />
+    <Folder Name="I_TestLocation" Id="{8ae7578a-ca6c-48b6-bb84-13afa4d4eb85}" />
+    <Folder Name="I_TestSetup" Id="{e096788d-015b-4823-99f2-7d92a9f263b1}" />
+    <Folder Name="I_TestTeardown" Id="{873a8ee4-3f9c-4116-bd2d-e1850733eb3d}" />
+    <Property Name="Path" Id="{01241230-534e-4955-aa50-c47993a36a4a}" FolderPath="I_TestLocation\">
+      <Declaration><![CDATA[PROPERTY Path : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{fbbbda37-212c-43e6-9e19-17b8afd0a931}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Path := 'Verifier.Doubles.AllHooks';]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{9952b636-ad61-4469-b38d-9bdc52cc096c}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_RunCount := _RunCount + 1;
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Setup" Id="{685b444d-fea2-48f8-b0b8-01ea183513b8}" FolderPath="I_TestSetup\">
+      <Declaration><![CDATA[METHOD Setup : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Setup := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Teardown" Id="{a4f86f03-951b-416d-9195-0567dea2f559}" FolderPath="I_TestTeardown\">
+      <Declaration><![CDATA[METHOD Teardown : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Teardown := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_ArbiterRestartsFromTheBeginning" Id="{6b9b0523-096b-4d16-92b4-e68661a4a07c}" SpecialFunc="None">
+    <Declaration><![CDATA[// Begin is also what a re-run calls. A re-run re-executes the registered set from
+// the start, so there is no separate restart path that could drift out of step
+// with this one.
+FUNCTION_BLOCK TEST_ArbiterRestartsFromTheBeginning IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<3>;
+	Arbiter	 : TestArbiter;
+	Fakes	 : ARRAY[0..2] OF FakeTest;
+	Budgets	 : ST_TestBudgets;
+	Active : ST_TestSlot;
+
+	ExpectedLabel : T_MaxString;
+	ActualLabel	  : T_MaxString;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{28ad17e9-7c24-4f78-bfb1-fb880811d8f3}" />
+    <Method Name="Run" Id="{8861790a-6ddc-4ac7-a2eb-54317b12aecc}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Registry.TryClaim(Fakes[0], 'Alpha', Budgets);
+Registry.TryClaim(Fakes[1], 'Beta', Budgets);
+
+Arbiter.Attach(Registry);
+Arbiter.Begin();
+Arbiter.Advance();
+Arbiter.Advance();
+Arbiter.Advance();
+Test.AssertTrue(Arbiter.IsExhausted, 'first pass finished');
+
+Arbiter.Begin();
+
+Test.AssertFalse(Arbiter.IsExhausted, 'exhausted state cleared');
+Test.AssertTrue(Arbiter.Advance(), 'advances again');
+
+Active		  := Arbiter.Current;
+ActualLabel	  := Active.Label;
+ExpectedLabel := 'Alpha';
+Test.AssertEqual(ExpectedLabel, ActualLabel, 'back at the first test');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

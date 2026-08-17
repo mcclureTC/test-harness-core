@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RegistryCapacityAndOverflow" Id="{85c6da99-c649-47a4-a91b-858d04c02935}" SpecialFunc="None">
+    <Declaration><![CDATA[// A registry declared with three slots holds three, and the fourth is refused as
+// Full rather than accepted or written past the end.
+//
+// The original declared ARRAY[0..MaxTestCount], so a suite asked for two held
+// three - and reported "maximum test count exceeded - 2" while holding three.
+FUNCTION_BLOCK TEST_RegistryCapacityAndOverflow IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<3>;
+	Fakes	 : ARRAY[0..3] OF FakeTest;
+	Budgets	 : ST_TestBudgets;
+	i		 : DINT;
+
+	ExpectedFault : E_RegistrationFault;
+	ActualFault	  : E_RegistrationFault;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{ad4e9152-e41a-40a7-89a5-2a02cc6ddc49}" />
+    <Method Name="Run" Id="{ec466220-b196-4929-98be-464e4ad7f6cd}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR i := 0 TO 2 DO
+	ActualFault	  := Registry.TryClaim(Fakes[i], CONCAT('Test ', DINT_TO_STRING(i)), Budgets);
+	ExpectedFault := E_RegistrationFault.None;
+	Test.AssertEqual(ExpectedFault, ActualFault, 'three slots accepted');
+END_FOR
+
+ExpectedCount := 3;
+ActualCount	  := Registry.Count;
+Test.AssertEqual(ExpectedCount, ActualCount, 'count after filling');
+
+ActualFault	  := Registry.TryClaim(Fakes[3], 'One too many', Budgets);
+ExpectedFault := E_RegistrationFault.Full;
+Test.AssertEqual(ExpectedFault, ActualFault, 'fourth refused as Full');
+
+ExpectedCount := 3;
+ActualCount	  := Registry.Count;
+Test.AssertEqual(ExpectedCount, ActualCount, 'count unchanged by refusal');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RegistrySlotCarriesItsIndex" Id="{ddd905bd-6e29-47b6-a7a2-b76eed3b1231}" SpecialFunc="None">
+    <Declaration><![CDATA[// A slot knows where it lives, so a holder of the slot reaches the matching
+// journal without carrying a second value alongside it. An unclaimed slot reports
+// -1, the same "nothing here" answer its null Test gives.
+FUNCTION_BLOCK TEST_RegistrySlotCarriesItsIndex IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<3>;
+	Fakes	 : ARRAY[0..1] OF FakeTest;
+	Budgets	 : ST_TestBudgets;
+	Slot	 : ST_TestSlot;
+
+	ExpectedIndex : DINT;
+	ActualIndex	  : DINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{85140d8f-1160-4415-a859-1ff50fccb303}" />
+    <Method Name="Run" Id="{eb642e6b-9fdd-4635-aa38-6018e2c86f8a}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Registry.TryClaim(Fakes[0], 'First', Budgets);
+Registry.TryClaim(Fakes[1], 'Second', Budgets);
+
+Slot		  := Registry.Slot(0);
+ExpectedIndex := 0;
+ActualIndex	  := Slot.Index;
+Test.AssertEqual(ExpectedIndex, ActualIndex, 'slot 0 knows it is 0');
+
+Slot		  := Registry.Slot(1);
+ExpectedIndex := 1;
+ActualIndex	  := Slot.Index;
+Test.AssertEqual(ExpectedIndex, ActualIndex, 'slot 1 knows it is 1');
+
+Slot		  := Registry.Slot(2);
+ExpectedIndex := -1;
+ActualIndex	  := Slot.Index;
+Test.AssertEqual(ExpectedIndex, ActualIndex, 'unclaimed slot is -1');
+Test.AssertTrue(Slot.Test = 0, 'and carries no test');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

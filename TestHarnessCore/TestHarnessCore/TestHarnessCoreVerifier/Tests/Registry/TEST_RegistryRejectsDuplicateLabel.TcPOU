@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RegistryRejectsDuplicateLabel" Id="{46e06260-e9df-4448-85a3-b1b6b2ccf5f7}" SpecialFunc="None">
+    <Declaration><![CDATA[// Labels are the key CI trend history is built on, so two tests cannot share one.
+// The second claim is refused and takes no slot.
+FUNCTION_BLOCK TEST_RegistryRejectsDuplicateLabel IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<4>;
+	First	 : FakeTest;
+	Second	 : FakeTest;
+	Budgets	 : ST_TestBudgets;
+
+	ExpectedFault : E_RegistrationFault;
+	ActualFault	  : E_RegistrationFault;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{2844f9b1-3e42-4275-9c87-17937c2ce156}" />
+    <Method Name="Run" Id="{bd8186ec-2fe8-4e71-83ba-acb65172ccb2}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ActualFault	  := Registry.TryClaim(First, 'Homes the axis', Budgets);
+ExpectedFault := E_RegistrationFault.None;
+Test.AssertEqual(ExpectedFault, ActualFault, 'first accepted');
+
+ActualFault	  := Registry.TryClaim(Second, 'Homes the axis', Budgets);
+ExpectedFault := E_RegistrationFault.DuplicateLabel;
+Test.AssertEqual(ExpectedFault, ActualFault, 'duplicate refused');
+
+ExpectedCount := 1;
+ActualCount	  := Registry.Count;
+Test.AssertEqual(ExpectedCount, ActualCount, 'duplicate took no slot');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

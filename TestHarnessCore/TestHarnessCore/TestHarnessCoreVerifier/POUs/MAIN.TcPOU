@@ -1,16 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="MAIN" Id="{4675dad2-e94b-404d-becd-9b42710d4903}" SpecialFunc="None">
+  <POU Name="MAIN" Id="{6ad23a12-ff60-4084-95d3-efc5edf615eb}" SpecialFunc="None">
     <Declaration><![CDATA[// The verifier's task entry point.
 //
-// The floor check runs first and stands alone: it proves the harness can run a
-// test at all, without using the harness to prove it. Read PRG_FloorCheck.AllGood
-// before trusting anything else in this project.
-//
-// Suites and their tests are added below as they are written.
+// The floor check stands alone and runs first: it proves the harness can run a
+// test at all, WITHOUT using the harness to prove it. Read PRG_FloorCheck.AllGood
+// before trusting anything in PRG_UnitTests - if the runner is broken, every test
+// reports NotStarted and that looks exactly like a wiring mistake.
 PROGRAM MAIN]]></Declaration>
     <Implementation>
-      <ST><![CDATA[PRG_FloorCheck();]]></ST>
+      <ST><![CDATA[PRG_FloorCheck();
+PRG_UnitTests();]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

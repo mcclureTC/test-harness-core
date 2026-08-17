@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_ArbiterCurrentIsNullWhenNothingActive" Id="{7fdd4a6d-8f0e-4373-bb81-58b674fa1783}" SpecialFunc="None">
+    <Declaration><![CDATA[// "Nothing active" is a NULL REFERENCE, not a sentinel index. The original let
+// index 0 double as "none", so a caller reading the index without asking first
+// got a live test that was not running.
+FUNCTION_BLOCK TEST_ArbiterCurrentIsNullWhenNothingActive IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<3>;
+	Arbiter	 : TestArbiter;
+	Fakes	 : ARRAY[0..2] OF FakeTest;
+	Budgets	 : ST_TestBudgets;
+	Active : ST_TestSlot;
+
+	ExpectedIndex : DINT;
+	ActualIndex	  : DINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{e98836fd-e60a-4c39-bf51-a6f48514e0e3}" />
+    <Method Name="Run" Id="{178554f6-a144-43ef-82a7-215531fc8e59}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Registry.TryClaim(Fakes[0], 'Alpha', Budgets);
+Registry.TryClaim(Fakes[1], 'Beta', Budgets);
+
+Arbiter.Attach(Registry);
+Arbiter.Begin();
+
+Active := Arbiter.Current;
+Test.AssertTrue(Active.Test = 0, 'no test after Begin');
+Test.AssertFalse(Arbiter.HasCurrent, 'HasCurrent agrees');
+
+ExpectedIndex := -1;
+ActualIndex	  := Active.Index;
+Test.AssertEqual(ExpectedIndex, ActualIndex, 'index is -1, not 0');
+
+Arbiter.Advance();
+Active := Arbiter.Current;
+Test.AssertTrue(Active.Test <> 0, 'a real test once advanced');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

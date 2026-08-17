@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RegistryJournalRejectsBadIndex" Id="{f6c638fb-76e4-4321-96f5-608ebcb6c8fc}" SpecialFunc="None">
+    <Declaration><![CDATA[// An index outside the registered range yields an INVALID reference, not a live
+// one pointing at whatever was nearby.
+//
+// A method returning REFERENCE TO that simply returns leaves the reference
+// undefined, and undefined reads as valid often enough to pass by luck. Journal
+// assigns REF= 0 first, and this is what holds that in place.
+FUNCTION_BLOCK TEST_RegistryJournalRejectsBadIndex IMPLEMENTS I_Test
+VAR
+	Registry : TestRegistry<4>;
+	Fake	 : FakeTest;
+	Budgets	 : ST_TestBudgets;
+	Borrowed : REFERENCE TO TestJournal;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{6f95cdd9-7250-48e8-9142-866a0c9505ed}" />
+    <Method Name="Run" Id="{4ef8513d-3784-4c33-9383-566268531bd4}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Registry.TryClaim(Fake, 'The only one', Budgets);
+
+Borrowed REF= Registry.Journal(0);
+Test.AssertTrue(__ISVALIDREF(Borrowed), 'registered index is valid');
+
+Borrowed REF= Registry.Journal(1);
+Test.AssertFalse(__ISVALIDREF(Borrowed), 'unclaimed index is invalid');
+
+Borrowed REF= Registry.Journal(-1);
+Test.AssertFalse(__ISVALIDREF(Borrowed), 'negative index is invalid');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
