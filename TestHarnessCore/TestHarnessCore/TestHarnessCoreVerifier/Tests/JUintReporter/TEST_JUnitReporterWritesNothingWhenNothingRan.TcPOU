@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_JUnitReporterWritesNothingWhenNothingRan" Id="{650bc756-1aa8-4184-89aa-cf8748b947a9}" SpecialFunc="None">
+    <Declaration><![CDATA[// A run with no results produces no document.
+//
+// Writing an empty one would read as a run that passed with no tests - which is
+// exactly the silence a missing file is supposed to signal.
+FUNCTION_BLOCK TEST_JUnitReporterWritesNothingWhenNothingRan IMPLEMENTS I_Test
+VAR
+	Writer : TestJUnitReporter;
+	Spy	   : SpyReporter;
+	Tally  : TestRunTally;
+	Phase  : DINT;
+	Scans  : DINT;
+	Path : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier_Empty.xml';
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{743a46e5-6d0b-48e3-b191-60664dedc74d}" />
+    <Method Name="Run" Id="{20f1a074-cd60-4bf8-b302-bae9f59b2f83}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 2000 THEN
+	Test.Fail('the write never finished');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Writer.SetPath(Path);
+	Writer.AttachErrorSink(Spy);
+
+	// No TestStarted, no TestFinished, no SuiteFinished. Straight to the end.
+	Tally.SetLabel('nothing');
+	Tally.Begin(0);
+	Tally.Finish();
+	Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	Test.AssertTrue(Writer.IsIdle, 'no write was started');
+
+	ExpectedCount := 0;
+	ActualCount	  := Writer.FilesWritten;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was written');
+
+	// Not an error either - an empty run is a legitimate deployment.
+	ActualCount := Writer.WriteFailures;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and that is not a failure');
+
+	ActualCount := Spy.FrameworkErrorCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was reported');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -150,6 +150,21 @@
     <Compile Include="Tests\Journal\TEST_JournalZeroBudgetDisablesTheDeadline.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterIsBusyWhileWriting.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterRefusesWithNoPath.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterReportsAFailedWrite.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterWritesNothingWhenNothingRan.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterWritesTheDocument.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\LogReporter\TEST_LogReporterAlwaysWritesFrameworkErrors.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -288,6 +303,7 @@
     <Folder Include="Tests\Fanout" />
     <Folder Include="Tests\LogReporter" />
     <Folder Include="Tests\EventReporter" />
+    <Folder Include="Tests\JUintReporter" />
     <Folder Include="Tests\Suite" />
     <Folder Include="Tests\Runner" />
     <Folder Include="Tests\Verdict" />

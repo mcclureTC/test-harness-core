@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{67a6e922-452c-49b2-9313-b96e1de63c55}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{18f2ab95-e103-4ad6-aba6-6cad4a51f263}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      63 - assert this. A test that stops being registered vanishes
+//   Total      68 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //
@@ -17,27 +17,27 @@
 //
 // THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests drive DELIBERATE
 // failures into a private journal; the Suite tests register doubles that fail and
-// error on purpose. They all pass. What they prove is that going red works -
-// without them, a wall of green would only show that nothing objected.
+// error on purpose; the JUnit tests write to a folder that does not exist. They
+// all pass. What they prove is that going wrong works - without them, a wall of
+// green would only show that nothing objected.
 //
-// THE RUNNER AND SUITE TESTS ARE MULTI-SCAN. Each holds a private runner or suite
-// and steps it one scan per call, returning FALSE until it finishes - the same
-// mechanism they are verifying, one level down. Each carries a 200-scan watchdog,
-// so a defect that never completes fails its own test instead of hanging
-// everything and looking like a broken verifier.
+// THE RUNNER, SUITE AND JUNIT TESTS ARE MULTI-SCAN. Each holds a private object and
+// steps it one scan per call, returning FALSE until it finishes - the same
+// mechanism they are verifying, one level down. Each carries a watchdog, so a
+// defect that never completes fails its own test instead of hanging everything and
+// looking like a broken verifier.
 //
-// THIS SUITE STILL ATTACHES NO REPORTER, even though two now exist. The reporter
-// tests drive their own instances. Nothing here writes to the log or raises an
-// event, so a reporting defect cannot be mistaken for a harness defect and the
-// counts below remain the whole result.
+// THIS SUITE STILL ATTACHES NO REPORTER, though three now exist. The reporter tests
+// drive their own instances, so a reporting defect cannot be mistaken for a harness
+// defect and the counts below remain the whole result.
 //
-// The reporter tests establish that the right BRANCH was taken and, for the event
-// sink, that the logger ACCEPTED the event - FailedSends and LastError are what
-// separate "the event class is not registered" from "everything is fine". What
-// neither can check is the wording. Read the Logged Events window once, by eye.
+// TWO THINGS NO TEST HERE CAN ESTABLISH, both needing one look by eye:
+//   - the wording of log lines and events, in the Logged Events window
+//   - whether the JUnit document is well formed and CI can parse it. Open
+//     C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier.xml
 PROGRAM PRG_UnitTests
 VAR
-	Suite	: TestSuite<70>;
+	Suite	: TestSuite<80>;
 	Budgets : ST_TestBudgets;
 	Wired	: BOOL;
 
@@ -121,6 +121,13 @@ VAR
 	eventReporterIsQuietAboutPasses	: TEST_EventReporterIsQuietAboutPasses;
 	eventReporterRaisesEachOutcomeOnce	: TEST_EventReporterRaisesEachOutcomeOnce;
 	eventReporterWorksThroughTheFanout	: TEST_EventReporterWorksThroughTheFanout;
+
+	// -- JUnitReporter --
+	jUnitReporterWritesTheDocument	: TEST_JUnitReporterWritesTheDocument;
+	jUnitReporterIsBusyWhileWriting	: TEST_JUnitReporterIsBusyWhileWriting;
+	jUnitReporterReportsAFailedWrite	: TEST_JUnitReporterReportsAFailedWrite;
+	jUnitReporterRefusesWithNoPath	: TEST_JUnitReporterRefusesWithNoPath;
+	jUnitReporterWritesNothingWhenNothingRan	: TEST_JUnitReporterWritesNothingWhenNothingRan;
 
 	// -- the result, for the watch window ---------------------------------------
 	Complete : BOOL;
@@ -218,6 +225,13 @@ END_VAR]]></Declaration>
 	Suite.Register(eventReporterIsQuietAboutPasses, 'EventReporter: quiet about passes until narration is asked for', Budgets);
 	Suite.Register(eventReporterRaisesEachOutcomeOnce, 'EventReporter: one event per notification, none raised twice', Budgets);
 	Suite.Register(eventReporterWorksThroughTheFanout, 'EventReporter: it sits behind the fan-out beside the log sink', Budgets);
+
+	// JUnitReporter
+	Suite.Register(jUnitReporterWritesTheDocument, 'JUnitReporter: the document reaches disk', Budgets);
+	Suite.Register(jUnitReporterIsBusyWhileWriting, 'JUnitReporter: IsIdle is FALSE until the file lands', Budgets);
+	Suite.Register(jUnitReporterReportsAFailedWrite, 'JUnitReporter: a failed write is counted and reported (R3)', Budgets);
+	Suite.Register(jUnitReporterRefusesWithNoPath, 'JUnitReporter: no path set is a failure, not silence', Budgets);
+	Suite.Register(jUnitReporterWritesNothingWhenNothingRan, 'JUnitReporter: an empty run produces no document', Budgets);
 
 END_IF
 

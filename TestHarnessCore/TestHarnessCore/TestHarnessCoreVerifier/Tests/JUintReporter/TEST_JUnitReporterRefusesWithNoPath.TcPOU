@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_JUnitReporterRefusesWithNoPath" Id="{4a9b5857-df65-49fc-90ce-7e2aeb4a2dcc}" SpecialFunc="None">
+    <Declaration><![CDATA[// Asking for a write with no path set is a failure, not silence.
+//
+// It is caught before anything asynchronous starts, so IsIdle never drops - there
+// is nothing to wait for.
+FUNCTION_BLOCK TEST_JUnitReporterRefusesWithNoPath IMPLEMENTS I_Test
+VAR
+	Writer : TestJUnitReporter;
+	Spy	   : SpyReporter;
+	Tally  : TestRunTally;
+	Phase  : DINT;
+	Scans  : DINT;	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{f7a63901-30e8-4d43-8267-a2fc845d27da}" />
+    <Method Name="Run" Id="{2b1d2466-9209-4c0c-90cf-4b7ad1bc7a38}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 2000 THEN
+	Test.Fail('the write never finished');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	// Deliberately no SetPath.
+	Writer.AttachErrorSink(Spy);
+
+	Tally.SetLabel('a suite');
+	Tally.Begin(1);
+
+	Writer.TestStarted(SuiteLabel := 'a suite', TestLabel := 'a test',
+					   Location := 'Verifier.Somewhere');
+	Writer.CheckPassed(StepLabel := '', Detail := '');
+	Writer.CheckFailed(StepLabel := 'Home', Kind := E_FailureKind.ValueMismatch,
+					   Expected := '1', Actual := '2',
+					   Diagnostic := 'expected 1, actual 2', Message := 'deliberate');
+	Writer.TestFinished(SuiteLabel := 'a suite', TestLabel := 'a test',
+						Location := 'Verifier.Somewhere', Status := E_TestStatus.Failed,
+						Kind := E_FailureKind.ValueMismatch,
+						Summary := 'Home: expected 1, actual 2 - deliberate',
+						ElapsedTime := 0.01, ElapsedCycles := 1, Assertions := 2);
+
+	Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.01);
+	Tally.Finish();
+	Writer.SuiteFinished(Tally);
+	Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	Test.AssertTrue(Writer.IsIdle, 'no write was started');
+
+	ExpectedCount := 1;
+	ActualCount	  := Writer.WriteFailures;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'but it counted as a failure');
+
+	ExpectedCount := 1;
+	ActualCount	  := Spy.FrameworkErrorCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and said so');
+
+	ExpectedCount := 0;
+	ActualCount	  := Writer.FilesWritten;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and wrote nothing');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

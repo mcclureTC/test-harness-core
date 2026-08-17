@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_JUnitReporterIsBusyWhileWriting" Id="{2ded5bcb-e6bf-4630-99fc-4bca2081b7b8}" SpecialFunc="None">
+    <Declaration><![CDATA[// The ONLY sink where IsIdle means anything. Every other one returns TRUE
+// constantly because nothing they do outlives the call.
+//
+// CI must wait for this as well as IsComplete: a run finishing and its document
+// reaching disk are different events, and copying between them yields a truncated
+// artifact - which reads as a broken pipeline rather than a finished run.
+//
+// A fast local write could hide a missing IsIdle. Checking it on the scan the
+// write is REQUESTED, before CyclicLogic has run at all, is what makes this test
+// mean something.
+FUNCTION_BLOCK TEST_JUnitReporterIsBusyWhileWriting IMPLEMENTS I_Test
+VAR
+	Writer : TestJUnitReporter;
+	Spy	   : SpyReporter;
+	Tally  : TestRunTally;
+	Phase  : DINT;
+	Scans  : DINT;
+	Path : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier_Busy.xml';
+	IdleAtStart	  : BOOL;
+	IdleWhenAsked : BOOL;
+	IdleAtEnd	  : BOOL;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{a384d3b4-df6f-4e6a-bd7a-a32285f7bc8b}" />
+    <Method Name="Run" Id="{4ecd0f36-f6a1-4b30-baee-f670db1eaae5}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 2000 THEN
+	Test.Fail('the write never finished');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Writer.SetPath(Path);
+	IdleAtStart := Writer.IsIdle;
+	Writer.AttachErrorSink(Spy);
+
+	Tally.SetLabel('a suite');
+	Tally.Begin(1);
+
+	Writer.TestStarted(SuiteLabel := 'a suite', TestLabel := 'a test',
+					   Location := 'Verifier.Somewhere');
+	Writer.CheckPassed(StepLabel := '', Detail := '');
+	Writer.CheckFailed(StepLabel := 'Home', Kind := E_FailureKind.ValueMismatch,
+					   Expected := '1', Actual := '2',
+					   Diagnostic := 'expected 1, actual 2', Message := 'deliberate');
+	Writer.TestFinished(SuiteLabel := 'a suite', TestLabel := 'a test',
+						Location := 'Verifier.Somewhere', Status := E_TestStatus.Failed,
+						Kind := E_FailureKind.ValueMismatch,
+						Summary := 'Home: expected 1, actual 2 - deliberate',
+						ElapsedTime := 0.01, ElapsedCycles := 1, Assertions := 2);
+
+	Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.01);
+	Tally.Finish();
+	Writer.SuiteFinished(Tally);
+	Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
+
+	// Requested, and nothing has driven it yet.
+	IdleWhenAsked := Writer.IsIdle;
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	Writer.CyclicLogic();
+	IF Writer.IsIdle THEN
+		IdleAtEnd := TRUE;
+		Phase	  := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(IdleAtStart, 'idle before anything was asked of it');
+	Test.AssertFalse(IdleWhenAsked, 'NOT idle once the write is requested');
+	Test.AssertTrue(IdleAtEnd, 'idle again once the file lands');
+
+	ExpectedCount := 1;
+	ActualCount	  := Writer.FilesWritten;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and it really wrote');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
