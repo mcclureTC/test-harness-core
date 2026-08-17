@@ -390,6 +390,21 @@ END_IF
 _IsSaving := TRUE;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="RunStarted" Id="{64e605b6-2a78-4463-a824-c30b614dc50d}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[// Opens the document at the start of the run rather than on the first result to
+// arrive.
+//
+// The lazy version worked and was guesswork: it inferred "a run has begun" from
+// something happening. This is the run saying so.
+METHOD RunStarted
+VAR_INPUT
+	Label	   : T_MaxString;
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.BeginDocument();]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="SetPath" Id="{fab71537-94da-4b88-bbea-217beadb4c71}">
       <Declaration><![CDATA[// Absolute path of the result document. REQUIRED - there is no default.
 //

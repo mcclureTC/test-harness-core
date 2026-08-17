@@ -22,6 +22,7 @@ VAR
 
 	_SuiteCount : UDINT;
 	_SaveCount	: UDINT;
+	_RunStartedCalls : UDINT;
 
 	_ErrorCount		 : UDINT;
 	_LastErrorSource : T_MaxString;
@@ -304,6 +305,7 @@ END_FOR
 _CaseCount		 := 0;
 _SuiteCount		 := 0;
 _SaveCount		 := 0;
+_RunStartedCalls := 0;
 _ErrorCount		 := 0;
 _LastErrorSource := '';
 _LastErrorText	 := '';
@@ -323,6 +325,16 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_SaveCount := _SaveCount + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RunStarted" Id="{9de7285b-5ea2-4989-8a79-03766aed1928}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD RunStarted
+VAR_INPUT
+	Label	   : T_MaxString;
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_RunStartedCalls := _RunStartedCalls + 1;]]></ST>
       </Implementation>
     </Method>
     <Property Name="SaveCount" Id="{7fcb88b9-ac02-4789-829e-51ac17ff030f}">

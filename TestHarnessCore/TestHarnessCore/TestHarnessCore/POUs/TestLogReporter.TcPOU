@@ -29,6 +29,10 @@ VAR
 	_FailuresLogged		   : UDINT;
 	_ErrorsLogged		   : UDINT;
 	_FrameworkErrorsLogged : UDINT;
+	// The banner rule. Held once so both ends of a run are drawn identically - two
+	// rules that differed by a character would be worse than none.
+	_Rule : T_MaxString := '========================================================';
+
 	_TestsSeen			   : UDINT;
 	_SuitesSeen			   : UDINT;
 END_VAR]]></Declaration>
@@ -165,11 +169,47 @@ END_IF
 // several targets produces log output that cannot be told apart.
 Line := CONCAT(CONCAT(THIS^.Tally(Status), '  on '), TargetInfo);
 
+THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);
+
+// Severity follows the outcome. A log filtered to errors still shows the closing
+// line of a run that went red, and shows nothing of one that did not.
 IF Status.Outcome = E_RunOutcome.Passed THEN
-	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('RUN PASSED  ', Line));
+	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('===  RUN PASSED  ', Line));
 ELSE
-	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, CONCAT('RUN FAILED  ', Line));
-END_IF]]></ST>
+	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, CONCAT('===  RUN FAILED  ', Line));
+END_IF
+
+THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RunStarted" Id="{7e120ce4-1d0a-4789-b07c-42569a340e59}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[// Opens the run with a banner, so everything between it and the closing rule
+// belongs to this run and nothing else.
+//
+// The TwinCAT log is shared - a machine writes to it too - and test output is
+// interleaved with whatever else is happening. Without a marker at BOTH ends, a
+// reader scrolling back cannot tell where the run began; the failures stream
+// during it and the summary only arrives at the end.
+METHOD RunStarted
+VAR_INPUT
+	Label	   : T_MaxString;
+	TargetInfo : T_MaxString;
+END_VAR
+
+VAR
+	Line : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);
+
+Line := CONCAT('===  TEST RUN  ', Label);
+
+IF TargetInfo <> '' THEN
+	Line := CONCAT(Line, CONCAT('  on ', TargetInfo));
+END_IF
+
+THIS^.Emit(ADSLOG_MSGTYPE_HINT, Line);
+THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);]]></ST>
       </Implementation>
     </Method>
     <Method Name="SetPrefix" Id="{f9f3eda4-4dbe-4486-afa1-31324a80de1d}">

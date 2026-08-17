@@ -14,6 +14,7 @@ VAR
 	_TestFinishedCalls	 : UDINT;
 	_SuiteFinishedCalls	 : UDINT;
 	_RunFinishedCalls	 : UDINT;
+	_RunStartedCalls : UDINT;
 	_FrameworkErrorCalls : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
@@ -91,6 +92,16 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Method Name="RunStarted" Id="{c4bd9a79-52ce-494c-b452-0d888d99a65c}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD RunStarted
+VAR_INPUT
+	Label	   : T_MaxString;
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_RunStartedCalls := _RunStartedCalls + 1;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="SuiteFinished" Id="{56c8fcfd-340c-4740-af5d-f9d231d58721}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[METHOD SuiteFinished
 VAR_INPUT

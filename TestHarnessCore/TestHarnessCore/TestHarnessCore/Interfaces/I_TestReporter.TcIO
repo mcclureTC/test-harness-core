@@ -56,6 +56,23 @@ VAR_INPUT
 	TargetInfo : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
+    <Method Name="RunStarted" Id="{2bb2de02-34c7-45c6-a0ec-f41861cf3233}">
+      <Declaration><![CDATA[// A run has begun. Raised once, before anything else in it.
+//
+// The counterpart of I_TestDetailSink.TestStarted, and it exists for the same
+// reason: a sink that BUILDS something needs to be told when to open it rather
+// than inferring it from the first thing that arrives. The result-document writer
+// used to create its document lazily on the first result, which worked and was
+// guesswork.
+//
+// It also lets a log sink bracket its output. Failures stream DURING a run and the
+// summary comes at the end, so a marker only at the end brackets nothing.
+METHOD RunStarted
+VAR_INPUT
+	Label	   : T_MaxString;
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+    </Method>
     <Method Name="SuiteFinished" Id="{42b7f26e-c8ce-40e0-b953-71bb708cc00d}">
       <Declaration><![CDATA[// One suite reached a terminal state. Status carries the label and the counts.
 METHOD SuiteFinished

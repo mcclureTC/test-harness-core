@@ -94,6 +94,9 @@
     <Compile Include="Interfaces\I_TestOutcome.TcIO">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Interfaces\I_TestReporter.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Interfaces\I_TestReRun.TcIO">
       <SubType>Code</SubType>
     </Compile>
@@ -101,9 +104,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Interfaces\I_TestRegistration.TcIO">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Interfaces\I_TestReporter.TcIO">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Interfaces\I_TestRoster.TcIO">

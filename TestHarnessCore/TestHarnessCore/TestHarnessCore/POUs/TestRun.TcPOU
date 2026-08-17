@@ -351,6 +351,10 @@ IF _IsOpen THEN
 	IF _Label = '' THEN
 		THIS^.RaiseFrameworkError('the run was started with no label');
 	END_IF
+
+	// Once, before anything else in the run. A sink that builds something opens it
+	// here rather than guessing from the first result to arrive.
+	_Fanout.RunStarted(Label := _Label, TargetInfo := _TargetInfo);
 END_IF
 
 IF _Tally.IsComplete THEN

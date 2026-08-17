@@ -262,6 +262,26 @@ FOR i := 0 TO TO_DINT(_Count) - 1 DO
 END_FOR]]></ST>
       </Implementation>
     </Method>
+    <Method Name="RunStarted" Id="{a05a752c-c027-46c5-ab84-9d40fad541b8}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[METHOD RunStarted
+VAR_INPUT
+	Label	   : T_MaxString;
+	TargetInfo : T_MaxString;
+END_VAR
+
+VAR
+	i : DINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _IsSuspended THEN
+	RETURN;
+END_IF
+
+FOR i := 0 TO TO_DINT(_Count) - 1 DO
+	_Reporters[i].RunStarted(Label := Label, TargetInfo := TargetInfo);
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="SuiteFinished" Id="{ec2bc5be-0df1-47a7-b8d1-031dba4bb8b1}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[METHOD SuiteFinished
 VAR_INPUT

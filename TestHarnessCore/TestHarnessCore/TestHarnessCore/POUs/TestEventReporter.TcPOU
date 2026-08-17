@@ -211,6 +211,24 @@ ELSE
 END_IF]]></ST>
       </Implementation>
     </Method>
+    <Method Name="RunStarted" Id="{a8aa82f7-7050-404f-8f72-6c6d8aa5ba4c}" FolderPath="I_TestReporter\">
+      <Declaration><![CDATA[// Deliberately raises nothing.
+//
+// A banner is a LOG device: it exists because log lines are an undifferentiated
+// stream that a reader scrolls through. Events are already discrete, timestamped
+// and filterable by class and ID, so bracketing them would add noise to a view
+// that does not need it.
+METHOD RunStarted
+VAR_INPUT
+	Label	   : T_MaxString;
+	TargetInfo : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+	Nothing. See the declaration.
+*)]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="SetVerbosity" Id="{abf54c99-adfa-48cc-b0cf-60c993b4812e}">
       <Declaration><![CDATA[// Whether passing and skipped tests raise an event of their own.
 //
