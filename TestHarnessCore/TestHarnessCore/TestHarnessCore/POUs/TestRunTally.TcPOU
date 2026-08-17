@@ -1,0 +1,276 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestRunTally" Id="{8649aed0-ca4f-45fb-9308-13791e326e6e}" SpecialFunc="None">
+    <Declaration><![CDATA[// The counts, and what they add up to. The read model of a run.
+//
+// Separated from the suite because "what does this run amount to" is its own
+// question, with its own consumers - CI, an HMI, a sequencer aggregating several -
+// and none of them should be handed the ability to start or stop anything.
+//
+// Every figure is maintained INCREMENTALLY, as each test completes. The original
+// recomputed all of this every scan by walking every slot, which is the
+// O(tests x capacity) per-cycle cost R6 exists to remove - and then exposed none
+// of it, so nothing could ask whether a run had finished.
+//
+// Not generic and holds nothing generic: it counts, and a count does not care how
+// many slots exist.
+FUNCTION_BLOCK TestRunTally IMPLEMENTS I_TestRunStatus
+VAR
+	_Status : ST_TestRunStatus;
+	// Tests folded in so far. Distinct from TestCount, which is how many were
+	// registered - they differ while a run is in progress, and after one that was
+	// abandoned.
+	_Recorded : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+	No cyclic body. Figures change when a test finishes, not every scan.
+*)]]></ST>
+    </Implementation>
+    <Folder Name="I_Labelled" Id="{837b0e49-64c8-469e-8a18-e0a21261e5b2}" />
+    <Folder Name="I_TestRunStatus" Id="{ccdd21b7-83ad-4b88-9743-80bd7567ae85}" />
+    <Method Name="Begin" Id="{afd6b0bf-b5a7-48a3-bf34-1a0532d907bf}">
+      <Declaration><![CDATA[// Start a run over Count tests. Clears every figure but the label.
+//
+// Also what a re-run calls. A re-run re-executes the registered set, so the counts
+// start again from nothing while the set itself is untouched.
+METHOD Begin
+VAR_INPUT
+	Count : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Status.Outcome		  := E_RunOutcome.Running;
+_Status.IsComplete	  := FALSE;
+_Status.TestCount	  := Count;
+_Status.PassedCount	  := 0;
+_Status.FailedCount	  := 0;
+_Status.ErrorCount	  := 0;
+_Status.SkippedCount  := 0;
+_Status.TotalDuration := 0.0;
+_Recorded			  := 0;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ErrorCount" Id="{71a2dd1a-2608-41c3-9f49-bdfb44f607ed}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[// Tests that could not run, plus framework errors.
+PROPERTY ErrorCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{9c91d845-e4ac-4cae-8b73-c701305021a5}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ErrorCount := _Status.ErrorCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FailedCount" Id="{d6e4b93d-d3dc-4017-8e20-50a0158e676f}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[// Checks that did not hold.
+PROPERTY FailedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{57061c5b-99de-40bb-a782-c0d0420c7571}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FailedCount := _Status.FailedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Finish" Id="{ffeca13e-0987-4f0c-850e-22ff7983dbe6}">
+      <Declaration><![CDATA[// Terminal. Settles the aggregate outcome from what was recorded.
+//
+// Named Finish, not Complete: Plan.md 2.1 bans status words as method names, and
+// Complete would sit beside the IsComplete property on this very object. That is
+// exactly the collision the rule names.
+//
+// Aggregation, applied in order:
+//   any Errored -> Errored   the run cannot be trusted
+//   any Failed  -> Failed
+//   all Skipped -> Skipped
+//   otherwise   -> Passed
+//
+// Errored outranks Failed because a framework or environment problem casts doubt
+// on every other result in the run. This is order-INSENSITIVE by design: a test
+// that errored and then failed weighs the same as one that failed and then
+// errored.
+METHOD Finish]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _Status.IsComplete THEN
+	RETURN;
+END_IF
+
+IF _Status.ErrorCount > 0 THEN
+	_Status.Outcome := E_RunOutcome.Errored;
+ELSIF _Status.FailedCount > 0 THEN
+	_Status.Outcome := E_RunOutcome.Failed;
+ELSIF (_Recorded > 0) AND (_Status.SkippedCount = _Recorded) THEN
+	_Status.Outcome := E_RunOutcome.Skipped;
+ELSIF _Status.PassedCount > 0 THEN
+	_Status.Outcome := E_RunOutcome.Passed;
+ELSE
+	// Nothing ran and nothing was skipped. An empty suite is a clean result, not a
+	// failure - a project may legitimately deploy one with no tests registered.
+	_Status.Outcome := E_RunOutcome.Passed;
+END_IF
+
+_Status.IsComplete := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="IsComplete" Id="{b204eb3e-d5d8-4f8c-a88f-a65b09a7b8a9}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[// Reached a terminal state - NOT "ran everything".
+PROPERTY IsComplete : BOOL]]></Declaration>
+      <Get Name="Get" Id="{52dde09f-bdc0-497a-9cc2-47e97ca4f071}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsComplete := _Status.IsComplete;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Label" Id="{d7346b8b-55dd-46ba-b439-d680ba6ec47b}" FolderPath="I_Labelled\">
+      <Declaration><![CDATA[PROPERTY Label : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{8a042e7c-048e-4dae-b220-bdd6e1a29238}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Label := _Status.Label;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Outcome" Id="{b80fecff-358f-45d7-973f-bb860362781c}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[// Readable while the run is in progress: Running is distinct from every
+// terminal value.
+PROPERTY Outcome : E_RunOutcome]]></Declaration>
+      <Get Name="Get" Id="{58861fd7-81d1-46f5-9c91-8395c0bc7eab}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Outcome := _Status.Outcome;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PassedCount" Id="{a4c17890-f102-4ddd-8a73-9565763b553e}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY PassedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{92dd6e25-0ad9-4b5d-bd91-2b6026b4f750}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PassedCount := _Status.PassedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Record" Id="{9cf12385-067c-4cd8-a0a7-2750b2aab419}">
+      <Declaration><![CDATA[// Fold one finished test into the totals.
+//
+// Called once per test as it completes, NOT recomputed every scan. The original
+// derived its counts by walking every slot each cycle, which is the O(tests x
+// capacity) cost R6 exists to remove - and it exposed none of the result anyway.
+//
+// A status that is not terminal is ignored rather than counted as something. There
+// is no sensible bucket for Running, and inventing one would let a half-finished
+// test look like a result.
+METHOD Record
+VAR_INPUT
+	// Named Verdict, not Status: a parameter called Status would shadow the Status
+	// property on this object, and the shadowing is silent.
+	Verdict		: E_TestStatus;
+	ElapsedTime : LREAL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE Verdict OF
+E_TestStatus.Passed:
+	_Status.PassedCount := _Status.PassedCount + 1;
+E_TestStatus.Failed:
+	_Status.FailedCount := _Status.FailedCount + 1;
+E_TestStatus.Errored:
+	_Status.ErrorCount := _Status.ErrorCount + 1;
+E_TestStatus.Skipped:
+	_Status.SkippedCount := _Status.SkippedCount + 1;
+ELSE
+	RETURN;
+END_CASE
+
+_Recorded			  := _Recorded + 1;
+_Status.TotalDuration := _Status.TotalDuration + ElapsedTime;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RecordFrameworkError" Id="{297277bd-6bb1-4656-89b2-84b01218cd48}">
+      <Declaration><![CDATA[// Something the framework itself could not do: a rejected registration, a
+// teardown that overran, a result document that could not be written.
+//
+// It raises ErrorCount without touching TestCount, so the per-test figures still
+// add up while the run is unmistakably untrustworthy. Reporting it as a test
+// failure would send the reader hunting a defect that is not there.
+METHOD RecordFrameworkError]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Status.ErrorCount := _Status.ErrorCount + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetLabel" Id="{24a6ceea-0108-418d-900a-1af1ce10a96c}">
+      <Declaration><![CDATA[// The name this run reports under. Supplied by the suite at composition.
+METHOD SetLabel
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Status.Label := Label;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SkippedCount" Id="{10436a11-3777-4790-afda-116f07532370}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[// Not a failure. Must not turn a build red.
+PROPERTY SkippedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{2b45bcfb-07d2-4d83-9a08-8448caee69e9}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SkippedCount := _Status.SkippedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Status" Id="{600628a7-673c-4f06-9032-24596b8421b1}">
+      <Declaration><![CDATA[// Every figure at once, as a plain struct, for publishing as an ADS symbol.
+//
+// Copy it to a variable before reading a member: TwinCAT will not take a member
+// off the result of a call.
+PROPERTY Status : ST_TestRunStatus]]></Declaration>
+      <Get Name="Get" Id="{5a5a2d0d-c200-4700-933a-5c66eca77618}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Status := _Status;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TestCount" Id="{41452c52-74f4-4028-b1f4-811fc7055313}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[// Tests registered.
+PROPERTY TestCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{49d8124b-1d88-40c6-b99c-745e82231d96}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TestCount := _Status.TestCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TotalDuration" Id="{1cfddb30-0798-4e5a-ac62-ccb0ea8d33d2}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[// Seconds for the whole run: a suite sums its tests, a sequencer sums its suites.
+//
+// Named apart from I_TestTiming.ElapsedTime deliberately - one is how long a
+// single test has been going, the other an aggregate over many.
+PROPERTY TotalDuration : LREAL]]></Declaration>
+      <Get Name="Get" Id="{65288387-60e2-442d-92a6-3d28b9383d84}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TotalDuration := _Status.TotalDuration;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

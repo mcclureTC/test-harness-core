@@ -50,6 +50,9 @@
     <Compile Include="DUTs\ST_TestBudgets.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\ST_TestRunStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\ST_TestSlot.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -131,6 +134,9 @@
     <Compile Include="POUs\TestRunner.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\TestRunTally.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\TestStopwatch.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -179,6 +185,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Documentation\TestHarnessCore.md">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Documentation\UPDATE_13.md">
       <SubType>Content</SubType>
     </Content>
   </ItemGroup>
