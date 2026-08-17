@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="PRG_FloorCheck" Id="{2058a9d6-87de-48e1-8749-0049e3b53617}" SpecialFunc="None">
+    <Declaration><![CDATA[// Proves the harness can run one test and report a verdict - WITHOUT using the
+// harness to prove it.
+//
+// The verifier tests TestHarnessCore using TestHarnessCore. That is unavoidable
+// and mostly fine, but it leaves one hole: if the runner never advances, every
+// test reports NotStarted, and that looks exactly like a wiring mistake. There is
+// no way to tell a framework defect from a setup error, because the thing
+// reporting the result is the thing under test.
+//
+// So this drives TestRegistry, TestArbiter and TestRunner BY HAND, one step per
+// scan, and writes what it finds into plain variables. Read them in the online
+// view. Nothing between you and those objects is itself under test.
+//
+// EXPECTED once Stage reaches Done:
+//
+//   Claimed        TRUE          Advanced       TRUE
+//   ActiveLabel    'floor'       Loaded         TRUE
+//   Outcome        Finished      Verdict        Passed
+//   Checks         1             BodyRunCount   1
+//   Exhausted      TRUE          AllGood        TRUE
+//
+// AllGood is every line above, ANDed. If it is TRUE the floor holds, and any
+// failure a real test reports afterwards is a real finding.
+//
+// If it is FALSE, read the values individually: the first wrong one names the
+// object that broke.
+//
+// Re-run after ANY change to TestRunner, TestArbiter or TestRegistry. It costs one
+// scan and it is the only check here that does not depend on what it tests.
+PROGRAM PRG_FloorCheck
+VAR
+	// -- driven directly, not through a suite -----------------------------------
+	Registry : TestRegistry<2>;
+	Arbiter	 : TestArbiter;
+	Runner	 : TestRunner;
+	// The assertion handle. Named Handle, not Verdict, so it cannot be confused
+	// with the verdict the test earns.
+	Handle	 : TestVerdict;
+	Subject	 : FloorTest;
+	Budgets	 : ST_TestBudgets;
+
+	// -- what was found ---------------------------------------------------------
+	Stage		 : E_FloorStage;
+	Claimed		 : BOOL;
+	Advanced	 : BOOL;
+	ActiveLabel	 : T_MaxString;
+	Loaded		 : BOOL;
+	Outcome		 : E_PhaseOutcome;
+	Verdict		 : E_TestStatus;
+	Checks		 : UDINT;
+	BodyRunCount : UDINT;
+	Exhausted	 : BOOL;
+	AllGood		 : BOOL;
+
+	// -- working ----------------------------------------------------------------
+	Slot	: ST_TestSlot;
+	Journal : REFERENCE TO TestJournal;
+	Fault	: E_RegistrationFault;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE Stage OF
+
+E_FloorStage.Register:
+	// Capacity 2 holding one test. Capacity is not what is being checked here.
+	Fault	:= Registry.TryClaim(Subject, 'floor', Budgets);
+	Claimed := (Fault = E_RegistrationFault.None);
+
+	Runner.Attach(Roster := Registry, Verdict := Handle);
+	Arbiter.Attach(Registry);
+	Arbiter.Begin();
+
+	Stage := E_FloorStage.Select;
+
+E_FloorStage.Select:
+	Advanced := Arbiter.Advance();
+	Slot	 := Arbiter.Current;
+
+	ActiveLabel := Slot.Label;
+	Loaded		:= Runner.Load(Slot);
+
+	Stage := E_FloorStage.Drive;
+
+E_FloorStage.Drive:
+	// One scan of the body. A single-scan test must finish here; if it does not,
+	// Outcome stays Running and that is itself the finding.
+	Outcome := Runner.Advance(Enable := TRUE);
+
+	IF Outcome <> E_PhaseOutcome.Running THEN
+		Stage := E_FloorStage.Read;
+	END_IF
+
+E_FloorStage.Read:
+	Journal REF= Registry.Journal(0);
+
+	IF __ISVALIDREF(Journal) THEN
+		Verdict := Journal.Status;
+		Checks	:= Journal.AssertionCount;
+	END_IF
+
+	BodyRunCount := Subject.RunCount;
+
+	// Nothing left to hand out and nothing running.
+	Arbiter.Advance();
+	Exhausted := Arbiter.IsExhausted;
+
+	AllGood := Claimed
+			   AND Advanced
+			   AND (ActiveLabel = 'floor')
+			   AND Loaded
+			   AND (Outcome = E_PhaseOutcome.Finished)
+			   AND (Verdict = E_TestStatus.Passed)
+			   AND (Checks = 1)
+			   AND (BodyRunCount = 1)
+			   AND Exhausted;
+
+	Stage := E_FloorStage.Done;
+
+E_FloorStage.Done:
+	// Terminal. Nothing repeats, so every value above stays readable.
+	;
+
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

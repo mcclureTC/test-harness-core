@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FloorTest" Id="{01e15801-b41c-40c8-be92-19201585b861}" SpecialFunc="None">
+    <Declaration><![CDATA[// The simplest thing that can be called a test: one check, finished in one scan.
+//
+// Nothing optional, nothing multi-scan, nothing that can fail. If the harness
+// cannot run THIS and report Passed, no other result it produces means anything.
+FUNCTION_BLOCK FloorTest IMPLEMENTS I_Test
+VAR
+	// Counted so the floor check can prove the body ran exactly once. A harness
+	// that called it twice, or never, would otherwise look identical from outside.
+	_RunCount : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{92ce2541-8d3f-445b-86b9-1cc86f6a77bc}" />
+    <Method Name="Run" Id="{7333c092-24ca-4f09-98ca-0cb6bbc4b519}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR
+
+VAR
+	// AssertEqual takes ANY, which binds only to an addressable variable - a
+	// literal or an inlined expression will not compile. Both sides are copied into
+	// variables first. A language constraint, not a choice.
+	Expected : DINT := 4;
+	Actual	 : DINT;
+	Two		 : DINT := 2;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	// Abandoned. Nothing to unwind.
+	Run := TRUE;
+	RETURN;
+END_IF
+
+_RunCount := _RunCount + 1;
+
+Actual := Two + Two;
+Test.AssertEqual(Expected, Actual, 'two and two');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="RunCount" Id="{4fce842d-3b9c-4571-a749-64591d57a39c}">
+      <Declaration><![CDATA[// How many times the harness called Run. Exactly 1 after a clean single run.
+PROPERTY RunCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{f63a3bfa-e499-4488-88c1-96ef5d97c766}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RunCount := _RunCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

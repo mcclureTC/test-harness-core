@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="MAIN" Id="{4675dad2-e94b-404d-becd-9b42710d4903}" SpecialFunc="None">
+    <Declaration><![CDATA[// The verifier's task entry point.
+//
+// The floor check runs first and stands alone: it proves the harness can run a
+// test at all, without using the harness to prove it. Read PRG_FloorCheck.AllGood
+// before trusting anything else in this project.
+//
+// Suites and their tests are added below as they are written.
+PROGRAM MAIN]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[PRG_FloorCheck();]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
