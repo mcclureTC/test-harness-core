@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_JournalDefaultsFillOnlyWhatWasNotClaimed" Id="{f72ad368-173a-4f0c-8be9-ee25671703ff}" SpecialFunc="None">
+    <Declaration><![CDATA[// Each unit is tracked separately on purpose. A test naming its own wall-clock
+// budget still inherits the suite's scan budget, and the reverse. A single
+// "overridden" flag would break exactly that case and nothing else would notice.
+FUNCTION_BLOCK TEST_JournalDefaultsFillOnlyWhatWasNotClaimed IMPLEMENTS I_Test
+VAR
+	Subject	 : TestJournal;
+	Claimed	 : ST_TestBudgets;
+	Defaults : ST_TestBudgets;
+	Got		 : ST_TestBudgets;
+
+	ExpectedCycles : UDINT;
+	ActualCycles   : UDINT;
+	ExpectedTime   : TIME;
+	ActualTime	   : TIME;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{21e45b7d-171f-4887-802f-08e902c79103}" />
+    <Method Name="Run" Id="{b929aeea-949a-40bb-8b84-483f9923af7f}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// The test claims a scan budget and says nothing about wall clock.
+Claimed.Body.Cycles	     := 7;
+Claimed.Body.IsCyclesSet := TRUE;
+Subject.SetBudgets(Claimed);
+
+Defaults.Body.Cycles	  := 999;
+Defaults.Body.IsCyclesSet := TRUE;
+Defaults.Body.Timeout	  := T#5S;
+Defaults.Body.IsTimeoutSet := TRUE;
+Subject.ApplyDefaults(Defaults);
+
+Got := Subject.Budgets;
+
+ExpectedCycles := 7;
+ActualCycles   := Got.Body.Cycles;
+Test.AssertEqual(ExpectedCycles, ActualCycles, 'the claimed scan budget survived');
+
+ExpectedTime := T#5S;
+ActualTime	 := Got.Body.Timeout;
+Test.AssertEqual(ExpectedTime, ActualTime, 'the unclaimed wall clock was filled in');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

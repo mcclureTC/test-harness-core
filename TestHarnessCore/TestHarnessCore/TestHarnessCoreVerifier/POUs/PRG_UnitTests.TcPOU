@@ -1,33 +1,35 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{573e38be-c066-4597-9d9c-2c65d113380d}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{5f290495-d16c-4e62-aacc-a04314e22716}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
 //
 // Registration happens on the first scan and the window closes when Run is first
-// called with Enable TRUE - which happens on that same scan, one line later. A
-// machine project may take several scans to decide what to register; a verifier
-// knows on the first.
+// called with Enable TRUE - one line later. A machine project may take several
+// scans to decide what to register; a verifier knows on the first.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      16 - assert this, or a test that stops being registered vanishes
-//              silently and CI sees fewer passes rather than a failure
+//   Total      29 - assert this. A test that stops being registered vanishes
+//              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //
-// A Failed count above zero names a real defect in TestHarnessCore. Errors above
-// zero means the framework itself could not do something - a rejected
-// registration, most likely - and no result in this run can be trusted until it
-// is explained.
+// Failed above zero names a real defect in TestHarnessCore. Errors above zero
+// means the framework itself could not do something - a rejected registration,
+// most likely - and no result in the run can be trusted until it is explained.
 //
-// NO REPORTER IS ATTACHED. Nothing is written to disk or to the event log; the
-// counts below are the whole result. That is deliberate for now: the harness is
-// being verified before logging is added to it, so a logging defect cannot be
-// mistaken for a harness defect.
+// THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests each drive a
+// DELIBERATE failure into a private journal and assert the journal noticed. They
+// pass; what they prove is that failing works. Without them, sixteen green results
+// would only show that nothing objected.
+//
+// NO REPORTER IS ATTACHED. Nothing reaches disk or the event log; these counts are
+// the whole result. That is deliberate - the harness is verified before logging is
+// added, so a logging defect cannot be mistaken for a harness defect.
 PROGRAM PRG_UnitTests
 VAR
-	Suite	: TestSuite<20>;
+	Suite	: TestSuite<40>;
 	Budgets : ST_TestBudgets;
 	Wired	: BOOL;
 
@@ -48,6 +50,19 @@ VAR
 	arbiterAbandonEndsThePass	: TEST_ArbiterAbandonEndsThePass;
 	arbiterNotExhaustedWhileLastTestRuns	: TEST_ArbiterNotExhaustedWhileLastTestRuns;
 	arbiterRestartsFromTheBeginning	: TEST_ArbiterRestartsFromTheBeginning;
+	verdictRecordsAFailure	: TEST_VerdictRecordsAFailure;
+	verdictPassDoesNotOvertakeAFailure	: TEST_VerdictPassDoesNotOvertakeAFailure;
+	verdictZeroChecksIsErrored	: TEST_VerdictZeroChecksIsErrored;
+	verdictReportErrorIsNotAFailure	: TEST_VerdictReportErrorIsNotAFailure;
+	verdictFailIsAPlainFailure	: TEST_VerdictFailIsAPlainFailure;
+	verdictSummaryLeadsWithTheStepLabel	: TEST_VerdictSummaryLeadsWithTheStepLabel;
+	verdictFirstFailureWinsTheSummary	: TEST_VerdictFirstFailureWinsTheSummary;
+	verdictUntargetedHandleIsInert	: TEST_VerdictUntargetedHandleIsInert;
+	journalTimesOutOnCycles	: TEST_JournalTimesOutOnCycles;
+	journalZeroBudgetDisablesTheDeadline	: TEST_JournalZeroBudgetDisablesTheDeadline;
+	journalDefaultsFillOnlyWhatWasNotClaimed	: TEST_JournalDefaultsFillOnlyWhatWasNotClaimed;
+	journalResetKeepsWhatWasRegistered	: TEST_JournalResetKeepsWhatWasRegistered;
+	journalSkippedIsTerminalAndNotRed	: TEST_JournalSkippedIsTerminalAndNotRed;
 
 	// -- the result, for the watch window ---------------------------------------
 	Complete : BOOL;
@@ -81,6 +96,19 @@ END_VAR]]></Declaration>
 	Suite.Register(arbiterAbandonEndsThePass, 'Arbiter: abandon does not visit the rest', Budgets);
 	Suite.Register(arbiterNotExhaustedWhileLastTestRuns, 'Arbiter: not exhausted while the last test runs', Budgets);
 	Suite.Register(arbiterRestartsFromTheBeginning, 'Arbiter: begin restarts from the first test', Budgets);
+	Suite.Register(verdictRecordsAFailure, 'Verdict: a mismatched check is recorded as a failure', Budgets);
+	Suite.Register(verdictPassDoesNotOvertakeAFailure, 'Verdict: a pass cannot undo a failure', Budgets);
+	Suite.Register(verdictZeroChecksIsErrored, 'Verdict: finishing with no checks is Errored', Budgets);
+	Suite.Register(verdictReportErrorIsNotAFailure, 'Verdict: ReportError produces Errored, not Failed', Budgets);
+	Suite.Register(verdictFailIsAPlainFailure, 'Verdict: Fail produces Failed', Budgets);
+	Suite.Register(verdictSummaryLeadsWithTheStepLabel, 'Verdict: the summary leads with the step label', Budgets);
+	Suite.Register(verdictFirstFailureWinsTheSummary, 'Verdict: the first failure wins the summary', Budgets);
+	Suite.Register(verdictUntargetedHandleIsInert, 'Verdict: an untargeted handle records nothing', Budgets);
+	Suite.Register(journalTimesOutOnCycles, 'Journal: a scan budget expires and records itself', Budgets);
+	Suite.Register(journalZeroBudgetDisablesTheDeadline, 'Journal: a zero budget never expires', Budgets);
+	Suite.Register(journalDefaultsFillOnlyWhatWasNotClaimed, 'Journal: defaults fill only unclaimed units', Budgets);
+	Suite.Register(journalResetKeepsWhatWasRegistered, 'Journal: reset clears the verdict, keeps the budgets', Budgets);
+	Suite.Register(journalSkippedIsTerminalAndNotRed, 'Journal: skipped is terminal and not a failure', Budgets);
 END_IF
 
 Suite.Run(Enable := TRUE);

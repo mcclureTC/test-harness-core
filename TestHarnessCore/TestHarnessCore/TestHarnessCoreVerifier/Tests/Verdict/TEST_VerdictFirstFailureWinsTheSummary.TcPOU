@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_VerdictFirstFailureWinsTheSummary" Id="{697a8a55-03ad-446b-87fb-5ad34d782285}" SpecialFunc="None">
+    <Declaration><![CDATA[// Only the FIRST failure's text reaches the 80-character summary. A later failure
+// is usually downstream of the first, and the summary has room for one - the rest
+// survive on the detail sink.
+FUNCTION_BLOCK TEST_VerdictFirstFailureWinsTheSummary IMPLEMENTS I_Test
+VAR
+	// A private journal and handle, so a DELIBERATE failure can be recorded and
+	// inspected without the suite's own verdict ever seeing it. The test itself
+	// passes; what it proves is that failing works.
+	Subject : TestJournal;
+	Handle	: TestVerdict;
+	Lower  : DINT := 1;
+	Higher : DINT := 2;
+
+	Summary : T_MaxString;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{4eb22969-60f5-4acf-a7e7-68fec2853b48}" />
+    <Method Name="Run" Id="{b368ebd2-608b-4624-8542-0d0c9f58ef68}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Handle.Target(Subject);
+Subject.Begin('two failures', '');
+
+Handle.AssertEqual(Lower, Higher, 'the first thing that broke');
+Handle.Fail('a consequence of the first');
+
+Subject.Finish(E_TestStatus.Passed);
+
+Summary := Subject.Summary;
+Test.AssertTrue(FIND(Summary, 'the first thing that broke') > 0, 'first failure is in the summary');
+Test.AssertTrue(FIND(Summary, 'a consequence of the first') = 0, 'the second is not');
+
+Handle.Untarget();
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

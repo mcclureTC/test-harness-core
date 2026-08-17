@@ -63,6 +63,21 @@
     <Compile Include="Tests\Arbiter\TEST_ArbiterVisitsEveryTestOnce.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Journal\TEST_JournalDefaultsFillOnlyWhatWasNotClaimed.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Journal\TEST_JournalResetKeepsWhatWasRegistered.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Journal\TEST_JournalSkippedIsTerminalAndNotRed.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Journal\TEST_JournalTimesOutOnCycles.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Journal\TEST_JournalZeroBudgetDisablesTheDeadline.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Registry\TEST_RegistryCapacityAndOverflow.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -93,6 +108,30 @@
     <Compile Include="Tests\Registry\TEST_RegistrySlotCarriesItsIndex.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Verdict\TEST_VerdictFailIsAPlainFailure.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Verdict\TEST_VerdictFirstFailureWinsTheSummary.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Verdict\TEST_VerdictPassDoesNotOvertakeAFailure.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Verdict\TEST_VerdictRecordsAFailure.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Verdict\TEST_VerdictReportErrorIsNotAFailure.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Verdict\TEST_VerdictSummaryLeadsWithTheStepLabel.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Verdict\TEST_VerdictUntargetedHandleIsInert.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Verdict\TEST_VerdictZeroChecksIsErrored.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DUTs" />
@@ -100,6 +139,8 @@
     <Folder Include="Tests" />
     <Folder Include="POUs" />
     <Folder Include="Tests\Arbiter" />
+    <Folder Include="Tests\Journal" />
+    <Folder Include="Tests\Verdict" />
     <Folder Include="Tests\Registry" />
   </ItemGroup>
   <ItemGroup>

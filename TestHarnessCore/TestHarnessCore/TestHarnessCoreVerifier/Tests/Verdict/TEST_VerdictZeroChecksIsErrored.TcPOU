@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_VerdictZeroChecksIsErrored" Id="{4c9bc17b-8f7a-411e-a404-6ab86caf52b2}" SpecialFunc="None">
+    <Declaration><![CDATA[// A test that finishes having recorded NOTHING is Errored, not Passed.
+//
+// A body that checked nothing usually means a branch never ran. Reporting that
+// green is a silent false pass wearing a badge, and it is one of the defects this
+// library was rewritten to remove.
+FUNCTION_BLOCK TEST_VerdictZeroChecksIsErrored IMPLEMENTS I_Test
+VAR
+	// A private journal and handle, so a DELIBERATE failure can be recorded and
+	// inspected without the suite's own verdict ever seeing it. The test itself
+	// passes; what it proves is that failing works.
+	Subject : TestJournal;
+	Handle	: TestVerdict;
+	ExpectedStatus : E_TestStatus;
+	ActualStatus   : E_TestStatus;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{dc71f1f2-548d-440f-a65b-2e7250ad49e8}" />
+    <Method Name="Run" Id="{62040814-d256-450c-a7ad-cb6a23caf40a}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Handle.Target(Subject);
+Subject.Begin('checked nothing', '');
+
+// No checks at all, then the runner asks for Passed.
+Subject.Finish(E_TestStatus.Passed);
+
+ExpectedStatus := E_TestStatus.Errored;
+ActualStatus   := Subject.Status;
+Test.AssertEqual(ExpectedStatus, ActualStatus, 'no checks means Errored, not Passed');
+
+Handle.Untarget();
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
