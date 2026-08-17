@@ -382,7 +382,10 @@ END_VAR
       <Declaration><![CDATA[// Advance one scan. Returns TRUE if a deadline has just expired, in which case
 // the suite abandons the test - the verdict is already recorded here.
 //
-// Called after the test body has run, so a budget of one allows one execution.
+// Called AFTER the test body has run, so a budget of one allows one execution.
+// That ordering is also why ElapsedCycles reads N-1 during the body's Nth call:
+// the scan in progress has not completed, so it is not counted. A test observing
+// its own duration needs one scan more than the duration it observes.
 METHOD Tick : BOOL]]></Declaration>
       <Implementation>
         <ST><![CDATA[Tick := FALSE;

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestAssertions" Id="{7bb027b6-8da3-4bc9-b78c-49a33894074e}">
     <Declaration><![CDATA[// The handle a test body reports through: the verdict surface, the runner's
 // timing, and the built-in comparisons.
@@ -13,18 +13,38 @@
 // There is no WaitUntil. A test that is not finished returns FALSE from Run and is
 // called again; waiting is the absence of returning TRUE.
 INTERFACE I_TestAssertions EXTENDS I_TestOutcome, I_TestTiming]]></Declaration>
-    <Method Name="AssertTrue" Id="{d6f49cce-33c6-472a-9384-4b43f6ccd911}">
-      <Declaration><![CDATA[METHOD AssertTrue
+    <Method Name="AssertBufferEqual" Id="{3c5ce92c-b89a-41a6-8113-902661a22829}">
+      <Declaration><![CDATA[// As AssertMemEqual, but lengths are compared first and a mismatch is reported
+// as SizeMismatch rather than as a difference at some offset.
+METHOD AssertBufferEqual
 VAR_INPUT
-	Condition : BOOL;
-	Message	  : T_MaxString;
+	pExpected	   : POINTER TO BYTE;
+	ExpectedLength : UDINT;
+	pActual		   : POINTER TO BYTE;
+	ActualLength   : UDINT;
+	Message		   : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
-    <Method Name="AssertFalse" Id="{9d0c85d7-c8e5-4baa-983e-49cee77ae83c}">
-      <Declaration><![CDATA[METHOD AssertFalse
+    <Method Name="AssertCompletedWithin" Id="{74bead21-bb07-4bd9-aa9b-9fb92a49bef9}">
+      <Declaration><![CDATA[// Asserts the test has COMPLETED no more than Cycles scans. Built on
+// I_TestTiming.ElapsedCycles, so it needs no bookkeeping from the test.
+//
+// The scan in progress is not counted - see I_TestTiming.ElapsedCycles. A body
+// checking this on its third call is asserting about the two scans that finished,
+// not the three it has been called for. Assert it on the scan AFTER the work is
+// done, which is where the answer is known anyway:
+//
+//   IF Sut.IsDone THEN
+//       Test.AssertCompletedWithin(2, 'homing took too long');
+//       Run := TRUE;
+//   END_IF
+//
+// Opt-in, never a default. A scan budget is a real regression signal on a fixed
+// target and noise across a matrix of them.
+METHOD AssertCompletedWithin
 VAR_INPUT
-	Condition : BOOL;
-	Message	  : T_MaxString;
+	Cycles	: UDINT;
+	Message : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
     <Method Name="AssertEqual" Id="{0ac6758f-e456-47b3-a37c-87690eb7dd05}">
@@ -40,13 +60,11 @@ VAR_INPUT
 	Message	 : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
-    <Method Name="AssertNotEqual" Id="{ae452047-5c4b-4f68-9fe7-bc1813746713}">
-      <Declaration><![CDATA[// See AssertEqual on the ANY constraint.
-METHOD AssertNotEqual
+    <Method Name="AssertFalse" Id="{9d0c85d7-c8e5-4baa-983e-49cee77ae83c}">
+      <Declaration><![CDATA[METHOD AssertFalse
 VAR_INPUT
-	Expected : ANY;
-	Actual	 : ANY;
-	Message	 : T_MaxString;
+	Condition : BOOL;
+	Message	  : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
     <Method Name="AssertGreater" Id="{b4f67768-60cf-4a7b-94b7-15eb133edada}">
@@ -58,6 +76,16 @@ VAR_INPUT
 	Message : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
+    <Method Name="AssertInRange" Id="{496acdbf-7f2e-45fa-b873-cbfe0c81b139}">
+      <Declaration><![CDATA[// Inclusive on both bounds.
+METHOD AssertInRange
+VAR_INPUT
+	Actual	: LREAL;
+	Minimum : LREAL;
+	Maximum : LREAL;
+	Message : T_MaxString;
+END_VAR]]></Declaration>
+    </Method>
     <Method Name="AssertLess" Id="{6b0b7a51-3e32-4102-b76f-4f9b9c4e45a8}">
       <Declaration><![CDATA[// Actual < Bound. Numeric types only. See AssertEqual on the ANY constraint.
 METHOD AssertLess
@@ -65,6 +93,17 @@ VAR_INPUT
 	Actual	: ANY;
 	Bound	: ANY;
 	Message : T_MaxString;
+END_VAR]]></Declaration>
+    </Method>
+    <Method Name="AssertMemEqual" Id="{f881604a-d3f0-486e-9893-715cbbe3220b}">
+      <Declaration><![CDATA[// Byte comparison of two regions of equal length. Reports the offset of the
+// first difference.
+METHOD AssertMemEqual
+VAR_INPUT
+	pExpected : POINTER TO BYTE;
+	pActual	  : POINTER TO BYTE;
+	Length	  : UDINT;
+	Message	  : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
     <Method Name="AssertNear" Id="{49dce46e-b3a7-4015-8688-14abdcf58b0c}">
@@ -83,6 +122,22 @@ VAR_INPUT
 	Message	 : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
+    <Method Name="AssertNotEqual" Id="{ae452047-5c4b-4f68-9fe7-bc1813746713}">
+      <Declaration><![CDATA[// See AssertEqual on the ANY constraint.
+METHOD AssertNotEqual
+VAR_INPUT
+	Expected : ANY;
+	Actual	 : ANY;
+	Message	 : T_MaxString;
+END_VAR]]></Declaration>
+    </Method>
+    <Method Name="AssertTrue" Id="{d6f49cce-33c6-472a-9384-4b43f6ccd911}">
+      <Declaration><![CDATA[METHOD AssertTrue
+VAR_INPUT
+	Condition : BOOL;
+	Message	  : T_MaxString;
+END_VAR]]></Declaration>
+    </Method>
     <Method Name="AssertWithin" Id="{d1c6af21-5147-4452-8b91-2e50fd9ced51}">
       <Declaration><![CDATA[// RELATIVE tolerance: passes when |Expected - Actual| <= |Expected| * Fraction.
 //
@@ -96,51 +151,6 @@ VAR_INPUT
 	// Dimensionless. 0.001 is 0.1 per cent of Expected.
 	Fraction : LREAL;
 	Message	 : T_MaxString;
-END_VAR]]></Declaration>
-    </Method>
-    <Method Name="AssertInRange" Id="{496acdbf-7f2e-45fa-b873-cbfe0c81b139}">
-      <Declaration><![CDATA[// Inclusive on both bounds.
-METHOD AssertInRange
-VAR_INPUT
-	Actual	: LREAL;
-	Minimum : LREAL;
-	Maximum : LREAL;
-	Message : T_MaxString;
-END_VAR]]></Declaration>
-    </Method>
-    <Method Name="AssertMemEqual" Id="{f881604a-d3f0-486e-9893-715cbbe3220b}">
-      <Declaration><![CDATA[// Byte comparison of two regions of equal length. Reports the offset of the
-// first difference.
-METHOD AssertMemEqual
-VAR_INPUT
-	pExpected : POINTER TO BYTE;
-	pActual	  : POINTER TO BYTE;
-	Length	  : UDINT;
-	Message	  : T_MaxString;
-END_VAR]]></Declaration>
-    </Method>
-    <Method Name="AssertBufferEqual" Id="{3c5ce92c-b89a-41a6-8113-902661a22829}">
-      <Declaration><![CDATA[// As AssertMemEqual, but lengths are compared first and a mismatch is reported
-// as SizeMismatch rather than as a difference at some offset.
-METHOD AssertBufferEqual
-VAR_INPUT
-	pExpected	   : POINTER TO BYTE;
-	ExpectedLength : UDINT;
-	pActual		   : POINTER TO BYTE;
-	ActualLength   : UDINT;
-	Message		   : T_MaxString;
-END_VAR]]></Declaration>
-    </Method>
-    <Method Name="AssertCompletedWithin" Id="{74bead21-bb07-4bd9-aa9b-9fb92a49bef9}">
-      <Declaration><![CDATA[// Asserts the test has not yet used more than Cycles scans. Built on
-// I_TestTiming.ElapsedCycles, so it needs no bookkeeping from the test.
-//
-// Opt-in, never a default. A scan budget is a real regression signal on a fixed
-// target and noise across a matrix of them.
-METHOD AssertCompletedWithin
-VAR_INPUT
-	Cycles	: UDINT;
-	Message : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
   </Itf>

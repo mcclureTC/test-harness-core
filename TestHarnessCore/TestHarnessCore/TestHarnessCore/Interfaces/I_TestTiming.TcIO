@@ -8,9 +8,19 @@
 // built on ElapsedCycles rather than on bookkeeping inside the test.
 INTERFACE I_TestTiming EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Property Name="ElapsedCycles" Id="{bc226552-2c19-4901-8c04-56eecc378b32}">
-      <Declaration><![CDATA[// Scans consumed by this test so far, counted by the runner.
+      <Declaration><![CDATA[// Scans this test has COMPLETED, counted by the runner.
 //
 // The reproducible measure. Prefer it to ElapsedTime for anything asserted on.
+//
+// THE SCAN IN PROGRESS IS NOT COUNTED. The runner ticks the clock after the body
+// has run, so a body reading this on its first call sees 0, on its second sees 1,
+// and on its Nth sees N-1. That keeps it consistent with IsFirstCycle, which is
+// TRUE on the same call this reads 0.
+//
+// The practical consequence: a body that finishes on its third call must be called
+// a third time to observe that it completed two. Establishing that a test finished
+// within a budget costs one scan more than the budget - which is cheap, and honest.
+// The alternative is a count that includes work not yet done.
 PROPERTY ElapsedCycles : UDINT]]></Declaration>
       <Get Name="Get" Id="{efdfccc1-5fb0-4bb7-8b31-559270d3eeb0}">
         <Declaration><![CDATA[VAR

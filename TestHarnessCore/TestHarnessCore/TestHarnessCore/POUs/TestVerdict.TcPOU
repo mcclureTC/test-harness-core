@@ -69,7 +69,10 @@ THIS^.AssertMemEqual(pExpected, pActual, ExpectedLength, Message);]]></ST>
       </Implementation>
     </Method>
     <Method Name="AssertCompletedWithin" Id="{1f4e4d3b-0ba5-43c1-bad0-bb7c80b0bb38}" FolderPath="I_TestAssertions\">
-      <Declaration><![CDATA[// Opt-in, never a default. A scan budget is a real regression signal on a fixed
+      <Declaration><![CDATA[// Compares against COMPLETED scans: the one in progress is not counted, because
+// the journal is ticked after the body runs. See I_TestTiming.ElapsedCycles.
+//
+// Opt-in, never a default. A scan budget is a real regression signal on a fixed
 // target and noise across a matrix of them.
 METHOD AssertCompletedWithin
 VAR_INPUT
