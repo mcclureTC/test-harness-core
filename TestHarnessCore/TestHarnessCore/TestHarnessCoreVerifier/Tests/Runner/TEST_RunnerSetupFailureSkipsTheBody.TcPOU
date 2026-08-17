@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunnerSetupFailureSkipsTheBody" Id="{b3685929-542c-4b7a-8d77-d34ba6367697}" SpecialFunc="None">
+    <Declaration><![CDATA[// A failure recorded during setup ends the test WITHOUT running the body, and
+// still runs teardown.
+//
+// The body is what is under test; a fixture that never came up means it was never
+// exercised. Reporting that as a failed check would send the reader after the
+// wrong thing.
+FUNCTION_BLOCK TEST_RunnerSetupFailureSkipsTheBody IMPLEMENTS I_Test
+VAR
+	// A private runner, driven one scan per call. The outer test spans scans by
+	// returning FALSE, which is exactly the mechanism being verified one level down.
+	Registry : TestRegistry<1>;
+	Runner	 : TestRunner;
+	Handle	 : TestVerdict;
+	Budgets	 : ST_TestBudgets;
+	Journal	 : REFERENCE TO TestJournal;
+	Slot	 : ST_TestSlot;
+	Outcome	 : E_PhaseOutcome;
+	Loaded	 : BOOL;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	Subject : SetupFailsTest;
+
+	ExpectedZero : UDINT;
+	ExpectedOne	 : UDINT;
+	ActualCount	 : UDINT;
+	ExpectedStatus : E_TestStatus;
+	ActualStatus   : E_TestStatus;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{f6d09055-6bff-4732-a3c3-10b8550d77fa}" />
+    <Method Name="Run" Id="{b06bffc5-18d7-4cdf-88b3-d82673529186}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the subject never reached a terminal outcome');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Registry.TryClaim(Subject, 'setup fails', Budgets);
+	Runner.Attach(Roster := Registry, Verdict := Handle);
+	Slot   := Registry.Slot(0);
+	Loaded := Runner.Load(Slot);
+	Phase   := 1;
+	Run	   := FALSE;
+
+1:
+	Outcome := Runner.Advance(Enable := TRUE);
+	IF Outcome <> E_PhaseOutcome.Running THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedZero := 0;
+	ActualCount	 := Subject.BodyCalls;
+	Test.AssertEqual(ExpectedZero, ActualCount, 'the body was never called');
+
+	ExpectedOne := 1;
+	ActualCount := Subject.TeardownCalls;
+	Test.AssertEqual(ExpectedOne, ActualCount, 'teardown ran anyway');
+
+	Journal REF= Registry.Journal(0);
+	IF __ISVALIDREF(Journal) THEN
+		ExpectedStatus := E_TestStatus.Failed;
+		ActualStatus   := Journal.Status;
+		Test.AssertEqual(ExpectedStatus, ActualStatus, 'the verdict is Failed');
+	END_IF
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

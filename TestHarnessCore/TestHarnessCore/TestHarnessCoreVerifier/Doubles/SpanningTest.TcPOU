@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="SpanningTest" Id="{0c22d57b-bebe-4586-ba98-f0f3cc602640}" SpecialFunc="None">
+    <Declaration><![CDATA[// A body that takes several scans, like most real tests.
+//
+// Returns FALSE until it has been called ScansToTake times, then records one check
+// and returns TRUE. Counts its calls so the runner can be held to calling it
+// exactly that many times - no more, no fewer.
+FUNCTION_BLOCK SpanningTest IMPLEMENTS I_Test
+VAR
+	_ScansToTake  : UDINT := 3;
+	_BodyCalls	  : UDINT;
+	_AbandonCalls : UDINT;
+	_FirstCycleAtStart : BOOL;
+	_CyclesAtFinish	   : UDINT;
+	_Seen		  : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{d035bd5b-64f5-4af4-8696-4769b9fcc1a5}" />
+    <Property Name="AbandonCalls" Id="{d92ad1e9-bb64-4d3e-9817-befd5ee50907}">
+      <Declaration><![CDATA[// Calls received with Enable FALSE. Exactly one after an abandon.
+PROPERTY AbandonCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{606305d8-1933-4952-a542-78ce8cf88a34}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AbandonCalls := _AbandonCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="BodyCalls" Id="{91af80d5-d9d8-4102-9091-0913fe4a63f8}">
+      <Declaration><![CDATA[PROPERTY BodyCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{4192bd92-7c93-40e2-8b9f-b23497a5f508}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="CyclesAtFinish" Id="{da69fc5a-2ef9-41f0-8898-9853c0dc2049}">
+      <Declaration><![CDATA[// ElapsedCycles the body saw on its last call. Counts the BODY only, not setup.
+PROPERTY CyclesAtFinish : UDINT]]></Declaration>
+      <Get Name="Get" Id="{03c70270-49bb-4bd7-ae14-c9ddae5a8dcf}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CyclesAtFinish := _CyclesAtFinish;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FirstCycleAtStart" Id="{51d793a7-4863-4430-a8a3-6484e819ec95}">
+      <Declaration><![CDATA[// I_TestTiming.IsFirstCycle as the body saw it on its first call. TRUE even when
+// setup consumed scans first - the body's first scan is the body's first scan.
+PROPERTY FirstCycleAtStart : BOOL]]></Declaration>
+      <Get Name="Get" Id="{b9109e60-e1cb-453b-b06e-07f3a34cf415}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FirstCycleAtStart := _FirstCycleAtStart;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{ec287a6b-8ab4-439b-8b6d-c08175d95b72}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	_AbandonCalls := _AbandonCalls + 1;
+	Run := TRUE;
+	RETURN;
+END_IF
+
+_BodyCalls := _BodyCalls + 1;
+
+IF NOT _Seen THEN
+	// Captured on the body's FIRST call, whatever setup did beforehand.
+	_Seen			   := TRUE;
+	_FirstCycleAtStart := Test.IsFirstCycle;
+END_IF
+
+IF _BodyCalls < _ScansToTake THEN
+	Run := FALSE;
+	RETURN;
+END_IF
+
+_CyclesAtFinish := Test.ElapsedCycles;
+Test.AssertTrue(TRUE, 'reached the end');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetScans" Id="{248a0030-e074-4c15-95af-248d5b68704c}">
+      <Declaration><![CDATA[// How many scans the body should take before finishing.
+METHOD SetScans
+VAR_INPUT
+	Scans : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_ScansToTake := Scans;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

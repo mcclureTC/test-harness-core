@@ -1,17 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{5f290495-d16c-4e62-aacc-a04314e22716}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{89d2af44-b52b-4203-ab41-4fd6da9deb94}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, and the suite that runs it.
-//
-// Registration happens on the first scan and the window closes when Run is first
-// called with Enable TRUE - one line later. A machine project may take several
-// scans to decide what to register; a verifier knows on the first.
 //
 // READ THESE, in the online view:
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      29 - assert this. A test that stops being registered vanishes
+//   Total      38 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //
@@ -21,19 +17,25 @@
 //
 // THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests each drive a
 // DELIBERATE failure into a private journal and assert the journal noticed. They
-// pass; what they prove is that failing works. Without them, sixteen green results
-// would only show that nothing objected.
+// pass; what they prove is that failing works. Without them, a wall of green would
+// only show that nothing objected.
+//
+// THE RUNNER TESTS ARE MULTI-SCAN. Each holds a private TestRunner and steps it one
+// scan per call, returning FALSE until its subject finishes - the same mechanism
+// they are verifying, one level down. Each carries a 200-scan watchdog, so a
+// runner defect that never completes fails its own test instead of hanging the
+// suite and looking like a broken verifier.
 //
 // NO REPORTER IS ATTACHED. Nothing reaches disk or the event log; these counts are
 // the whole result. That is deliberate - the harness is verified before logging is
 // added, so a logging defect cannot be mistaken for a harness defect.
 PROGRAM PRG_UnitTests
 VAR
-	Suite	: TestSuite<40>;
+	Suite	: TestSuite<60>;
 	Budgets : ST_TestBudgets;
 	Wired	: BOOL;
 
-	// -- the registered set -----------------------------------------------------
+	// -- Registry --
 	registryCapacityAndOverflow	: TEST_RegistryCapacityAndOverflow;
 	registryRejectsDuplicateLabel	: TEST_RegistryRejectsDuplicateLabel;
 	registryRejectsEmptyLabelAndNullTest	: TEST_RegistryRejectsEmptyLabelAndNullTest;
@@ -44,12 +46,16 @@ VAR
 	registryResolvesOptionalHooks	: TEST_RegistryResolvesOptionalHooks;
 	registryJournalsArePerSlot	: TEST_RegistryJournalsArePerSlot;
 	registryJournalRejectsBadIndex	: TEST_RegistryJournalRejectsBadIndex;
+
+	// -- Arbiter --
 	arbiterVisitsEveryTestOnce	: TEST_ArbiterVisitsEveryTestOnce;
 	arbiterCurrentIsNullWhenNothingActive	: TEST_ArbiterCurrentIsNullWhenNothingActive;
 	arbiterEmptyPassIsComplete	: TEST_ArbiterEmptyPassIsComplete;
 	arbiterAbandonEndsThePass	: TEST_ArbiterAbandonEndsThePass;
 	arbiterNotExhaustedWhileLastTestRuns	: TEST_ArbiterNotExhaustedWhileLastTestRuns;
 	arbiterRestartsFromTheBeginning	: TEST_ArbiterRestartsFromTheBeginning;
+
+	// -- Verdict --
 	verdictRecordsAFailure	: TEST_VerdictRecordsAFailure;
 	verdictPassDoesNotOvertakeAFailure	: TEST_VerdictPassDoesNotOvertakeAFailure;
 	verdictZeroChecksIsErrored	: TEST_VerdictZeroChecksIsErrored;
@@ -58,11 +64,24 @@ VAR
 	verdictSummaryLeadsWithTheStepLabel	: TEST_VerdictSummaryLeadsWithTheStepLabel;
 	verdictFirstFailureWinsTheSummary	: TEST_VerdictFirstFailureWinsTheSummary;
 	verdictUntargetedHandleIsInert	: TEST_VerdictUntargetedHandleIsInert;
+
+	// -- Journal --
 	journalTimesOutOnCycles	: TEST_JournalTimesOutOnCycles;
 	journalZeroBudgetDisablesTheDeadline	: TEST_JournalZeroBudgetDisablesTheDeadline;
 	journalDefaultsFillOnlyWhatWasNotClaimed	: TEST_JournalDefaultsFillOnlyWhatWasNotClaimed;
 	journalResetKeepsWhatWasRegistered	: TEST_JournalResetKeepsWhatWasRegistered;
 	journalSkippedIsTerminalAndNotRed	: TEST_JournalSkippedIsTerminalAndNotRed;
+
+	// -- Runner --
+	runnerDrivesThePhasesInOrder	: TEST_RunnerDrivesThePhasesInOrder;
+	runnerRunsAMultiScanBody	: TEST_RunnerRunsAMultiScanBody;
+	runnerSetupFailureSkipsTheBody	: TEST_RunnerSetupFailureSkipsTheBody;
+	runnerSetupDoesNotSpendTheBodyBudget	: TEST_RunnerSetupDoesNotSpendTheBodyBudget;
+	runnerBodyDeadlineFires	: TEST_RunnerBodyDeadlineFires;
+	runnerSetupDeadlineFires	: TEST_RunnerSetupDeadlineFires;
+	runnerTeardownOverrunKeepsTheVerdict	: TEST_RunnerTeardownOverrunKeepsTheVerdict;
+	runnerAbandonMakesOneFinalCall	: TEST_RunnerAbandonMakesOneFinalCall;
+	runnerRefusesAnEmptySlot	: TEST_RunnerRefusesAnEmptySlot;
 
 	// -- the result, for the watch window ---------------------------------------
 	Complete : BOOL;
@@ -80,6 +99,7 @@ END_VAR]]></Declaration>
 
 	Suite.SetLabel('TestHarnessCore');
 
+	// Registry
 	Suite.Register(registryCapacityAndOverflow, 'Registry: capacity and overflow', Budgets);
 	Suite.Register(registryRejectsDuplicateLabel, 'Registry: rejects a duplicate label', Budgets);
 	Suite.Register(registryRejectsEmptyLabelAndNullTest, 'Registry: rejects an empty label and a null test', Budgets);
@@ -90,12 +110,16 @@ END_VAR]]></Declaration>
 	Suite.Register(registryResolvesOptionalHooks, 'Registry: resolves the optional hooks independently', Budgets);
 	Suite.Register(registryJournalsArePerSlot, 'Registry: journals are per slot and live', Budgets);
 	Suite.Register(registryJournalRejectsBadIndex, 'Registry: an out-of-range journal is invalid', Budgets);
+
+	// Arbiter
 	Suite.Register(arbiterVisitsEveryTestOnce, 'Arbiter: visits every test once, in order', Budgets);
 	Suite.Register(arbiterCurrentIsNullWhenNothingActive, 'Arbiter: current is null when nothing is active', Budgets);
 	Suite.Register(arbiterEmptyPassIsComplete, 'Arbiter: an empty pass is complete, not stuck', Budgets);
 	Suite.Register(arbiterAbandonEndsThePass, 'Arbiter: abandon does not visit the rest', Budgets);
 	Suite.Register(arbiterNotExhaustedWhileLastTestRuns, 'Arbiter: not exhausted while the last test runs', Budgets);
 	Suite.Register(arbiterRestartsFromTheBeginning, 'Arbiter: begin restarts from the first test', Budgets);
+
+	// Verdict
 	Suite.Register(verdictRecordsAFailure, 'Verdict: a mismatched check is recorded as a failure', Budgets);
 	Suite.Register(verdictPassDoesNotOvertakeAFailure, 'Verdict: a pass cannot undo a failure', Budgets);
 	Suite.Register(verdictZeroChecksIsErrored, 'Verdict: finishing with no checks is Errored', Budgets);
@@ -104,11 +128,25 @@ END_VAR]]></Declaration>
 	Suite.Register(verdictSummaryLeadsWithTheStepLabel, 'Verdict: the summary leads with the step label', Budgets);
 	Suite.Register(verdictFirstFailureWinsTheSummary, 'Verdict: the first failure wins the summary', Budgets);
 	Suite.Register(verdictUntargetedHandleIsInert, 'Verdict: an untargeted handle records nothing', Budgets);
+
+	// Journal
 	Suite.Register(journalTimesOutOnCycles, 'Journal: a scan budget expires and records itself', Budgets);
 	Suite.Register(journalZeroBudgetDisablesTheDeadline, 'Journal: a zero budget never expires', Budgets);
 	Suite.Register(journalDefaultsFillOnlyWhatWasNotClaimed, 'Journal: defaults fill only unclaimed units', Budgets);
 	Suite.Register(journalResetKeepsWhatWasRegistered, 'Journal: reset clears the verdict, keeps the budgets', Budgets);
 	Suite.Register(journalSkippedIsTerminalAndNotRed, 'Journal: skipped is terminal and not a failure', Budgets);
+
+	// Runner
+	Suite.Register(runnerDrivesThePhasesInOrder, 'Runner: setup, body, teardown, each once, in order', Budgets);
+	Suite.Register(runnerRunsAMultiScanBody, 'Runner: a multi-scan body is called until it finishes', Budgets);
+	Suite.Register(runnerSetupFailureSkipsTheBody, 'Runner: a failed setup skips the body but not teardown', Budgets);
+	Suite.Register(runnerSetupDoesNotSpendTheBodyBudget, 'Runner: setup does not spend the body scan budget', Budgets);
+	Suite.Register(runnerBodyDeadlineFires, 'Runner: the body deadline stops a hanging test', Budgets);
+	Suite.Register(runnerSetupDeadlineFires, 'Runner: setup has its own deadline', Budgets);
+	Suite.Register(runnerTeardownOverrunKeepsTheVerdict, 'Runner: a teardown overrun does not change the verdict', Budgets);
+	Suite.Register(runnerAbandonMakesOneFinalCall, 'Runner: abandon makes one final call and skips teardown', Budgets);
+	Suite.Register(runnerRefusesAnEmptySlot, 'Runner: an empty slot is refused', Budgets);
+
 END_IF
 
 Suite.Run(Enable := TRUE);

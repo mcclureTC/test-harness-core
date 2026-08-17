@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="HangingSetupTest" Id="{bda99907-7379-4403-a83d-223b2b88eaf6}" SpecialFunc="None">
+    <Declaration><![CDATA[// Setup that never completes. Bounded by the SETUP deadline, not the body's - the
+// body must never run, and teardown must still be called.
+FUNCTION_BLOCK HangingSetupTest IMPLEMENTS I_Test, I_TestSetup, I_TestTeardown
+VAR
+	_SetupCalls	   : UDINT;
+	_BodyCalls	   : UDINT;
+	_TeardownCalls : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{c2ba0615-d598-41f2-9c8f-1e4b84ad20fc}" />
+    <Folder Name="I_TestSetup" Id="{7a71cd9e-c5f7-444a-b335-8fe3e2fc7922}" />
+    <Folder Name="I_TestTeardown" Id="{2c15c8f9-9746-4230-b011-0b29e2cd6b7b}" />
+    <Property Name="BodyCalls" Id="{3dba4cb9-4c16-46f0-92c9-cde1738c83af}">
+      <Declaration><![CDATA[// Must be 0. Setup never succeeded, so the body was never exercised.
+PROPERTY BodyCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{1cfe7b30-55a1-4258-b4bd-f1af0a361d0d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{3063e460-ad2b-4ce2-9b43-8248f15ad627}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Enable THEN
+	_BodyCalls := _BodyCalls + 1;
+END_IF
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Setup" Id="{244138f6-67ec-4130-9bd7-fe106b3d3b38}" FolderPath="I_TestSetup\">
+      <Declaration><![CDATA[METHOD Setup : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Enable THEN
+	_SetupCalls := _SetupCalls + 1;
+END_IF
+Setup := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SetupCalls" Id="{27315ded-cc9a-4ba0-8895-4640c06f0ab9}">
+      <Declaration><![CDATA[PROPERTY SetupCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{be103b34-9432-4470-b299-c8227ee7e76d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SetupCalls := _SetupCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Teardown" Id="{4cac608b-fe7d-434c-90ef-d30f35e39b5e}" FolderPath="I_TestTeardown\">
+      <Declaration><![CDATA[METHOD Teardown : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_TeardownCalls := _TeardownCalls + 1;
+Teardown := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TeardownCalls" Id="{e4121094-dd99-48c3-a27a-3bbe7bf1eb6c}">
+      <Declaration><![CDATA[// Must be 1 even here. On a rig, a fixture that half came up is exactly when
+// cleanup matters most.
+PROPERTY TeardownCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{8c7e17b6-9962-4343-a097-061483113660}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TeardownCalls := _TeardownCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

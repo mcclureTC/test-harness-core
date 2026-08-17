@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="SlowSetupTest" Id="{250a1e6f-2d88-48ea-bf91-c80e4dbcd368}" SpecialFunc="None">
+    <Declaration><![CDATA[// Setup that legitimately takes several scans - waiting for hardware to answer is
+// the normal case, which is why setup has its own deadline.
+//
+// The body then records what the runner told it about timing. Setup must NOT have
+// spent the body's scan budget, and the body's first call must still be its first
+// cycle.
+FUNCTION_BLOCK SlowSetupTest IMPLEMENTS I_Test, I_TestSetup
+VAR
+	_SetupScans	 : UDINT := 4;
+	_SetupCalls	 : UDINT;
+	_BodyCalls	 : UDINT;
+	_FirstCycleAtStart : BOOL;
+	_CyclesAtStart	   : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{ffff2766-1e8c-4862-9b2b-ae82c4ea5b0f}" />
+    <Folder Name="I_TestSetup" Id="{d5374a68-daa5-4377-a7c6-3534ab597639}" />
+    <Property Name="BodyCalls" Id="{f76b1f0a-853e-4f2e-98a8-13d92f361166}">
+      <Declaration><![CDATA[PROPERTY BodyCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{e4081d1d-ea0f-4dca-a262-754eb4b5a99b}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="CyclesAtStart" Id="{95fef86c-49ed-4d29-bcc3-5af79e28afd1}">
+      <Declaration><![CDATA[// ElapsedCycles as the body saw it on its first call. Zero if setup did not spend
+// the body's budget.
+PROPERTY CyclesAtStart : UDINT]]></Declaration>
+      <Get Name="Get" Id="{4c6f3965-25c1-4326-9e48-441d1f6d316c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CyclesAtStart := _CyclesAtStart;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FirstCycleAtStart" Id="{0f7b5a07-5786-4398-a088-224b98b05221}">
+      <Declaration><![CDATA[// TRUE if the body's first scan was reported as the first cycle, despite setup
+// having consumed four scans before it.
+PROPERTY FirstCycleAtStart : BOOL]]></Declaration>
+      <Get Name="Get" Id="{050eddb1-d84a-4654-b21d-707322c96247}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FirstCycleAtStart := _FirstCycleAtStart;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{c520a55d-bd7d-4f43-ae08-b91446f2ef93}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	Run := TRUE;
+	RETURN;
+END_IF
+
+_BodyCalls := _BodyCalls + 1;
+
+IF _BodyCalls = 1 THEN
+	_FirstCycleAtStart := Test.IsFirstCycle;
+	_CyclesAtStart	   := Test.ElapsedCycles;
+END_IF
+
+Test.AssertTrue(TRUE, 'body ran after a slow setup');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Setup" Id="{23225557-bc71-4e82-93c5-a0db2d9c111e}" FolderPath="I_TestSetup\">
+      <Declaration><![CDATA[METHOD Setup : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	Setup := TRUE;
+	RETURN;
+END_IF
+
+_SetupCalls := _SetupCalls + 1;
+Setup		:= (_SetupCalls >= _SetupScans);]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SetupCalls" Id="{3698c9fe-9efc-49e6-959e-84bd27d24986}">
+      <Declaration><![CDATA[PROPERTY SetupCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{65278592-d003-4c6a-8c61-d01ccf755208}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SetupCalls := _SetupCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

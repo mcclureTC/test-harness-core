@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunnerSetupDeadlineFires" Id="{78e736f1-314d-4a40-b32b-c93055fa8aa4}" SpecialFunc="None">
+    <Declaration><![CDATA[// Setup has its OWN deadline. A fixture that never comes up must not run forever
+// on the body's budget, and the body must never be reached.
+//
+// Teardown still runs: a fixture that half came up is exactly when cleanup
+// matters.
+FUNCTION_BLOCK TEST_RunnerSetupDeadlineFires IMPLEMENTS I_Test
+VAR
+	// A private runner, driven one scan per call. The outer test spans scans by
+	// returning FALSE, which is exactly the mechanism being verified one level down.
+	Registry : TestRegistry<1>;
+	Runner	 : TestRunner;
+	Handle	 : TestVerdict;
+	Budgets	 : ST_TestBudgets;
+	Journal	 : REFERENCE TO TestJournal;
+	Slot	 : ST_TestSlot;
+	Outcome	 : E_PhaseOutcome;
+	Loaded	 : BOOL;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	Subject : HangingSetupTest;
+
+	ExpectedZero : UDINT;
+	ExpectedOne	 : UDINT;
+	ExpectedTwo	 : UDINT;
+	ActualCount	 : UDINT;
+	ExpectedKind : E_FailureKind;
+	ActualKind	 : E_FailureKind;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{787a13a1-90a4-4362-8378-072102f65dcc}" />
+    <Method Name="Run" Id="{eef91c1b-a66b-42bb-8bda-8eb04f52e851}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the subject never reached a terminal outcome');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Budgets.Setup.Cycles	  := 2;
+	Budgets.Setup.IsCyclesSet := TRUE;
+	// The body budget is deliberately left disabled. If the runner were using it
+	// for setup, nothing would ever expire and the watchdog would fail this test.
+	Registry.TryClaim(Subject, 'setup hangs', Budgets);
+	Runner.Attach(Roster := Registry, Verdict := Handle);
+	Slot   := Registry.Slot(0);
+	Loaded := Runner.Load(Slot);
+	Phase   := 1;
+	Run	   := FALSE;
+
+1:
+	Outcome := Runner.Advance(Enable := TRUE);
+	IF Outcome <> E_PhaseOutcome.Running THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedTwo := 2;
+	ActualCount := Subject.SetupCalls;
+	Test.AssertEqual(ExpectedTwo, ActualCount, 'setup got its own budget, not the body one');
+
+	ExpectedZero := 0;
+	ActualCount	 := Subject.BodyCalls;
+	Test.AssertEqual(ExpectedZero, ActualCount, 'the body was never reached');
+
+	ExpectedOne := 1;
+	ActualCount := Subject.TeardownCalls;
+	Test.AssertEqual(ExpectedOne, ActualCount, 'teardown ran anyway');
+
+	Journal REF= Registry.Journal(0);
+	IF __ISVALIDREF(Journal) THEN
+		ExpectedKind := E_FailureKind.Timeout;
+		ActualKind	 := Journal.Kind;
+		Test.AssertEqual(ExpectedKind, ActualKind, 'recorded as a timeout');
+	END_IF
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

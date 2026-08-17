@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunnerRunsAMultiScanBody" Id="{90daadcb-d221-413a-98ed-84364fa213cd}" SpecialFunc="None">
+    <Declaration><![CDATA[// A body returning FALSE is called again next scan, and only then. Multi-cycle is
+// the normal case here, not an awkward one.
+//
+// ElapsedCycles counts the body, so a three-scan body reports three.
+FUNCTION_BLOCK TEST_RunnerRunsAMultiScanBody IMPLEMENTS I_Test
+VAR
+	// A private runner, driven one scan per call. The outer test spans scans by
+	// returning FALSE, which is exactly the mechanism being verified one level down.
+	Registry : TestRegistry<1>;
+	Runner	 : TestRunner;
+	Handle	 : TestVerdict;
+	Budgets	 : ST_TestBudgets;
+	Journal	 : REFERENCE TO TestJournal;
+	Slot	 : ST_TestSlot;
+	Outcome	 : E_PhaseOutcome;
+	Loaded	 : BOOL;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	Subject : SpanningTest;
+
+	RunningCount : DINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{0618863e-ca10-4dc5-be0b-18b26535f366}" />
+    <Method Name="Run" Id="{3308a7c3-a278-4fea-a95f-94b7e52add26}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the subject never reached a terminal outcome');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Subject.SetScans(3);
+	Registry.TryClaim(Subject, 'spanning', Budgets);
+	Runner.Attach(Roster := Registry, Verdict := Handle);
+	Slot   := Registry.Slot(0);
+	Loaded := Runner.Load(Slot);
+	Phase   := 1;
+	Run	   := FALSE;
+
+1:
+	Outcome := Runner.Advance(Enable := TRUE);
+	IF Outcome = E_PhaseOutcome.Running THEN
+		RunningCount := RunningCount + 1;
+	ELSE
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(Outcome = E_PhaseOutcome.Finished, 'finished');
+
+	ExpectedCount := 3;
+	ActualCount	  := Subject.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the body was called three times');
+
+	// Two Running answers, then the finishing one.
+	Test.AssertTrue(RunningCount = 2, 'and reported Running in between');
+
+	ActualCount := Subject.CyclesAtFinish;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'ElapsedCycles counted the body');
+
+	Test.AssertTrue(Subject.FirstCycleAtStart, 'the first call was the first cycle');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

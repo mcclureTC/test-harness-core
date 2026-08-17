@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="HangingTeardownTest" Id="{c0f5c382-366d-4dc6-8b62-6a2c8ea627e7}" SpecialFunc="None">
+    <Declaration><![CDATA[// Passes cleanly, then hangs on the way out.
+//
+// The verdict must survive: a passing test whose cleanup hung still proved the
+// code correct. The overrun is a framework error, not a test failure - but on a
+// rig it may mean an axis left powered, so it must be loud.
+FUNCTION_BLOCK HangingTeardownTest IMPLEMENTS I_Test, I_TestTeardown
+VAR
+	_BodyCalls	   : UDINT;
+	_TeardownCalls : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{26ca4b75-71ef-4df8-bbbc-9365d46f8316}" />
+    <Folder Name="I_TestTeardown" Id="{7e3dbd27-8147-439f-88e1-48d0c30c5bd6}" />
+    <Property Name="BodyCalls" Id="{784e5c86-6178-4e50-ba2a-3a900a62f392}">
+      <Declaration><![CDATA[PROPERTY BodyCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{18bf104e-ab74-4bdf-b206-2dabb67d4310}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{23b3dcfa-5008-400d-aaef-ec98e7cf3793}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Enable THEN
+	_BodyCalls := _BodyCalls + 1;
+	Test.AssertTrue(TRUE, 'the body was fine');
+END_IF
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Teardown" Id="{b81859d0-73dd-4d7d-8361-78e16f169fc1}" FolderPath="I_TestTeardown\">
+      <Declaration><![CDATA[METHOD Teardown : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Enable THEN
+	_TeardownCalls := _TeardownCalls + 1;
+END_IF
+Teardown := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TeardownCalls" Id="{7fc8e838-f893-45a8-97d3-6e7945e97f39}">
+      <Declaration><![CDATA[PROPERTY TeardownCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{17ad5b8a-ceaf-4d85-ad35-097de5ceaf37}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TeardownCalls := _TeardownCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

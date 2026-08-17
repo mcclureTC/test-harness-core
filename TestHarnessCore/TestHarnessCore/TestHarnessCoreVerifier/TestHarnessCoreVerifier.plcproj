@@ -30,6 +30,27 @@
     <Compile Include="Doubles\FloorTest.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Doubles\HangingBodyTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\HangingSetupTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\HangingTeardownTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\OrderedHooksTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\SetupFailsTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\SlowSetupTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Doubles\SpanningTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\E_FloorStage.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -108,6 +129,33 @@
     <Compile Include="Tests\Registry\TEST_RegistrySlotCarriesItsIndex.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerAbandonMakesOneFinalCall.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerBodyDeadlineFires.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerDrivesThePhasesInOrder.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerRefusesAnEmptySlot.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerRunsAMultiScanBody.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerSetupDeadlineFires.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerSetupDoesNotSpendTheBodyBudget.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerSetupFailureSkipsTheBody.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Runner\TEST_RunnerTeardownOverrunKeepsTheVerdict.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Verdict\TEST_VerdictFailIsAPlainFailure.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -140,6 +188,7 @@
     <Folder Include="POUs" />
     <Folder Include="Tests\Arbiter" />
     <Folder Include="Tests\Journal" />
+    <Folder Include="Tests\Runner" />
     <Folder Include="Tests\Verdict" />
     <Folder Include="Tests\Registry" />
   </ItemGroup>

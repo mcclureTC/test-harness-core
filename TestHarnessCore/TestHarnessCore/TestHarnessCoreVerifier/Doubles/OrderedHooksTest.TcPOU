@@ -1,0 +1,136 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="OrderedHooksTest" Id="{d8a6f79a-7d4f-42c2-ad07-10384effd599}" SpecialFunc="None">
+    <Declaration><![CDATA[// Implements all three phases and records the order they were called in.
+//
+// Setup before body, body before teardown, each exactly once. Order is the whole
+// contract and nothing else in the library checks it.
+FUNCTION_BLOCK OrderedHooksTest IMPLEMENTS I_Test, I_TestSetup, I_TestTeardown
+VAR
+	_SetupCalls	   : UDINT;
+	_BodyCalls	   : UDINT;
+	_TeardownCalls : UDINT;
+	// Captured at each phase, so the ORDER is provable and not just the counts.
+	_BodyAfterSetup		: BOOL;
+	_TeardownAfterBody	: BOOL;
+	_StatusInTeardown	: E_TestStatus;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{3a16fa36-1627-4fff-a5b4-5b355e5afd6f}" />
+    <Folder Name="I_TestSetup" Id="{8cc1caa9-6fac-415c-a4a6-fb7c3a8b135b}" />
+    <Folder Name="I_TestTeardown" Id="{1d4bdd2f-fe93-4db8-ab28-0615d5b46260}" />
+    <Property Name="BodyAfterSetup" Id="{490c585b-2a15-4fcf-9084-315d8bdd06c9}">
+      <Declaration><![CDATA[PROPERTY BodyAfterSetup : BOOL]]></Declaration>
+      <Get Name="Get" Id="{5afc92a3-30ec-42ca-aaae-5c0706c423af}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[BodyAfterSetup := _BodyAfterSetup;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="BodyCalls" Id="{d4bb59ac-4f6d-48cd-9869-4db9279e596a}">
+      <Declaration><![CDATA[PROPERTY BodyCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{72b4772e-71ea-47ae-93f9-1c3da6e189e6}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{f2fd0ef0-9306-495f-8226-3a744d5a0269}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	Run := TRUE;
+	RETURN;
+END_IF
+
+_BodyCalls		:= _BodyCalls + 1;
+_BodyAfterSetup := (_SetupCalls > 0);
+
+Test.AssertTrue(TRUE, 'body ran');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Setup" Id="{8eb8658f-6e18-42f7-b200-5f57fbaf737a}" FolderPath="I_TestSetup\">
+      <Declaration><![CDATA[METHOD Setup : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_SetupCalls := _SetupCalls + 1;
+Setup := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SetupCalls" Id="{00831fdc-68b9-4f49-bada-7829b98ea3e0}">
+      <Declaration><![CDATA[PROPERTY SetupCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{139181bf-7174-4797-b7cc-64ad6e833e93}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SetupCalls := _SetupCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StatusInTeardown" Id="{da3befda-88d6-4ef0-942c-6b79e927e5d7}">
+      <Declaration><![CDATA[// The verdict as teardown saw it. Terminal by then, whatever it is.
+PROPERTY StatusInTeardown : E_TestStatus]]></Declaration>
+      <Get Name="Get" Id="{defd2dc2-f868-4250-bb53-b1e73812f200}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StatusInTeardown := _StatusInTeardown;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Teardown" Id="{5701bebb-e08f-41b1-af67-4a7b6fcf8f40}" FolderPath="I_TestTeardown\">
+      <Declaration><![CDATA[METHOD Teardown : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_TeardownCalls	   := _TeardownCalls + 1;
+_TeardownAfterBody := (_BodyCalls > 0);
+// Readable here on purpose: cleanup may differ by outcome.
+_StatusInTeardown  := Test.Status;
+Teardown := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TeardownAfterBody" Id="{abe6133c-193f-41da-afde-76a52ccb0ff9}">
+      <Declaration><![CDATA[PROPERTY TeardownAfterBody : BOOL]]></Declaration>
+      <Get Name="Get" Id="{20e49ad2-59c5-4ce3-aa31-c97194cb50c0}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TeardownAfterBody := _TeardownAfterBody;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TeardownCalls" Id="{f1b2c332-b080-47db-b697-e346c3aa9a06}">
+      <Declaration><![CDATA[PROPERTY TeardownCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{1a2b19d8-de99-4afc-899a-c3f2aaef26d3}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TeardownCalls := _TeardownCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>
