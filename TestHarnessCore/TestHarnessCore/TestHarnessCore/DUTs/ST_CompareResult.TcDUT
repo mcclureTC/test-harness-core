@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="ST_CompareResult" Id="{2301bc4a-a78c-45f6-b049-3d5b395b26cb}">
+    <Declaration><![CDATA[// What TestValueCompare found. A value, not a verdict - nothing is recorded until
+// a caller decides to record it.
+TYPE ST_CompareResult :
+STRUCT
+	IsEqual	   : BOOL;
+	// Why not, when IsEqual is FALSE. None when it is TRUE.
+	Kind	   : E_FailureKind;
+	// The composed one-line form, for the summary. Each value in it is shortened to
+	// a per-value budget, because both of them plus the surrounding words cannot fit
+	// in 255 characters and CONCAT cannot build a longer string than that.
+	//
+	// Never the author's message - the comparison knows nothing about intent.
+	Diagnostic : T_MaxString;
+	// The values as rendered, in full, each in its own field so neither is cut by
+	// the other. Empty when IsEqual, and empty for a failure that has no two values
+	// to show - a size mismatch, a type mismatch.
+	//
+	// A value whose rendering exceeds 255 characters is still cut here. Comparing
+	// something that long is what AssertBufferEqual is for.
+	Expected   : T_MaxString;
+	Actual	   : T_MaxString;
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

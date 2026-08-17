@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <Itf Name="I_TestJournalSet" Id="{ef14a27c-68bb-42c0-aa6c-ad7ebcb447ec}">
+    <Declaration><![CDATA[// Bulk operations across every registered journal, at the two moments a run has
+// them: starting one, and starting it again.
+//
+// Held by the suite alone. Deliberately not on I_TestRoster - something that only
+// reads the set must not be able to clear every verdict in it.
+INTERFACE I_TestJournalSet EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Method Name="ApplyDefaults" Id="{b65c5ff4-9ec4-4751-b07d-53ab075c0360}">
+      <Declaration><![CDATA[// Push the suite defaults into every registered journal, filling whatever each
+// test did not claim for itself at registration.
+//
+// Called once when the run starts, not at registration: the defaults may be set
+// after some tests are already registered.
+METHOD ApplyDefaults
+VAR_INPUT
+	Defaults : ST_TestBudgets;
+END_VAR]]></Declaration>
+    </Method>
+    <Method Name="ResetAll" Id="{86c4213d-9e41-48c4-988c-14947e7b5619}">
+      <Declaration><![CDATA[// Clear every verdict and count, keeping the registered set and the budgets each
+// test claimed. This is what a re-run does: it re-executes what was registered, it
+// does not redefine it.
+METHOD ResetAll]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

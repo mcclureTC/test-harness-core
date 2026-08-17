@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.0">
+  <POU Name="TestValueIsText" Id="{0cb71660-9023-4bfd-8e2b-a8b5641d516d}" SpecialFunc="None">
+    <Declaration><![CDATA[// TRUE for STRING and WSTRING.
+//
+// Split out so the rule lives in one place: 'is this a string' is asked by the
+// comparison, by the formatter, and eventually by the reporters when they decide
+// whether a value needs quoting.
+FUNCTION TestValueIsText : BOOL
+VAR_INPUT
+	Value : ANY;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TestValueIsText := (Value.TypeClass = __SYSTEM.TYPE_CLASS.TYPE_STRING)
+				OR (Value.TypeClass = __SYSTEM.TYPE_CLASS.TYPE_WSTRING);]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,171 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestValueCompare" Id="{aa80efe3-93cc-4c02-966d-5aa99719d3aa}" SpecialFunc="None">
+    <Declaration><![CDATA[// Compares any two values and says whether they match, and if not, why.
+//
+// Pure: no state, no reporting, no verdict. That makes it the one part of the
+// framework testable in isolation - including against the OLD library, before the
+// new runner exists.
+//
+// WHAT IS BEING TESTED decides the rule. A test author writing AssertEqual is
+// testing a value, so the storage that value happens to sit in is not the subject:
+//
+//   strings   compared by CONTENT. Declared capacity is ignored - STRING(20) and
+//             STRING(80) holding 'homed' are equal. diSize for a string is the
+//             capacity of the variable, not the length of the value, so comparing
+//             it would be testing the declaration. If capacity or length is the
+//             subject, say so: AssertEqual(ExpectedLength, LEN(Actual)).
+//
+//   numerics  compared by VALUE across widths. INT#5 equals DINT#5. The width is
+//             incidental to what the author is checking.
+//
+//   the rest  structs, arrays, times, enums: compared by size, then by bytes. A
+//             size difference here is a genuine TypeMismatch - different types
+//             rather than different values.
+//
+// Two changes from the original, both deliberate:
+//
+//  1. WSTRING is compared AS WSTRING. The original copied WSTRING bytes into a
+//     STRING buffer and compared with '<>', which terminates at the first NUL -
+//     and every second byte of ASCII WSTRING content is NUL. Two different
+//     WSTRINGs of equal declared size compared equal and the test went green.
+//
+//  2. REAL and LREAL compare EXACTLY. The original applied a hidden epsilon of
+//     0.000001, so a test passing at 1E-7 looked identical to one passing exactly.
+//     Tolerance now has its own methods - AssertNear for absolute, AssertWithin
+//     for relative - and choosing one is visible at the call site.
+//
+//     Because exact float equality is a classic trap, a near-miss on a float
+//     appends a hint naming the two methods.
+FUNCTION TestValueCompare : ST_CompareResult
+VAR_INPUT
+	Expected : ANY;
+	Actual	 : ANY;
+END_VAR
+
+VAR
+	ExpectedText  : T_MaxString;
+	ActualText	  : T_MaxString;
+	ExpectedWide  : WSTRING(255);
+	ActualWide	  : WSTRING(255);
+	ExpectedNumber : ST_NumericValue;
+	ActualNumber   : ST_NumericValue;
+	pExpected	  : POINTER TO BYTE;
+	pActual		  : POINTER TO BYTE;
+	i			  : DINT;
+	Spread		  : LREAL;
+END_VAR
+
+VAR CONSTANT
+	// Only ever used to decide whether to SUGGEST a tolerance method. Never
+	// applied as one.
+	HintThreshold : LREAL := 1E-6;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TestValueCompare.IsEqual	:= FALSE;
+TestValueCompare.Kind		:= E_FailureKind.ValueMismatch;
+TestValueCompare.Diagnostic := '';
+TestValueCompare.Expected	:= '';
+TestValueCompare.Actual		:= '';
+
+// ---- strings: content only ------------------------------------------------
+IF TestValueIsText(Expected) AND TestValueIsText(Actual) THEN
+
+	// WSTRING is converted, never reinterpreted. Comparing its bytes as a STRING
+	// stops at the first character.
+	IF Expected.TypeClass = __SYSTEM.TYPE_CLASS.TYPE_WSTRING THEN
+		MEMCPY(ADR(ExpectedWide), Expected.pValue, MIN(SIZEOF(ExpectedWide), TO_UDINT(Expected.diSize)));
+		WSTRING_TO_STRING2(ADR(ExpectedText), ADR(ExpectedWide), SIZEOF(ExpectedText));
+	ELSE
+		MEMCPY(ADR(ExpectedText), Expected.pValue, MIN(SIZEOF(ExpectedText), TO_UDINT(Expected.diSize)));
+	END_IF
+
+	IF Actual.TypeClass = __SYSTEM.TYPE_CLASS.TYPE_WSTRING THEN
+		MEMCPY(ADR(ActualWide), Actual.pValue, MIN(SIZEOF(ActualWide), TO_UDINT(Actual.diSize)));
+		WSTRING_TO_STRING2(ADR(ActualText), ADR(ActualWide), SIZEOF(ActualText));
+	ELSE
+		MEMCPY(ADR(ActualText), Actual.pValue, MIN(SIZEOF(ActualText), TO_UDINT(Actual.diSize)));
+	END_IF
+
+	IF ExpectedText = ActualText THEN
+		TestValueCompare.IsEqual := TRUE;
+		TestValueCompare.Kind	 := E_FailureKind.None;
+	ELSE
+		TestValueCompare.Expected := TestValueString(Expected);
+		TestValueCompare.Actual	  := TestValueString(Actual);
+		TestValueCompare.Diagnostic := CONCAT(CONCAT(CONCAT(
+			'expected ', TestValueBrief(TestValueCompare.Expected)),
+			', actual '), TestValueBrief(TestValueCompare.Actual));
+	END_IF
+	RETURN;
+END_IF
+
+// ---- numerics: value across widths ----------------------------------------
+ExpectedNumber := TestValueAsLReal(Expected);
+ActualNumber   := TestValueAsLReal(Actual);
+
+IF ExpectedNumber.IsNumeric AND ActualNumber.IsNumeric THEN
+	IF ExpectedNumber.Value = ActualNumber.Value THEN
+		TestValueCompare.IsEqual := TRUE;
+		TestValueCompare.Kind	 := E_FailureKind.None;
+		RETURN;
+	END_IF
+
+	TestValueCompare.Expected := TestValueString(Expected);
+	TestValueCompare.Actual	  := TestValueString(Actual);
+	TestValueCompare.Diagnostic := CONCAT(CONCAT(CONCAT(
+		'expected ', TestValueBrief(TestValueCompare.Expected)),
+		', actual '), TestValueBrief(TestValueCompare.Actual));
+
+	// A near miss on a float is almost always someone expecting tolerance from
+	// exact equality. Say so where they are already looking.
+	IF TestValueIsFloat(Expected) OR TestValueIsFloat(Actual) THEN
+		Spread := ABS(ExpectedNumber.Value - ActualNumber.Value);
+		IF Spread <= (HintThreshold * MAX(1.0, ABS(ExpectedNumber.Value))) THEN
+			TestValueCompare.Diagnostic := CONCAT(TestValueCompare.Diagnostic,
+				' (use AssertNear or AssertWithin for floats)');
+		END_IF
+	END_IF
+	RETURN;
+END_IF
+
+// ---- one numeric, one not -------------------------------------------------
+IF ExpectedNumber.IsNumeric <> ActualNumber.IsNumeric THEN
+	TestValueCompare.Kind		:= E_FailureKind.TypeMismatch;
+	TestValueCompare.Diagnostic := 'compared a numeric value with a non-numeric one';
+	RETURN;
+END_IF
+
+// ---- everything else: size, then bytes ------------------------------------
+// Structs, arrays, times, enums. Here a size difference IS a type difference,
+// not two spellings of the same value.
+IF Expected.diSize <> Actual.diSize THEN
+	TestValueCompare.Kind		:= E_FailureKind.TypeMismatch;
+	TestValueCompare.Expected := CONCAT(LREAL_TO_FMTSTR(TO_LREAL(Expected.diSize), 0, FALSE), ' bytes');
+	TestValueCompare.Actual	  := CONCAT(LREAL_TO_FMTSTR(TO_LREAL(Actual.diSize), 0, FALSE), ' bytes');
+	TestValueCompare.Diagnostic := CONCAT(CONCAT(CONCAT(
+		'expected ', TestValueCompare.Expected),
+		', actual '), TestValueCompare.Actual);
+	RETURN;
+END_IF
+
+pExpected := Expected.pValue;
+pActual	  := Actual.pValue;
+
+FOR i := 0 TO TO_DINT(Expected.diSize) - 1 DO
+	IF pExpected[i] <> pActual[i] THEN
+		TestValueCompare.Expected := TestValueString(Expected);
+		TestValueCompare.Actual	  := TestValueString(Actual);
+		TestValueCompare.Diagnostic := CONCAT(CONCAT(CONCAT(CONCAT(CONCAT(
+			'differs at byte ', LREAL_TO_FMTSTR(TO_LREAL(i), 0, FALSE)),
+			': expected '), TestValueBrief(TestValueCompare.Expected)),
+			', actual '),	 TestValueBrief(TestValueCompare.Actual));
+		RETURN;
+	END_IF
+END_FOR
+
+TestValueCompare.IsEqual := TRUE;
+TestValueCompare.Kind	 := E_FailureKind.None;]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

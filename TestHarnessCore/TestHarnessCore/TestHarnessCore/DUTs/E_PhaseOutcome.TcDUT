@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_PhaseOutcome" Id="{bca66538-4dd2-45d4-bd65-873858feff9f}">
+    <Declaration><![CDATA[// What one scan of TestRunner.Advance did.
+//
+// TeardownOverran is separate from Finished because the two need different action
+// from the caller, and the runner cannot take it: the suite holds the reporters.
+// The test's VERDICT is unaffected either way - a passing test whose cleanup hung
+// still proved the code correct - but the run must go red, and only the suite can
+// say so.
+{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_PhaseOutcome :
+(
+	// Nothing is loaded. Load a test before advancing.
+	Idle		   := 0,
+	// Still working. Call again next scan.
+	Running		   := 1,
+	// Terminal, cleanly. The verdict is in the journal.
+	Finished	   := 2,
+	// Terminal, but teardown hit its deadline and was abandoned. On a rig this may
+	// mean an axis left powered. Raise a framework error; do not touch the verdict.
+	TeardownOverran := 3
+) DINT;
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

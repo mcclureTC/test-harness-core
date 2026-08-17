@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="E_TestStatus" Id="{f9eb01d6-69f1-41a0-b9e9-8830bfe8d3fc}">
+    <Declaration><![CDATA[// The state of a single test.
+//
+// Six members, each earned: the suite needs to know what to run next, the result
+// document needs the four terminal values, and CI needs the last two kept out of
+// the failure count.
+//
+// Errored is deliberately distinct from Failed. Failed means an assertion did not
+// hold - the code under test was shown to be wrong. Errored means the test could
+// not run: a precondition was absent, a target was unreachable. Conflating them
+// sends whoever reads the report hunting a defect that is not there.
+//
+// The order is NOT load-bearing. The original relied on 'State >= DoneOk' to mean
+// 'terminal', which made adding a member a breaking change. Ask IsTerminal(), not
+// the ordinal.
+{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE E_TestStatus :
+(
+	NotStarted := 0,
+	Running	   := 1,
+	Passed	   := 2,
+	Failed	   := 3,
+	Errored	   := 4,
+	Skipped	   := 5
+) DINT;
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

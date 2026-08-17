@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestDeadline" Id="{35fd6091-38eb-4ffe-a251-d413eebc24b7}" SpecialFunc="None">
+    <Declaration><![CDATA[// Bounds one phase that is not the test body: setup, or teardown.
+//
+// The body's deadline stays in TestJournal, which already counts that phase's
+// scans and already owns the verdict an expiry produces. This object exists for
+// the two phases nothing else is watching.
+//
+// Teardown is the reason it exists at all. TestJournal.Tick returns immediately
+// once the verdict is terminal, and teardown runs after the verdict by
+// definition - so before this, teardown had no deadline of any kind. On a rig
+// that means an axis left powered.
+//
+// Self-contained: its own clock and its own scan count, because setup runs before
+// the body has a first cycle and teardown runs after the journal has stopped.
+// Neither span is one the journal is measuring.
+FUNCTION_BLOCK TestDeadline
+VAR
+	_Phase		   : T_MaxString;
+	_Budget		   : ST_TestBudget;
+	_ElapsedCycles : UDINT;
+	_Stopwatch	   : TestStopwatch;
+	_IsArmed	   : BOOL;
+	_Diagnostic	   : T_MaxString;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+	No cyclic body. Tick is called by the runner while the phase is in progress,
+	and only then.
+*)]]></ST>
+    </Implementation>
+    <Method Name="Arm" Id="{0ad3c2b8-bf59-488f-a11f-3a7278e19d7d}">
+      <Declaration><![CDATA[// Start bounding a phase. Restarts the clock and the scan count.
+//
+// The budget passed here is the RESOLVED one - the test's own, or the suite
+// default it inherited. The IsSet flags have already done their work by this
+// point and are not read.
+METHOD Arm
+VAR_INPUT
+	// 'setup' or 'teardown'. Appears in the diagnostic, so a reader can tell which
+	// phase hung without opening the test.
+	Phase  : T_MaxString;
+	Budget : ST_TestBudget;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Phase		   := Phase;
+_Budget		   := Budget;
+_ElapsedCycles := 0;
+_Diagnostic	   := '';
+_IsArmed	   := TRUE;
+_Stopwatch.Start();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Disarm" Id="{9620deec-1c90-4507-8335-886611bba368}">
+      <Declaration><![CDATA[// The phase finished on its own. Stops the clock and leaves any diagnostic
+// already composed intact.
+METHOD Disarm]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_IsArmed := FALSE;
+_Stopwatch.Stop();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Tick" Id="{3f537b2c-fb67-43fb-aa91-1720dbabb5c8}">
+      <Declaration><![CDATA[// Advance one scan. Returns TRUE on the scan the deadline expires, and FALSE
+// every scan after that - the caller acts once.
+//
+// Called AFTER the phase has run, so a budget of one allows one execution. This
+// matches TestJournal.Tick deliberately: two deadline mechanisms that counted
+// differently would be a trap.
+METHOD Tick : BOOL]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Tick := FALSE;
+
+IF NOT _IsArmed THEN
+	RETURN;
+END_IF
+
+_ElapsedCycles := _ElapsedCycles + 1;
+
+IF (_Budget.Cycles > 0) AND (_ElapsedCycles >= _Budget.Cycles) THEN
+	_Diagnostic := TestTimeoutDiagnostic(Phase	  := _Phase,
+										 Cycles	  := _Budget.Cycles,
+										 Timeout  := _Budget.Timeout,
+										 ByCycles := TRUE);
+	THIS^.Disarm();
+	Tick := TRUE;
+	RETURN;
+END_IF
+
+IF (_Budget.Timeout > T#0S) AND (_Stopwatch.Elapsed >= (TO_LREAL(TIME_TO_UDINT(_Budget.Timeout)) / 1000.0)) THEN
+	_Diagnostic := TestTimeoutDiagnostic(Phase	  := _Phase,
+										 Cycles	  := _Budget.Cycles,
+										 Timeout  := _Budget.Timeout,
+										 ByCycles := FALSE);
+	THIS^.Disarm();
+	Tick := TRUE;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Diagnostic" Id="{e919bf8d-ca00-4805-b803-9a7e74516248}">
+      <Declaration><![CDATA[// Why it expired, in the shared wording. Empty until it does.
+PROPERTY Diagnostic : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{55873466-9d90-4684-8c6f-a3aa6a3e7c70}">
+        <Declaration><![CDATA[VAR
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Diagnostic := _Diagnostic;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ElapsedCycles" Id="{c7591897-cb60-493a-ada3-435390704f44}">
+      <Declaration><![CDATA[// Scans this phase has consumed.
+PROPERTY ElapsedCycles : UDINT]]></Declaration>
+      <Get Name="Get" Id="{69e109b7-0da4-43dd-bcdf-fdccb3b5140a}">
+        <Declaration><![CDATA[VAR
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ElapsedCycles := _ElapsedCycles;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="IsArmed" Id="{c010598c-1624-45ec-940c-8222f4f51cb2}">
+      <Declaration><![CDATA[PROPERTY IsArmed : BOOL]]></Declaration>
+      <Get Name="Get" Id="{2a90841a-f8a6-4925-b2ac-5efe20fbf7e4}">
+        <Declaration><![CDATA[VAR
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsArmed := _IsArmed;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

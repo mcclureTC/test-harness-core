@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.0">
+  <POU Name="TestValueString" Id="{9105455e-a1f6-4cd3-96f7-bfd054ae4ace}" SpecialFunc="None">
+    <Declaration><![CDATA[// Renders any value as text for a diagnostic.
+//
+// Returns T_MaxString, not STRING. The original built into a 255-character buffer
+// and returned 80, so every value was already truncated before the reporter saw
+// it - widening the detail field elsewhere would have delivered pre-truncated
+// input into a wider field.
+//
+// Unhandled type classes - enums, structs, arrays, pointers - render as hex bytes
+// rather than as an empty string. The original returned nothing for these, which
+// produced diagnostics reading 'Expected: , Actual: '.
+FUNCTION TestValueString : T_MaxString
+VAR_INPUT
+	Value : ANY;
+END_VAR
+
+VAR
+	Unsigned : ULINT;
+	Signed8	 : SINT;
+	Signed16 : INT;
+	Signed32 : DINT;
+	Signed64 : LINT;
+	Real32	 : REAL;
+	Real64	 : LREAL;
+	Narrow	 : T_MaxString;
+	Wide	 : WSTRING(255);
+	ByteAt	 : POINTER TO BYTE;
+	i		 : DINT;
+	Shown	 : DINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TestValueString := '';
+
+CASE Value.TypeClass OF
+
+	__SYSTEM.TYPE_CLASS.TYPE_BOOL:
+		MEMCPY(ADR(Unsigned), Value.pValue, TO_UDINT(Value.diSize));
+		TestValueString := SEL(Unsigned <> 0, 'FALSE', 'TRUE');
+
+	__SYSTEM.TYPE_CLASS.TYPE_BYTE,	__SYSTEM.TYPE_CLASS.TYPE_USINT,
+	__SYSTEM.TYPE_CLASS.TYPE_WORD,	__SYSTEM.TYPE_CLASS.TYPE_UINT,
+	__SYSTEM.TYPE_CLASS.TYPE_DWORD, __SYSTEM.TYPE_CLASS.TYPE_UDINT,
+	__SYSTEM.TYPE_CLASS.TYPE_LWORD, __SYSTEM.TYPE_CLASS.TYPE_ULINT:
+		MEMCPY(ADR(Unsigned), Value.pValue, TO_UDINT(Value.diSize));
+		TestValueString := LREAL_TO_FMTSTR(TO_LREAL(Unsigned), 0, FALSE);
+
+	__SYSTEM.TYPE_CLASS.TYPE_SINT:
+		MEMCPY(ADR(Signed8), Value.pValue, TO_UDINT(Value.diSize));
+		TestValueString := LREAL_TO_FMTSTR(TO_LREAL(Signed8), 0, FALSE);
+
+	__SYSTEM.TYPE_CLASS.TYPE_INT:
+		MEMCPY(ADR(Signed16), Value.pValue, TO_UDINT(Value.diSize));
+		TestValueString := LREAL_TO_FMTSTR(TO_LREAL(Signed16), 0, FALSE);
+
+	__SYSTEM.TYPE_CLASS.TYPE_DINT:
+		MEMCPY(ADR(Signed32), Value.pValue, TO_UDINT(Value.diSize));
+		TestValueString := LREAL_TO_FMTSTR(TO_LREAL(Signed32), 0, FALSE);
+
+	__SYSTEM.TYPE_CLASS.TYPE_LINT:
+		MEMCPY(ADR(Signed64), Value.pValue, TO_UDINT(Value.diSize));
+		TestValueString := LREAL_TO_FMTSTR(TO_LREAL(Signed64), 0, FALSE);
+
+	__SYSTEM.TYPE_CLASS.TYPE_REAL:
+		MEMCPY(ADR(Real32), Value.pValue, TO_UDINT(Value.diSize));
+		TestValueString := LREAL_TO_FMTSTR(TO_LREAL(Real32), 6, TRUE);
+
+	__SYSTEM.TYPE_CLASS.TYPE_LREAL:
+		MEMCPY(ADR(Real64), Value.pValue, TO_UDINT(Value.diSize));
+		TestValueString := LREAL_TO_FMTSTR(Real64, 6, TRUE);
+
+	__SYSTEM.TYPE_CLASS.TYPE_STRING:
+		MEMCPY(ADR(Narrow), Value.pValue, MIN(SIZEOF(Narrow), TO_UDINT(Value.diSize)));
+		TestValueString := CONCAT(CONCAT('$'', Narrow), '$'');
+
+	__SYSTEM.TYPE_CLASS.TYPE_WSTRING:
+		// Converted, never reinterpreted. Copying WSTRING bytes into a STRING
+		// buffer terminates the text at the first character, because every second
+		// byte of ASCII content is zero.
+		MEMCPY(ADR(Wide), Value.pValue, MIN(SIZEOF(Wide), TO_UDINT(Value.diSize)));
+		WSTRING_TO_STRING2(ADR(Narrow), ADR(Wide), SIZEOF(Narrow));
+		TestValueString := CONCAT(CONCAT('$'', Narrow), '$'');
+
+ELSE
+	// Enums, structs, arrays, pointers, anything unrecognised. Hex is not
+	// friendly, but it is true - and it beats an empty diagnostic.
+	ByteAt := Value.pValue;
+	Shown  := MIN(TO_DINT(Value.diSize), 16);
+	TestValueString := '16#';
+	FOR i := 0 TO Shown - 1 DO
+		TestValueString := CONCAT(TestValueString, BYTE_TO_HEXSTR(ByteAt[i], 2, TRUE));
+	END_FOR
+	IF TO_DINT(Value.diSize) > Shown THEN
+		TestValueString := CONCAT(TestValueString, '...');
+	END_IF
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

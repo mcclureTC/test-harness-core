@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Itf Name="I_TestSuite" Id="{0b28e681-7c3a-459f-9763-578d278903b2}">
+    <Declaration><![CDATA[// A suite as the sequencer sees it: something to drive, and something to read
+// counts from. It adds nothing of its own - it exists so the sequencer can hold
+// one reference instead of two that must be kept pointing at the same object.
+//
+// The other faces of a suite are deliberately not here. I_TestRegistration,
+// I_TestDefaults and I_TestConfiguration belong to the composition root,
+// I_TestReRun to whoever is debugging. One object, six interfaces, three holders -
+// and cyclic code cannot reach registration.
+INTERFACE I_TestSuite EXTENDS I_TestExecution, I_TestRunStatus]]></Declaration>
+  </Itf>
+</TcPlcObject>

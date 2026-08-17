@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Itf Name="I_TestRegistration" Id="{62df51f5-ab08-4e6f-9664-bdf717a35bef}">
+    <Declaration><![CDATA[// The startup-only face of a suite. Held by the composition root and nothing else.
+//
+// Separated from the driving surface so cyclic code cannot reach Register. A test
+// body registering another test mid-run would corrupt the ordering, the counts and
+// the statistics, and the sequencer has no reason to see it.
+INTERFACE I_TestRegistration EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
+    <Method Name="Register" Id="{d8fef51f-0c57-446d-8540-d0348b65dcb7}">
+      <Declaration><![CDATA[// Add a test. Order of registration is order of execution.
+//
+// The label is required and becomes the result document's 'name' - the key CI
+// trend history is built on, so it should read as a description rather than an
+// identifier. For an array of parameterised tests, build it:
+// CONCAT('Scaling case ', INT_TO_STRING(i)).
+//
+// Returns FALSE, and raises a framework error naming the label, when the suite is
+// full, the label is already used, the label is empty, or registration has closed.
+//
+// Never silent. A test that failed to register would otherwise vanish from the
+// results and CI would see fewer passes rather than a failure - the regression
+// hazard RegisteredCount exists to catch.
+METHOD Register : BOOL
+VAR_INPUT
+	Test	: I_Test;
+	Label	: T_MaxString;
+	// This test's own deadlines. An untouched instance claims nothing and inherits
+	// every suite default, which is what most registrations want - declare one in
+	// the composition root and pass the same one to all of them.
+	//
+	// Registration is where a deadline is set because it is the only point that is
+	// unambiguously before every phase runs. Setup happens before the test's first
+	// cycle, so a test cannot set its own setup budget from inside itself; and a
+	// budget that could be written from the test body could be moved during the
+	// work it bounds.
+	Budgets : ST_TestBudgets;
+END_VAR]]></Declaration>
+    </Method>
+    <Property Name="RegisteredCount" Id="{9e91a861-19bf-4836-b332-aeaf6a8386f4}">
+      <Declaration><![CDATA[// Assert this in CI against an expected number. A test that silently stops being
+// registered reduces the count, and no other signal exists.
+PROPERTY RegisteredCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{5f22bd7e-6bcf-43f8-99cb-0f11a1fbd8f8}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="IsOpen" Id="{3790a197-842e-4682-a8e1-654847e90030}">
+      <Declaration><![CDATA[// TRUE until the suite is first enabled. Registration is open until then, not
+// merely for the first scan - a machine project may need several scans to decide
+// what to register, for instance based on which hardware answered.
+//
+// A re-run does not reopen it. A re-run re-executes the registered set; it does
+// not redefine it.
+PROPERTY IsOpen : BOOL]]></Declaration>
+      <Get Name="Get" Id="{30916756-852a-4903-b264-c60608f3a2a6}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>

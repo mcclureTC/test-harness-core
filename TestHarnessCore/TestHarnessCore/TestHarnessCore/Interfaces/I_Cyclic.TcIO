@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Itf Name="I_Cyclic" Id="{7a95b8cb-aa86-4365-bddf-61d9232bfe04}">
+    <Declaration><![CDATA[// Something with per-scan work.
+//
+// The bottom of the stack, with IQueryInterface beneath it. Every interface in
+// this library reaches IQueryInterface through its own root, so any reference can
+// be queried for any other role it plays.
+INTERFACE I_Cyclic EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
+    <Method Name="CyclicLogic" Id="{c46bd092-f06b-4fa1-937e-776ebadabca9}">
+      <Declaration><![CDATA[// Called every scan, unconditionally, by whatever owns this object.
+//
+// The name is the contract. An Execute input would mean a trigger; an Enable
+// input would mean held-while-wanted; CyclicLogic means there is no gating
+// condition and the caller must not invent one.
+METHOD CyclicLogic]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

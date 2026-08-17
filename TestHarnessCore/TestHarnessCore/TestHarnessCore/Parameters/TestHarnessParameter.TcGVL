@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="TestHarnessParameter" Id="{f09cf24a-7c72-4cbd-8442-379efd852d18}" ParameterList="True">
+    <Declaration><![CDATA[// Dials a referencing project can turn from the Library Manager, without editing
+// this library.
+//
+// Everything here is a DEFAULT, not a limit. Capacity is overridable per instance
+// as well - TestRegistry<20> - so this is the value a declaration inherits when it
+// says nothing.
+{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+	// Tests a suite can hold. Every slot costs its journal whether used or not, so
+	// prefer several small suites to one large one.
+	//
+	// Must be at least 1: ARRAY[0..Capacity - 1] with zero is a compile error, and
+	// that is the right outcome. Clamping a zero to one slot would be the same class
+	// of silent surprise this library exists to remove.
+	Capacity		 : UDINT := 10;
+	// Sinks a suite or sequencer can hold. Not a generic argument: a project
+	// attaches the same set of sinks to every suite it owns, so per-instance
+	// variation would cost every declaration site a second argument to buy nothing.
+	ReporterCapacity : UDINT := 4;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

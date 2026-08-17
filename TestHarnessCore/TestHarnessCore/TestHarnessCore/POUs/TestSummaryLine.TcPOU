@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.0">
+  <POU Name="TestSummaryLine" Id="{cbd9ecb4-66d4-4b81-8dd1-68f996ff64fb}" SpecialFunc="None">
+    <Declaration><![CDATA[// Composes the one-line summary that CI list views render.
+//
+// Pure, and separate from the journal, because the composition rule is worth
+// testing on its own - it is the part most likely to be got subtly wrong.
+//
+// Order is fixed: step label, then generated diagnostic, then the author's
+// message. Nothing is cut mid-word. The author's message is the only element that
+// may be dropped, and it is dropped whole - it appears in full in the detail
+// either way, so a truncated copy in the summary buys nothing and costs
+// legibility.
+//
+// The step label leads because timeout is the dominant failure mode for anything
+// multi-scan, and there the label IS the diagnostic: 'Home: timed out after 5000
+// cycles' usually ends an investigation.
+//
+// The failure kind is deliberately absent - it travels in the result document's
+// 'type' attribute, where CI can group by it.
+FUNCTION TestSummaryLine : STRING
+VAR_INPUT
+	StepLabel  : T_MaxString;
+	Diagnostic : T_MaxString;
+	Message	   : T_MaxString;
+END_VAR
+
+VAR CONSTANT
+	// STRING is STRING(80). Composing to fit is the point of this function.
+	MaxLength : INT := 80;
+END_VAR
+
+VAR
+	Built : T_MaxString;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[Built := '';
+
+IF StepLabel <> '' THEN
+	Built := CONCAT(StepLabel, ': ');
+END_IF
+
+Built := CONCAT(Built, Diagnostic);
+
+// Appended only if the whole of it fits. A partial message is worse than none:
+// the reader cannot tell whether the sentence ended or the buffer did.
+IF Message <> '' THEN
+	IF Built = '' THEN
+		IF LEN(Message) <= MaxLength THEN
+			Built := Message;
+		END_IF
+	ELSIF LEN(Built) + 3 + LEN(Message) <= MaxLength THEN
+		Built := CONCAT(CONCAT(Built, ' - '), Message);
+	END_IF
+END_IF
+
+// A diagnostic alone can still overrun - a compared string may be long. Cut it
+// with an ellipsis so the reader knows to look at the detail.
+IF LEN(Built) > MaxLength THEN
+	Built := CONCAT(LEFT(Built, TO_INT(MaxLength - 3)), '...');
+END_IF
+
+TestSummaryLine := Built;]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

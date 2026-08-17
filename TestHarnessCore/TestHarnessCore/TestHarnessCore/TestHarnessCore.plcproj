@@ -1,0 +1,291 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <FileVersion>1.0.0.0</FileVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{54241298-cac8-4759-ad7c-4fd6acf104bf}</ProjectGuid>
+    <SubObjectsSortedByName>True</SubObjectsSortedByName>
+    <DownloadApplicationInfo>true</DownloadApplicationInfo>
+    <WriteProductVersion>true</WriteProductVersion>
+    <GenerateTpy>false</GenerateTpy>
+    <Name>TestHarnessCore</Name>
+    <ProgramVersion>3.1.4026.24</ProgramVersion>
+    <Application>{9714214b-3e2d-47c9-8da3-7c2fd6c0f2e1}</Application>
+    <TypeSystem>{ace04962-4e19-43a6-99b3-7e4a624a7c3d}</TypeSystem>
+    <Implicit_Task_Info>{2d9effeb-5f28-4d17-98cc-c3453016a6b2}</Implicit_Task_Info>
+    <Implicit_KindOfTask>{a9bff015-b7cd-472b-8b9c-db65dcd23920}</Implicit_KindOfTask>
+    <Implicit_Jitter_Distribution>{8f1d610b-3d60-4479-9b8a-80381c0c31ac}</Implicit_Jitter_Distribution>
+    <LibraryReferences>{9917ce47-ed06-44aa-a361-5fed25420694}</LibraryReferences>
+    <POUsForPropertyAccessIncluded>true</POUsForPropertyAccessIncluded>
+    <GlobalVersionStructureIncluded>true</GlobalVersionStructureIncluded>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="DUTs\E_FailureKind.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_PhaseOutcome.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_RegistrationFault.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_RunOutcome.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_RunPhase.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\E_TestStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_CompareResult.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_NumericValue.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_TestBudget.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_TestBudgets.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\ST_TestSlot.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_Cyclic.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_Labelled.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_Test.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestAssertions.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestConfiguration.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestDefaults.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestDetailSink.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestExecution.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestJournalSet.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestLocation.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestOutcome.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestReRun.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestRegistrar.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestRegistration.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestReporter.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestRoster.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestRunStatus.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestSetup.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestSuite.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestTeardown.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Interfaces\I_TestTiming.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestArbiter.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestDeadline.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestJournal.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestRegistry.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestRunner.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestStopwatch.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestSummaryLine.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestTimeoutDiagnostic.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestValueAsLReal.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestValueBrief.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestValueCompare.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestValueIsFloat.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestValueIsText.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestValueString.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\TestVerdict.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Parameters\TestHarnessParameter.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project Information\F_GetCompany.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project Information\F_GetTitle.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Project Information\F_GetVersion.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Version\Global_Version.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Documentation\TestHarnessCore.md">
+      <SubType>Content</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="DUTs" />
+    <Folder Include="Documentation" />
+    <Folder Include="Interfaces" />
+    <Folder Include="POUs" />
+    <Folder Include="Parameters" />
+    <Folder Include="Project Information" />
+    <Folder Include="Version" />
+  </ItemGroup>
+  <ItemGroup>
+    <PlaceholderReference Include="Tc2_Standard">
+      <DefaultResolution>Tc2_Standard, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Standard</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_System">
+      <DefaultResolution>Tc2_System, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_System</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Utilities">
+      <DefaultResolution>Tc2_Utilities, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Utilities</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Module">
+      <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Module</Namespace>
+      <SystemLibrary>true</SystemLibrary>
+    </PlaceholderReference>
+  </ItemGroup>
+  <ProjectExtensions>
+    <PlcProjectOptions>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
+      <v n="Name">"&lt;ProjectRoot&gt;"</v>
+      <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+        <v>{29BD8D0C-3586-4548-BB48-497B9A01693F}</v>
+        <o>
+          <v n="Name">"{29BD8D0C-3586-4548-BB48-497B9A01693F}"</v>
+          <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+            <v>NamingConventions</v>
+            <o>
+              <v n="Name">"NamingConventions"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
+            <v>Rules</v>
+            <o>
+              <v n="Name">"Rules"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
+          </d>
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{40450F57-0AA3-4216-96F3-5444ECB29763}</v>
+        <o>
+          <v n="Name">"{40450F57-0AA3-4216-96F3-5444ECB29763}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{8A0FB252-96EB-4DCC-A5B4-B4804D05E2D6}</v>
+        <o>
+          <v n="Name">"{8A0FB252-96EB-4DCC-A5B4-B4804D05E2D6}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+            <v>WriteLineIDs</v>
+            <v>False</v>
+          </d>
+        </o>
+        <v>{8F99A816-E488-41E4-9FA3-846536012284}</v>
+        <o>
+          <v n="Name">"{8F99A816-E488-41E4-9FA3-846536012284}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="String">
+            <v>DisabledWarningIds</v>
+            <v>410,5410</v>
+          </d>
+        </o>
+        <v>{eeeeeeee-3909-4298-8022-501ac3238667}</v>
+        <o>
+          <v n="Name">"{eeeeeeee-3909-4298-8022-501ac3238667}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{F66C7017-BDD8-4114-926C-81D6D687E35F}</v>
+        <o>
+          <v n="Name">"{F66C7017-BDD8-4114-926C-81D6D687E35F}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+            <v>CalcActiveTransOnly</v>
+            <v>True</v>
+          </d>
+        </o>
+      </d>
+      <d n="Values" t="Hashtable" />
+    </o>
+        </Data>
+        <TypeList>
+          <Type n="Boolean">System.Boolean</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
+    </PlcProjectOptions>
+  </ProjectExtensions>
+</Project>

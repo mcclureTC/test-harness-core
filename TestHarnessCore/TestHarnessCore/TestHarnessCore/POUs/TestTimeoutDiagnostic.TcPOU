@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestTimeoutDiagnostic" Id="{c891bab3-ff2f-4f65-a0ba-1dadbb65f93a}" SpecialFunc="None">
+    <Declaration><![CDATA[// The one place a deadline expiry is put into words.
+//
+// Two objects detect timeouts - TestJournal for the body, TestDeadline for setup
+// and teardown - and a reader comparing two reports should not have to work out
+// whether two differently-worded lines mean the same thing.
+//
+// Pure, so the wording is testable without running a test that hangs.
+FUNCTION TestTimeoutDiagnostic : T_MaxString
+VAR_INPUT
+	// 'setup', 'teardown', or empty for the test body.
+	Phase	 : T_MaxString;
+	// The budget that expired. Only the one named by ByCycles is read.
+	Cycles	 : UDINT;
+	Timeout	 : TIME;
+	ByCycles : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF ByCycles THEN
+	TestTimeoutDiagnostic := CONCAT(CONCAT('timed out after ',
+		LREAL_TO_FMTSTR(TO_LREAL(Cycles), 0, FALSE)), ' cycles');
+ELSE
+	TestTimeoutDiagnostic := CONCAT(CONCAT('timed out after ',
+		TIME_TO_STRING(Timeout)), ' of wall time');
+END_IF
+
+IF Phase <> '' THEN
+	TestTimeoutDiagnostic := CONCAT(CONCAT(Phase, ' '), TestTimeoutDiagnostic);
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

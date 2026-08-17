@@ -1,0 +1,342 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestRunner" Id="{6587c53f-032a-48cf-b59c-663c322fdeee}" SpecialFunc="None">
+    <Declaration><![CDATA[// Drives ONE test through its three phases: setup, body, teardown.
+//
+// Separated from TestArbiter because that object decides WHICH test runs and this
+// one decides WHAT HAPPENS to it - two different reasons to change. Separated from
+// the suite because the suite is a facade and this is the only real state machine
+// in the library.
+//
+// One instance per suite. Only one test runs at a time, which is the whole reason
+// the verdict handle and the deadlines can be single copies rather than per slot.
+//
+// It holds no reporters. A teardown overrun is returned to the suite rather than
+// reported here, because the suite is what owns the sinks - and keeping this
+// object ignorant of them is what keeps it testable.
+FUNCTION_BLOCK TestRunner
+VAR
+	_Roster		: I_TestRoster;
+	// A REFERENCE TO, not a copy. A function block held by value would be copied at
+	// the call that supplied it, and the runner would retarget a copy nobody reads.
+	_Verdict	: REFERENCE TO TestVerdict;
+	// The same object, as the interface a test body is handed. A REFERENCE TO does
+	// not substitute for an interface at a call site, so it is held both ways.
+	_Assertions : I_TestAssertions;
+
+	_Slot	 : ST_TestSlot;
+	_Journal : REFERENCE TO TestJournal;
+
+	_Phase	 : E_RunPhase;
+	_Outcome : E_PhaseOutcome;
+
+	// Bounds setup and teardown. The BODY deadline lives in TestJournal, which
+	// already counts that phase and already owns the verdict an expiry produces.
+	_PhaseDeadline : TestDeadline;
+
+	_TeardownDiagnostic : T_MaxString;
+
+	// Never written. Assigned to clear, so "nothing loaded" is one well-defined
+	// value rather than six field assignments to keep in step.
+	_EmptySlot : ST_TestSlot;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+	No cyclic body. Advance is called by the suite while a test is loaded, and only
+	then.
+*)]]></ST>
+    </Implementation>
+    <Method Name="Attach" Id="{3790870f-2b8d-4926-b872-3c252b24407c}">
+      <Declaration><![CDATA[// Wire the runner up. Called once by the suite at composition.
+//
+// The verdict handle is one per suite and is retargeted here, per test, because
+// only one test runs at a time. At capacity 50 that is one copy of the assertion
+// machinery rather than fifty.
+METHOD Attach
+VAR_INPUT
+	Roster : I_TestRoster;
+END_VAR
+
+VAR_IN_OUT
+	Verdict : TestVerdict;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Roster		:= Roster;
+_Verdict	REF= Verdict;
+_Assertions := Verdict;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Load" Id="{f7a127df-20f2-4b59-997b-b07158379134}">
+      <Declaration><![CDATA[// Make this slot the active test and start it. One call, then Advance every scan
+// until it stops returning Running.
+//
+// Begin is called BEFORE setup so the wall clock covers the whole test. The
+// journal is ticked only while the BODY runs, so ElapsedCycles - and therefore
+// AssertCompletedWithin - measure the body rather than the fixture, and
+// IsFirstCycle is TRUE on the body's first scan as documented.
+//
+// Returns FALSE if the slot carries no test or the runner is not attached, in
+// which case nothing is loaded and Outcome stays Idle.
+METHOD Load : BOOL
+VAR_INPUT
+	Slot : ST_TestSlot;
+END_VAR
+
+VAR
+	Location : T_MaxString;
+	// A property returning a STRUCT cannot have a member read off the call result.
+	// It is copied to a local first - a TwinCAT rule, not a style choice.
+	Budgets	 : ST_TestBudgets;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Load := FALSE;
+
+IF (Slot.Test = 0) OR (_Roster = 0) OR NOT __ISVALIDREF(_Verdict) THEN
+	RETURN;
+END_IF
+
+_Slot	 := Slot;
+_Journal REF= _Roster.Journal(Slot.Index);
+
+IF NOT __ISVALIDREF(_Journal) THEN
+	// The slot and the roster disagree. Running nothing is safer than writing
+	// through an invalid reference.
+	_Slot	 := _EmptySlot;
+	_Outcome := E_PhaseOutcome.Idle;
+	RETURN;
+END_IF
+
+IF _Slot.Location <> 0 THEN
+	Location := _Slot.Location.Path;
+END_IF
+
+_Journal.Begin(Label := _Slot.Label, Location := Location);
+_Verdict.Target(_Journal);
+
+// Setup is skipped entirely by a test that does not implement it. There is no
+// empty method body to call and no flag to keep in step.
+Budgets := _Journal.Budgets;
+
+IF _Slot.Setup <> 0 THEN
+	_Phase := E_RunPhase.Setup;
+	_PhaseDeadline.Arm('setup', Budgets.Setup);
+ELSE
+	_Phase := E_RunPhase.Body;
+END_IF
+
+_Outcome := E_PhaseOutcome.Running;
+Load	 := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Advance" Id="{b6ede49e-8fcd-481c-a2eb-47cde7b2d241}">
+      <Declaration><![CDATA[// One scan of the active test. Call every scan while the suite is enabled.
+//
+// Enable is held, not edged: it is passed straight through to whichever phase is
+// running. Dropping it abandons the test - the phase in flight gets one final
+// call with Enable FALSE so it can put its own state back, and its return value
+// is ignored, because a test that failed by hanging will not answer that call
+// either.
+METHOD Advance : E_PhaseOutcome
+VAR_INPUT
+	Enable : BOOL;
+END_VAR
+
+VAR
+	PhaseDone : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Advance := _Outcome;
+
+IF _Outcome <> E_PhaseOutcome.Running THEN
+	RETURN;
+END_IF
+
+IF NOT Enable THEN
+	THIS^.Abandon();
+	Advance := _Outcome;
+	RETURN;
+END_IF
+
+CASE _Phase OF
+
+E_RunPhase.Setup:
+	PhaseDone := _Slot.Setup.Setup(Enable := TRUE, Test := _Assertions);
+
+	IF PhaseDone THEN
+		_PhaseDeadline.Disarm();
+
+		// A failure or error recorded during setup ends the test WITHOUT running the
+		// body. A test whose fixture never came up has not been exercised, and
+		// reporting it as a failed check would be a lie.
+		//
+		// Kind is what answers this, not Status: RecordFailure does not move the
+		// journal out of Running - only Complete does - so Status is still Running
+		// here whatever setup found. Kind is None until a failure is recorded.
+		IF _Journal.Kind <> E_FailureKind.None THEN
+			_Journal.Complete(E_TestStatus.Failed);
+			THIS^.BeginTeardown();
+		ELSE
+			_Phase := E_RunPhase.Body;
+		END_IF
+	ELSIF _PhaseDeadline.Tick() THEN
+		_Journal.RecordFailure(Kind		  := E_FailureKind.Timeout,
+							   Diagnostic := _PhaseDeadline.Diagnostic,
+							   Message	  := '');
+		_Journal.Complete(E_TestStatus.Failed);
+		THIS^.BeginTeardown();
+	END_IF
+
+E_RunPhase.Body:
+	PhaseDone := _Slot.Test.Run(Enable := TRUE, Test := _Assertions);
+
+	IF PhaseDone THEN
+		_Journal.Complete(E_TestStatus.Passed);
+		THIS^.BeginTeardown();
+	ELSIF _Journal.Tick() THEN
+		// Tick recorded the timeout and completed the journal itself.
+		THIS^.BeginTeardown();
+	END_IF
+
+E_RunPhase.Teardown:
+	PhaseDone := _Slot.Teardown.Teardown(Enable := TRUE, Test := _Assertions);
+
+	IF PhaseDone THEN
+		_PhaseDeadline.Disarm();
+		THIS^.Unload();
+		_Outcome := E_PhaseOutcome.Finished;
+	ELSIF _PhaseDeadline.Tick() THEN
+		// Abandoned, not failed. The verdict stands: a passing test whose cleanup
+		// hung still proved the code correct. The suite raises a framework error and
+		// the run goes red.
+		_TeardownDiagnostic := _PhaseDeadline.Diagnostic;
+		THIS^.Unload();
+		_Outcome := E_PhaseOutcome.TeardownOverran;
+	END_IF
+
+END_CASE
+
+Advance := _Outcome;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="BeginTeardown" Id="{a875612c-fc14-420d-ad2d-106662b05028}">
+      <Declaration><![CDATA[// Move to teardown, or finish if there is none.
+//
+// Teardown runs whatever the verdict - passed, failed, errored, timed out. This is
+// the guarantee the original could not make, because it never called the tests and
+// so could not call anything after them.
+//
+// Its deadline is its own and is usually shorter than the body's. A test that
+// failed by hanging is now being asked to clean up and will most likely hang
+// again, and on a rig that means an axis left powered.
+METHOD BeginTeardown
+VAR
+	Budgets : ST_TestBudgets;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// The journal must be terminal before teardown reads Status to decide how to
+// clean up. Setup failure and body completion both leave it so; this covers the
+// path where neither did.
+IF _Journal.Status = E_TestStatus.Running THEN
+	_Journal.Complete(E_TestStatus.Passed);
+END_IF
+
+IF _Slot.Teardown = 0 THEN
+	THIS^.Unload();
+	_Outcome := E_PhaseOutcome.Finished;
+	RETURN;
+END_IF
+
+Budgets := _Journal.Budgets;
+
+_Phase := E_RunPhase.Teardown;
+_PhaseDeadline.Arm('teardown', Budgets.Teardown);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Abandon" Id="{2e35f533-6a58-41a1-9e83-9665cab9f136}">
+      <Declaration><![CDATA[// Enable dropped. Give the phase in flight one final call so it can return its
+// own state to its starting condition, then stop.
+//
+// The return value of that call is ignored. A test abandoned because it hung will
+// not answer it either, and waiting for TRUE would reproduce the stall the whole
+// design removes.
+//
+// Teardown is NOT run. Abandonment is the suite being switched off, not a test
+// finishing, and calling cleanup on a half-torn-down rig is its own hazard.
+METHOD Abandon]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE _Phase OF
+E_RunPhase.Setup:
+	_Slot.Setup.Setup(Enable := FALSE, Test := _Assertions);
+E_RunPhase.Body:
+	_Slot.Test.Run(Enable := FALSE, Test := _Assertions);
+E_RunPhase.Teardown:
+	_Slot.Teardown.Teardown(Enable := FALSE, Test := _Assertions);
+END_CASE
+
+_PhaseDeadline.Disarm();
+
+// Errored, not Failed and not Skipped. The code under test was never shown to be
+// wrong, and a Skipped verdict must not turn a build red - but an abandoned run
+// must not read as a clean one either.
+IF _Journal.Status = E_TestStatus.Running THEN
+	_Journal.RecordFailure(Kind		  := E_FailureKind.Environment,
+						   Diagnostic := 'abandoned before completing',
+						   Message	  := '');
+	_Journal.Complete(E_TestStatus.Errored);
+END_IF
+
+THIS^.Unload();
+_Outcome := E_PhaseOutcome.Finished;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Unload" Id="{bd9ec659-00b0-4e82-a1f4-77e2d16c0be2}">
+      <Declaration><![CDATA[// Drop the active test. The verdict handle is untargeted so a stray call cannot
+// write into a finished test's record.
+METHOD Unload]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Verdict.Untarget();
+_Journal REF= 0;
+_Slot	 := _EmptySlot;
+_Phase	 := E_RunPhase.Idle;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Outcome" Id="{94be2a73-cc44-48b5-b6f5-1b80d13b0b53}">
+      <Declaration><![CDATA[// What the last Advance did. Idle when nothing is loaded.
+PROPERTY Outcome : E_PhaseOutcome]]></Declaration>
+      <Get Name="Get" Id="{6035fba9-e194-4526-86ba-f29ced7c480d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Outcome := _Outcome;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TeardownDiagnostic" Id="{07ba2292-25a1-4da7-936d-d79caa847737}">
+      <Declaration><![CDATA[// Why teardown was abandoned, for the framework error the suite raises. Empty
+// unless the last Advance returned TeardownOverran.
+PROPERTY TeardownDiagnostic : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{05ef51f9-e897-4648-a16a-2d3eefd5cfc4}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TeardownDiagnostic := _TeardownDiagnostic;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ActiveLabel" Id="{8a6bb386-ba58-47e4-9a4e-efae88ce6664}">
+      <Declaration><![CDATA[// The label of the test currently loaded, or empty. Names the source in the
+// framework error the suite raises.
+PROPERTY ActiveLabel : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{d39e097f-0eec-4052-9935-d961a8d304df}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ActiveLabel := _Slot.Label;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

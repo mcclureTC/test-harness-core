@@ -1,0 +1,93 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TestStopwatch" Id="{3cc4e536-9b8f-43c8-89e1-d34fc7913601}" SpecialFunc="None">
+    <Declaration><![CDATA[// Elapsed seconds, measured in task scans.
+//
+// Ported from the original essentially unchanged - one of the few parts that
+// needed nothing. Resolution is the task period, so a test shorter than one scan
+// reports zero. That is honest: at this resolution there is nothing finer to say.
+//
+// Duration is reported, never asserted on. Scan counts are the reproducible
+// measure across Windows, BSD, Linux RT and containers.
+FUNCTION_BLOCK TestStopwatch
+VAR
+	_StartCycle		 : UDINT;
+	_PreviousElapsed : LREAL;
+	_IsRunning		 : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(*
+	No cyclic body. Elapsed is derived from the task's own cycle counter, so
+	nothing has to be called every scan to keep it accurate.
+*)]]></ST>
+    </Implementation>
+    <Property Name="Elapsed" Id="{37f0ace4-1757-481a-ad3e-a4fa37d38ba3}">
+      <Declaration><![CDATA[// Seconds since Start, or the frozen value once stopped.
+PROPERTY Elapsed : LREAL]]></Declaration>
+      <Get Name="Get" Id="{35be167e-e1c6-435f-888b-28a2f00c94f8}">
+        <Declaration><![CDATA[VAR
+	Cycles : UDINT;
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[
+
+IF NOT _IsRunning THEN
+	Elapsed := _PreviousElapsed;
+	RETURN;
+END_IF
+
+// Unsigned subtraction, so a wrapped cycle counter still yields the correct
+// difference.
+Cycles := TwinCAT_SystemInfoVarList._TaskInfo[GETCURTASKINDEXEX()].CycleCount - _StartCycle;
+
+// CycleTime is in 100 ns units.
+Elapsed := TO_LREAL(Cycles)
+		 * TO_LREAL(TwinCAT_SystemInfoVarList._TaskInfo[GETCURTASKINDEXEX()].CycleTime)
+		 / 10000000.0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="IsRunning" Id="{7f7506f8-e8f2-4e28-b0ce-125ead2977b6}">
+      <Declaration><![CDATA[PROPERTY IsRunning : BOOL]]></Declaration>
+      <Get Name="Get" Id="{15216e90-2da3-48b8-aeb7-9f8f243c274c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsRunning := _IsRunning;
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Reset" Id="{35f80804-b9de-4097-8ee0-f7c2f5b74085}">
+      <Declaration><![CDATA[METHOD Reset]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_PreviousElapsed := 0.0;
+_StartCycle		 := 0;
+_IsRunning		 := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Start" Id="{a29d664b-fea4-473d-a030-d5d168adf50e}">
+      <Declaration><![CDATA[// Restarts from zero. Starting an already-running stopwatch discards what it had.
+METHOD Start]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_PreviousElapsed := 0.0;
+_StartCycle		 := TwinCAT_SystemInfoVarList._TaskInfo[GETCURTASKINDEXEX()].CycleCount;
+_IsRunning		 := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Stop" Id="{dd061033-f2d8-45d9-9594-7d8c30f50400}">
+      <Declaration><![CDATA[// Freezes and returns the elapsed seconds. Stopping a stopped stopwatch returns
+// what it already held rather than zero.
+METHOD Stop : LREAL]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _IsRunning THEN
+	_PreviousElapsed := THIS^.Elapsed;
+	_IsRunning		 := FALSE;
+END_IF
+
+Stop := _PreviousElapsed;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

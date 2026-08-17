@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Itf Name="I_TestLocation" Id="{0e49fcaf-46dc-49e3-a46f-7f2ead991e2a}">
+    <Declaration><![CDATA[// Optional. Supplies the instance path of a test, carried in the result document
+// as 'classname' - where to look when the test fails.
+//
+// Additive, not a replacement. The label passed to Register is the stable key CI
+// history is built on and survives renaming or moving the instance; this is the
+// diagnostic that says where the instance actually is.
+//
+// A test not implementing this reports an empty classname; nothing else changes.
+//
+// Implement by declaring one TestIdentity member and returning its Path. The three
+// attributes it needs are all required - reflection on the function block,
+// instance-path and noinit on the string - and a missing one is silent: the
+// project compiles and the string stays empty.
+INTERFACE I_TestLocation EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
+    <Property Name="Path" Id="{e50446d3-7f32-4aa9-a7ca-afe878b1c553}">
+      <Declaration><![CDATA[// e.g. 'Project.PLC.UnitTests.AddsTwoNumbers'
+PROPERTY Path : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{0dae37cd-979b-4907-8c35-63339b5507ff}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>

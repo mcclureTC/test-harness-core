@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Itf Name="I_TestDefaults" Id="{ad272aa7-b77d-4481-93b3-74417511602d}">
+    <Declaration><![CDATA[// Suite-wide deadline defaults, set once at startup alongside registration.
+//
+// Separate from execution because it has a different holder and a different
+// lifetime: the composition root configures, the sequencer drives.
+//
+// One method rather than six. Three phases times two units is six numbers, and
+// six setters would be six chances to set the wrong one; the struct names every
+// field at the call site.
+INTERFACE I_TestDefaults EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
+    <Method Name="SetDefaults" Id="{beffa405-116c-4939-9e24-63a9cdccd121}">
+      <Declaration><![CDATA[// The budgets every test inherits for any phase and unit it did not claim for
+// itself at registration.
+//
+// A field with its IsSet flag FALSE leaves that default as it was, so a caller can
+// set the teardown default without restating the other two.
+//
+// Deadlines are ON by default. An opt-in deadline protects only the tests whose
+// authors considered hanging, and those are not the tests that hang. Zero in a
+// field that IS set disables that unit deliberately.
+//
+// Must be called before the suite is first enabled. Defaults are applied to the
+// registered set when the run starts; changing them afterwards changes nothing.
+METHOD SetDefaults
+VAR_INPUT
+	Defaults : ST_TestBudgets;
+END_VAR]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

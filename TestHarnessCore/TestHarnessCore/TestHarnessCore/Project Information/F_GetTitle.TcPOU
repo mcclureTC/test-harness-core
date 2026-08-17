@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_GetTitle" Id="{b36b6b70-2b65-4f5e-b817-91caeb1d3576}" SpecialFunc="None">
+    <Declaration><![CDATA[// This function has been automatically generated from the project information.
+{attribute 'signature_flag' := '1073741824'}
+{attribute 'TcGenerated'}
+{attribute 'no-analysis'}
+FUNCTION F_GetTitle : WSTRING
+VAR_INPUT
+	
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[F_GetTitle := "TestHarnessCore";
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_TestBudgets" Id="{75e185b3-6b82-48a6-aa08-199e648ffbc9}">
+    <Declaration><![CDATA[// The three deadlines a test can have, one per phase.
+//
+// Three rather than one because the phases are not the same kind of work. Setup
+// may legitimately be slow - waiting for hardware to answer. Teardown should not
+// be: stopping motion and dropping power is near-immediate, and if it is not,
+// that is the fault being detected. Giving teardown the body's budget would leave
+// an axis powered for the whole of it.
+//
+// An untouched instance specifies nothing and inherits every suite default, which
+// is what the great majority of registrations want. Declare one in the
+// composition root and pass it to every Register that has nothing to say.
+TYPE ST_TestBudgets :
+STRUCT
+	// Bounds I_TestSetup.Setup. Ignored by a test that does not implement it.
+	Setup	 : ST_TestBudget;
+	// Bounds I_Test.Run. This is the original deadline, from when a test grew from
+	// one scan to many.
+	Body	 : ST_TestBudget;
+	// Bounds I_TestTeardown.Teardown. Overrunning it does NOT change the test's
+	// verdict - a passing test whose cleanup hung still proved the code correct -
+	// but it is reported as a framework error and turns the run red.
+	Teardown : ST_TestBudget;
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>
