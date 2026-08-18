@@ -444,7 +444,7 @@
   </ItemGroup>
   <ItemGroup>
     <PlaceholderResolution Include="TestHarnessCore">
-      <Resolution>[TestHarnessCore], 0.0.1 (None)</Resolution>
+      <Resolution>[TestHarnessCore], * (None)</Resolution>
     </PlaceholderResolution>
   </ItemGroup>
   <ProjectExtensions>

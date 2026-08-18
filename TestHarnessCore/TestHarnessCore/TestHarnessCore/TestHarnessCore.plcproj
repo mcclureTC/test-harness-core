@@ -21,7 +21,7 @@
     <Company>None</Company>
     <Released>false</Released>
     <Title>TestHarnessCore</Title>
-    <ProjectVersion>0.0.1</ProjectVersion>
+    <ProjectVersion>0.0.2</ProjectVersion>
     <VirtualLibrary>true</VirtualLibrary>
   </PropertyGroup>
   <ItemGroup>
@@ -216,6 +216,9 @@
     <Content Include="Documentation\UPDATE_13.md">
       <SubType>Content</SubType>
     </Content>
+    <None Include="ExternalTypes.tmc">
+      <SubType>Content</SubType>
+    </None>
     <None Include="TestHarnessCore.tmc">
       <SubType>Content</SubType>
     </None>
