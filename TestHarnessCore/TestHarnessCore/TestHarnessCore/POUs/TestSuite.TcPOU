@@ -11,7 +11,7 @@
 // error - and if this object grows past that, something belongs in one of the
 // five.
 //
-// The original did all six jobs in one function block. That is most of why it is
+// One object doing all six jobs is most of why such a thing becomes
 // being replaced.
 //
 // GENERIC only because it declares TestRegistry<Capacity> as a member and only a

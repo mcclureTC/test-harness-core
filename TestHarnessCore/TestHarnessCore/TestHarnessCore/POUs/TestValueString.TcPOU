@@ -3,14 +3,12 @@
   <POU Name="TestValueString" Id="{9105455e-a1f6-4cd3-96f7-bfd054ae4ace}" SpecialFunc="None">
     <Declaration><![CDATA[// Renders any value as text for a diagnostic.
 //
-// Returns T_MaxString, not STRING. The original built into a 255-character buffer
-// and returned 80, so every value was already truncated before the reporter saw
-// it - widening the detail field elsewhere would have delivered pre-truncated
-// input into a wider field.
+// Returns T_MaxString, so a long value reaches the reporter intact and is
+// shortened once, where the width is actually known.
 //
-// Unhandled type classes - enums, structs, arrays, pointers - render as hex bytes
-// rather than as an empty string. The original returned nothing for these, which
-// produced diagnostics reading 'Expected: , Actual: '.
+// Unhandled type classes - enums, structs, arrays, pointers - render as hex bytes.
+// Not friendly, but true: a diagnostic reading 'expected , actual ' tells the
+// reader nothing at the moment they most need something.
 FUNCTION TestValueString : T_MaxString
 VAR_INPUT
 	Value : ANY;

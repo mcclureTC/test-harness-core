@@ -5,7 +5,7 @@
 // deadline. One per registered test, owned by the suite.
 //
 // Written through TestVerdict, read by the reporters. It holds no assertion logic
-// and no comparison logic - that is what kept the original's equivalent at 673
+// and no comparison logic - mixing those in is what takes an object past 673
 // lines and made it impossible to test any part of it in isolation.
 //
 // It holds no detailed report either. Individual checks are streamed to
@@ -150,7 +150,8 @@ END_VAR
     <Method Name="Finish" Id="{74cb9823-229c-4015-bdd2-73a1478c3f93}">
       <Declaration><![CDATA[// Terminal. Composes the summary once and stops the clock.
 //
-// Named Finish, not Complete: Plan.md 2.1 bans status words as method names, and
+// Named Finish, not Complete: a status word as a method name reads as a question,
+// and
 // Complete collides with IsComplete on the status interface.
 //
 // A Passed verdict with no recorded check becomes Errored: a body that checked

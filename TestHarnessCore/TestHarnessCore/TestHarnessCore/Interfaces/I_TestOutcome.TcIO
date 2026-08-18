@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestOutcome" Id="{6308f609-4f93-4344-a943-466865e6747a}">
     <Declaration><![CDATA[// The verdict surface: recording what a check found, and reading what has been
 // recorded so far.
@@ -9,17 +9,28 @@
 // comparisons, and taking the full assertion interface would suggest otherwise.
 //
 // RecordPass and RecordFailure are the primitive pair everything else is built on,
-// inside this library and outside it. The original had Fail() and no way to record
+// inside this library and outside it. Fail() alone gives no way to record
 // a pass, so an external helper had to write AssertTrue(TRUE) - which produced a
 // meaningless message when it went wrong.
 INTERFACE I_TestOutcome EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
-    <Method Name="RecordPass" Id="{0f372ef0-ecc5-4ee1-aaf2-3222c0f842b4}">
-      <Declaration><![CDATA[// Record one satisfied check. Does not end the test - a test ends when its Run
-// method returns TRUE.
-METHOD RecordPass
+    <Property Name="AssertionCount" Id="{2a24c9c5-e76b-4bae-9396-860be61dbefa}">
+      <Declaration><![CDATA[// Checks recorded so far, passed and failed.
+//
+// A test that finishes having recorded none is reported as Errored, not Passed. A
+// body that checked nothing usually means a branch never ran - a silent false pass
+// wearing a green badge.
+PROPERTY AssertionCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{3c9f9a2a-90f3-4c0d-b193-ed90a8d40dc1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Fail" Id="{f4da977c-2fe3-4fec-b471-17d6969b3e8b}">
+      <Declaration><![CDATA[// Fail outright, with no comparison. For a branch that should be unreachable.
+METHOD Fail
 VAR_INPUT
-	// Optional context for the detailed report. Never shown in the summary.
-	Detail : T_MaxString;
+	Reason : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
     <Method Name="RecordFailure" Id="{92033e6d-f0ca-451b-b0a1-d6825a0b3efd}">
@@ -36,11 +47,13 @@ VAR_INPUT
 	Message	   : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
-    <Method Name="Fail" Id="{f4da977c-2fe3-4fec-b471-17d6969b3e8b}">
-      <Declaration><![CDATA[// Fail outright, with no comparison. For a branch that should be unreachable.
-METHOD Fail
+    <Method Name="RecordPass" Id="{0f372ef0-ecc5-4ee1-aaf2-3222c0f842b4}">
+      <Declaration><![CDATA[// Record one satisfied check. Does not end the test - a test ends when its Run
+// method returns TRUE.
+METHOD RecordPass
 VAR_INPUT
-	Reason : T_MaxString;
+	// Optional context for the detailed report. Never shown in the summary.
+	Detail : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
     <Method Name="ReportError" Id="{a3560446-4dd6-42f6-861e-817f94b08254}">
@@ -72,19 +85,6 @@ END_VAR]]></Declaration>
 // to behave differently after a failure.
 PROPERTY Status : E_TestStatus]]></Declaration>
       <Get Name="Get" Id="{c57672cd-713a-4c5d-a591-f327b1d9020b}">
-        <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
-      </Get>
-    </Property>
-    <Property Name="AssertionCount" Id="{2a24c9c5-e76b-4bae-9396-860be61dbefa}">
-      <Declaration><![CDATA[// Checks recorded so far, passed and failed.
-//
-// A test that finishes having recorded none is reported as Errored, not Passed. A
-// body that checked nothing usually means a branch never ran - a silent false pass
-// wearing a green badge.
-PROPERTY AssertionCount : UDINT]]></Declaration>
-      <Get Name="Get" Id="{3c9f9a2a-90f3-4c0d-b193-ed90a8d40dc1}">
         <Declaration><![CDATA[VAR
 END_VAR
 ]]></Declaration>

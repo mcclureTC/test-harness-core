@@ -12,9 +12,8 @@
 // not run: a precondition was absent, a target was unreachable. Conflating them
 // sends whoever reads the report hunting a defect that is not there.
 //
-// The order is NOT load-bearing. The original relied on 'State >= DoneOk' to mean
-// 'terminal', which made adding a member a breaking change. Ask IsTerminal(), not
-// the ordinal.
+// The order is NOT load-bearing. Ask IsTerminal() rather than comparing ordinals,
+// so that adding a member later is not a breaking change.
 {attribute 'qualified_only'}
 {attribute 'strict'}
 TYPE E_TestStatus :

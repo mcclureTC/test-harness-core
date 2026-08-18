@@ -3,7 +3,7 @@
   <POU Name="TestStopwatch" Id="{3cc4e536-9b8f-43c8-89e1-d34fc7913601}" SpecialFunc="None">
     <Declaration><![CDATA[// Elapsed seconds, measured in task scans.
 //
-// Ported from the original essentially unchanged - one of the few parts that
+// Carried over essentially unchanged - one of the few parts that
 // needed nothing. Resolution is the task period, so a test shorter than one scan
 // reports zero. That is honest: at this resolution there is nothing finer to say.
 //

@@ -7,10 +7,9 @@
 // question, with its own consumers - CI, an HMI, a sequencer aggregating several -
 // and none of them should be handed the ability to start or stop anything.
 //
-// Every figure is maintained INCREMENTALLY, as each test completes. The original
-// recomputed all of this every scan by walking every slot, which is the
-// O(tests x capacity) per-cycle cost R6 exists to remove - and then exposed none
-// of it, so nothing could ask whether a run had finished.
+// Every figure is maintained INCREMENTALLY, as each test completes. Recomputing
+// them by walking every slot each scan costs O(tests x capacity) every cycle, and
+// still leaves nothing able to ask whether the run has finished.
 //
 // Not generic and holds nothing generic: it counts, and a count does not care how
 // many slots exist.
@@ -34,9 +33,8 @@ END_VAR]]></Declaration>
 // into a larger one.
 //
 // Counts TESTS, not suites. A consumer polling the top of a nest wants to know
-// how many tests passed, not how many containers did; Plan.md section 6 is what
-// makes nesting worth having, and it only works if the figures mean the same
-// thing at every level.
+// how many tests passed, not how many containers did. Nesting is only worth having
+// if the figures mean the same thing at every level.
 METHOD Absorb
 VAR_INPUT
 	Status : I_TestRunStatus;
@@ -106,7 +104,8 @@ END_VAR
     <Method Name="Finish" Id="{ffeca13e-0987-4f0c-850e-22ff7983dbe6}">
       <Declaration><![CDATA[// Terminal. Settles the aggregate outcome from what was recorded.
 //
-// Named Finish, not Complete: Plan.md 2.1 bans status words as method names, and
+// Named Finish, not Complete: a status word as a method name reads as a question
+// rather than an instruction, and
 // Complete would sit beside the IsComplete property on this very object. That is
 // exactly the collision the rule names.
 //
@@ -193,9 +192,9 @@ END_VAR
     <Method Name="Record" Id="{9cf12385-067c-4cd8-a0a7-2750b2aab419}">
       <Declaration><![CDATA[// Fold one finished test into the totals.
 //
-// Called once per test as it completes, NOT recomputed every scan. The original
-// derived its counts by walking every slot each cycle, which is the O(tests x
-// capacity) cost R6 exists to remove - and it exposed none of the result anyway.
+// Called once per test as it completes, NOT recomputed every scan. Deriving the
+// counts by walking every slot each cycle costs O(tests x capacity) and exposes
+// none of the result anyway.
 //
 // A status that is not terminal is ignored rather than counted as something. There
 // is no sensible bucket for Running, and inventing one would let a half-finished

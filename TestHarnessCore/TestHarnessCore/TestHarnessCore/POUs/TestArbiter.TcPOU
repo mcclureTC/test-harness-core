@@ -4,7 +4,7 @@
     <Declaration><![CDATA[// Which test runs next, and when there are no more.
 //
 // Separated from the runner because it is the ordering POLICY and the runner is
-// the test LIFECYCLE - two different reasons to change. Everything Plan.md 6.1
+// the test LIFECYCLE - two different reasons to change. Everything a sequencer
 // parks for later lands here and nowhere else: stop on first failing test, retry,
 // preconditions. Today it walks the set in registration order, and that is all it
 // should do.
@@ -31,13 +31,52 @@ END_VAR]]></Declaration>
 	not every scan.
 *)]]></ST>
     </Implementation>
+    <Method Name="Abandon" Id="{2114e7dc-8cf2-4aa2-aa8b-972cf23a79fd}">
+      <Declaration><![CDATA[// Stop the pass where it is. Called when Enable drops: the active test, and any
+// setup or teardown in flight, are cancelled by the runner and the pass does not
+// resume.
+//
+// The remaining tests are NOT visited. A run that was abandoned mid-way has not
+// been run, and reporting the rest as anything - passed, failed, skipped - would
+// be inventing a result.
+METHOD Abandon]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Current := _EmptySlot;
+_Next	 := _Count;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Advance" Id="{e3216687-a3bc-4ec3-a10e-09ddb8e380ce}">
+      <Declaration><![CDATA[// Move to the next test. Returns TRUE when there is one, FALSE when the pass is
+// over.
+//
+// The return value is the whole "are we finished" mechanism, so a caller cannot
+// reach a test without first having been told there is one.
+METHOD Advance : BOOL]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Advance	 := FALSE;
+_Current := _EmptySlot;
+
+IF (_Roster = 0) OR (_Next >= _Count) THEN
+	_Next := _Count;
+	RETURN;
+END_IF
+
+_Current := _Roster.Slot(_Next);
+_Next	 := _Next + 1;
+
+// A slot inside the registered range always carries a test. If one does not, the
+// registry and the count disagree, and running nothing is safer than dereferencing
+// a null.
+Advance := (_Current.Test <> 0);]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="Attach" Id="{9048cedf-3df1-4167-bc4d-bec4487a9daf}">
       <Declaration><![CDATA[// Point the arbiter at the registered set. Called once by the suite at
 // composition, before any run.
 //
 // An interface, not the registry itself: TestRegistry is generic and cannot be
 // held by its concrete type here. That constraint turned out to be the thing that
-// made Plan.md 2.1's instruction workable - an interface reference carries no
+// is what makes that workable - an interface reference carries no
 // generic argument, so the arbiter can hold the set AND stay non-generic.
 METHOD Attach
 VAR_INPUT
@@ -71,50 +110,11 @@ END_IF
 _Count := TO_DINT(_Roster.Count);]]></ST>
       </Implementation>
     </Method>
-    <Method Name="Advance" Id="{e3216687-a3bc-4ec3-a10e-09ddb8e380ce}">
-      <Declaration><![CDATA[// Move to the next test. Returns TRUE when there is one, FALSE when the pass is
-// over.
-//
-// The return value is the whole "are we finished" mechanism, so a caller cannot
-// reach a test without first having been told there is one.
-METHOD Advance : BOOL]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[Advance	 := FALSE;
-_Current := _EmptySlot;
-
-IF (_Roster = 0) OR (_Next >= _Count) THEN
-	_Next := _Count;
-	RETURN;
-END_IF
-
-_Current := _Roster.Slot(_Next);
-_Next	 := _Next + 1;
-
-// A slot inside the registered range always carries a test. If one does not, the
-// registry and the count disagree, and running nothing is safer than dereferencing
-// a null.
-Advance := (_Current.Test <> 0);]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="Abandon" Id="{2114e7dc-8cf2-4aa2-aa8b-972cf23a79fd}">
-      <Declaration><![CDATA[// Stop the pass where it is. Called when Enable drops: the active test, and any
-// setup or teardown in flight, are cancelled by the runner and the pass does not
-// resume.
-//
-// The remaining tests are NOT visited. A run that was abandoned mid-way has not
-// been run, and reporting the rest as anything - passed, failed, skipped - would
-// be inventing a result.
-METHOD Abandon]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[_Current := _EmptySlot;
-_Next	 := _Count;]]></ST>
-      </Implementation>
-    </Method>
     <Property Name="Current" Id="{2d7b5d99-f957-492e-83a6-c4c92f7734ce}">
       <Declaration><![CDATA[// The active test, with its label, its index and its resolved hooks. Its Test
 // member is NULL when nothing is active, which is the question callers ask.
 //
-// This is what Plan.md 2.1 asked for: "none" is a null reference, not a sentinel
+// "None" is a null reference, not a sentinel
 // index. The index is still here - a slot carries its own position, so the runner
 // can reach the matching journal - but it is carried BY the thing that is null
 // when there is nothing, rather than standing in for it.
@@ -131,7 +131,7 @@ END_VAR
     <Property Name="HasCurrent" Id="{98eb553e-3ad2-4b1c-8802-cdab4b934084}">
       <Declaration><![CDATA[// TRUE while a test is active.
 //
-// The original let index 0 double as "no active test", and the comment recording
+// Letting index 0 double as "no active test" is the trap here, and the note
 // why that could not work is what CHAR_SerialExecution pins. Here there is no
 // index to misread: the question is whether a reference is null.
 PROPERTY HasCurrent : BOOL]]></Declaration>

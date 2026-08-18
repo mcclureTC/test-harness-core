@@ -233,7 +233,7 @@ _Assertions := Verdict;]]></ST>
       <Declaration><![CDATA[// Move to teardown, or finish if there is none.
 //
 // Teardown runs whatever the verdict - passed, failed, errored, timed out. This is
-// the guarantee the original could not make, because it never called the tests and
+// a guarantee only reachable because the runner calls the tests rather than
 // so could not call anything after them.
 //
 // Its deadline is its own and is usually shorter than the body's. A test that

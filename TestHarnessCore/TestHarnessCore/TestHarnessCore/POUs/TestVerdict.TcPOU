@@ -7,7 +7,7 @@
 // ONE instance per suite, not one per test. Only one test runs at a time, so the
 // handle is retargeted to whichever journal is active rather than allocated per
 // slot. At capacity 50 that is the difference between one copy of the assertion
-// machinery and fifty; the original allocated all of it per slot, which is most of
+// machinery and fifty. Allocating all of it per slot is most of
 // why a referencing project paid for it whether it ran tests or not.
 //
 // Its single job is turning a check into a record: dispatch the comparison,

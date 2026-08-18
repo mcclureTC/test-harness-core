@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_Test" Id="{18aa7a29-c9ad-4a6d-b214-c87e5de2c245}">
     <Declaration><![CDATA[// A test. Implemented by test code you write - never by the code under test.
 //
@@ -19,7 +19,7 @@ INTERFACE I_Test EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
 // Return TRUE when there is no more work. A single-scan test returns TRUE on its
 // first call; a multi-scan test returns FALSE until its state machine finishes.
 // The test declares completion - the framework never infers it from the checks,
-// which is what let the original end a test at its first passing check and report
+// Without it a test can end at its first passing check and report
 // green on work it never reached.
 //
 // Enable is held TRUE while the test should keep running. The suite drops it to

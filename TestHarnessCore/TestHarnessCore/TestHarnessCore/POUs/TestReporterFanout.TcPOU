@@ -4,7 +4,7 @@
     <Declaration><![CDATA[// One sink standing for many. A suite holds a single I_TestReporter and never
 // learns how many are behind it.
 //
-// The composite is what makes several of the original design problems disappear
+// The composite is what makes several reporting problems disappear
 // rather than get solved. The individual re-run that "records nothing and saves
 // nothing" becomes a matter of NOT CALLING this object, rather than a flag
 // threaded through the runner. Severity policy and the duplicated event-logger

@@ -7,9 +7,9 @@
 // for a persistent HMI-visible failure state, an ADS logger, a metrics writer, and
 // an opt-in message box. A build attaches the sinks it wants.
 //
-// This is what turns three of the original's defects into configuration - the
-// severity policy, the guard that stopped an individual re-run polluting the
-// record, and the duplicated event-logger blocks in the test and the suite.
+// Reporting is configuration, not behaviour. Severity policy, whether an
+// individual re-run is recorded, and which destinations exist are all decided by
+// what a build attaches, not by anything inside a test.
 //
 // Extends I_Cyclic because a reporter must not block: anything slow, a file write
 // or an ADS call, is started in one of these methods and advanced in CyclicLogic.
@@ -60,13 +60,12 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[// A run has begun. Raised once, before anything else in it.
 //
 // The counterpart of I_TestDetailSink.TestStarted, and it exists for the same
-// reason: a sink that BUILDS something needs to be told when to open it rather
-// than inferring it from the first thing that arrives. The result-document writer
-// used to create its document lazily on the first result, which worked and was
-// guesswork.
+// reason: a sink that BUILDS something is told when to open it rather than
+// inferring it from the first thing to arrive. The result-document writer creates
+// its document here.
 //
 // It also lets a log sink bracket its output. Failures stream DURING a run and the
-// summary comes at the end, so a marker only at the end brackets nothing.
+// summary comes at the end, so a marker only at the end would bracket nothing.
 METHOD RunStarted
 VAR_INPUT
 	Label	   : T_MaxString;
@@ -91,12 +90,12 @@ END_VAR]]></Declaration>
 // There is no detailed report here. Detail is streamed check by check through
 // I_TestDetailSink, which a reporter implements only if it wants it. A single
 // T_MaxString could not carry it: one comparison of two 255-character values
-// already exceeds 255, so a per-test buffer would have truncated exactly the
-// long values R15.2 widened the formatter to preserve.
+// already exceeds 255, so a per-test buffer would truncate exactly the long values
+// worth reading.
 //
 // Kind belongs in the document's 'type' attribute, which frees Summary from
-// repeating it and gives CI something to group by. The original hardcoded
-// 'AssertionError' for every failure, making the field useless.
+// repeating it and gives CI something to group by - Timeout, ValueMismatch and
+// SizeMismatch are different questions and group separately.
 METHOD TestFinished
 VAR_INPUT
 	SuiteLabel	  : T_MaxString;

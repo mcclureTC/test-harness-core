@@ -4,15 +4,13 @@
     <Declaration><![CDATA[// A RUN: the boundary around one or more suites, and the only thing that says a
 // run has ended.
 //
-// It exists because a suite is not a run. RunFinished is a run-level event, and
-// having a suite raise it means the suite must know whether something above it
-// exists - which was the flag-shaped design this replaced. Here the answer is
-// structural: a single suite is composed with one TestRun, a sequencer IS one, and
-// exactly one object is ever in a position to announce the end.
+// It exists because a suite is not a run. RunFinished is a run-level event, and a
+// suite raising it would have to know whether anything sits above it. Here the
+// answer is structural: a single suite is composed with one TestRun, a sequencer
+// IS one, and exactly one object is ever in a position to announce the end.
 //
-// The practical consequence is the defect this was built for: without it, a
-// project with one suite and no sequencer produced NO result document at all,
-// because the JUnit writer only writes on RunFinished.
+// EVERY PROJECT NEEDS ONE, including a project with a single suite. The result
+// document is written on RunFinished, so without a run there is no artifact.
 //
 // Implements I_TestRunStatus, so runs nest: a consumer polls one symbol regardless
 // of how many suites exist, and an outer run absorbs an inner one exactly as this
@@ -162,8 +160,7 @@ AddSuite := TRUE;]]></ST>
 // on the slow rather than the stuck.
 //
 // A suite cannot see this about itself: it is the thing that has stopped. The run
-// owns the sequence, so it is the only object positioned to notice - which is what
-// Plan.md 6.1 means by the watchdog belonging here and nowhere else.
+// owns the sequence, so it is the only object positioned to notice.
 METHOD CheckWatchdog
 VAR_INPUT
 	Index : DINT;
@@ -369,10 +366,10 @@ END_VAR
     <Method Name="ReRun" Id="{a01ee304-4229-4307-9a7e-8452ccc0c354}">
       <Declaration><![CDATA[// Re-execute every suite in the run, and produce a FRESH document.
 //
-// It lives here rather than on a suite because the document boundary does. A
-// suite re-running on its own re-executes its tests and raises SuiteFinished
-// again, but nothing announces the end of a run - so no new artifact is written,
-// and the re-run is invisible to CI. That gap is what CHAR_ReRunTests found.
+// It lives here rather than on a suite because the document boundary does. A suite
+// re-running on its own re-executes its tests and raises SuiteFinished again, but
+// announces no run - so no new artifact is written and the re-run is invisible to
+// CI.
 //
 // The registered set is not redefined, at either level. A re-run re-executes what
 // was composed; it does not recompose it.
@@ -501,8 +498,8 @@ END_VAR]]></Declaration>
 // abandons it. Zero disables the watchdog.
 //
 // A backstop, not a deadline. Per-test budgets already bound every test that did
-// not disable them; this catches the two things they cannot - a framework defect,
-// and a test that turned its own deadlines off and then hung.
+// not disable them; this catches what they cannot - a suite that stops progressing
+// for any other reason, including a test that turned its own deadlines off.
 //
 // Raise it for a suite with a single legitimately long test: the count is scans
 // between VERDICTS, so one test taking longer than the budget looks identical to
@@ -542,9 +539,8 @@ END_VAR
       </Get>
     </Property>
     <Property Name="StalledSuites" Id="{b9b555ec-8627-4cc9-b93b-10331c61e587}">
-      <Declaration><![CDATA[// Suites the watchdog abandoned. Assert it is zero in CI: a stalled suite is a
-// framework or test defect, never a normal outcome, and the run it belongs to
-// cannot be trusted.
+      <Declaration><![CDATA[// Suites the watchdog abandoned. Assert it is zero in CI: a stalled suite is never
+// a normal outcome, and the run it belongs to cannot be trusted.
 PROPERTY StalledSuites : UDINT]]></Declaration>
       <Get Name="Get" Id="{65c91cfb-aace-4306-a5f2-73c85f1529d4}">
         <Declaration><![CDATA[VAR

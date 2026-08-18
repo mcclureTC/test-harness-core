@@ -23,14 +23,14 @@
 //             size difference here is a genuine TypeMismatch - different types
 //             rather than different values.
 //
-// Two changes from the original, both deliberate:
+// Two rules worth stating outright:
 //
-//  1. WSTRING is compared AS WSTRING. The original copied WSTRING bytes into a
+//  1. WSTRING is compared AS WSTRING, not by copying its bytes into a
 //     STRING buffer and compared with '<>', which terminates at the first NUL -
 //     and every second byte of ASCII WSTRING content is NUL. Two different
 //     WSTRINGs of equal declared size compared equal and the test went green.
 //
-//  2. REAL and LREAL compare EXACTLY. The original applied a hidden epsilon of
+//  2. REAL and LREAL compare EXACTLY, with no hidden epsilon of
 //     0.000001, so a test passing at 1E-7 looked identical to one passing exactly.
 //     Tolerance now has its own methods - AssertNear for absolute, AssertWithin
 //     for relative - and choosing one is visible at the call site.

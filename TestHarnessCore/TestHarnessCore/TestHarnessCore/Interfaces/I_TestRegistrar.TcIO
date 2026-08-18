@@ -10,21 +10,9 @@
 //
 // The registry is the one generic object in the library, so every consumer reaches
 // it through an interface: a generic instance cannot be passed by its concrete
-// type at all. See Plan.md 2.2.
+// type at all.
 INTERFACE I_TestRegistrar EXTENDS __SYSTEM.IQueryInterface
 ]]></Declaration>
-    <Method Name="TryClaim" Id="{a4fe7f27-d17e-4b69-b164-37e36f0ca507}">
-      <Declaration><![CDATA[// Take the next free slot. Returns None on success, or why it was refused.
-//
-// Order of claiming is order of execution. The optional hooks are resolved here,
-// once, so no __QUERYINTERFACE happens in cyclic code.
-METHOD TryClaim : E_RegistrationFault
-VAR_INPUT
-	Test	: I_Test;
-	Label	: T_MaxString;
-	Budgets : ST_TestBudgets;
-END_VAR]]></Declaration>
-    </Method>
     <Method Name="Close" Id="{ec359e65-90ba-4be3-bee6-93ecab22d70f}">
       <Declaration><![CDATA[// Registration is over. Called when the suite is first enabled - not after the
 // first scan, because a machine project may need several scans to decide what to
@@ -41,5 +29,17 @@ PROPERTY IsOpen : BOOL]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Method Name="TryClaim" Id="{a4fe7f27-d17e-4b69-b164-37e36f0ca507}">
+      <Declaration><![CDATA[// Take the next free slot. Returns None on success, or why it was refused.
+//
+// Order of claiming is order of execution. The optional hooks are resolved here,
+// once, so no __QUERYINTERFACE happens in cyclic code.
+METHOD TryClaim : E_RegistrationFault
+VAR_INPUT
+	Test	: I_Test;
+	Label	: T_MaxString;
+	Budgets : ST_TestBudgets;
+END_VAR]]></Declaration>
+    </Method>
   </Itf>
 </TcPlcObject>

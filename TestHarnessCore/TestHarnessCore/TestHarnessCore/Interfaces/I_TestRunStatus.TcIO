@@ -9,7 +9,7 @@
 // wants to know whether the run finished should not also be handed the ability to
 // restart it.
 //
-// The original computed all of this every scan and exposed none of it. The counts
+// Computing all of this every scan and exposing none of it is the trap. The counts
 // were private and absent from any interface, so nothing could ask whether a run
 // had finished - the only signals were a file appearing on disk and a line in a
 // log, both of which have to be scraped.

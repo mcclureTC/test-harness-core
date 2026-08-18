@@ -66,8 +66,8 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[// Where a failed write is reported. Optional but strongly advised.
 //
 // Without it, the only evidence of a failed write is WriteFailures on this object.
-// A sink that cannot write its file and cannot say so is exactly the silence R3
-// names.
+// A sink that cannot write its file and cannot say so is silent about the one
+// thing that matters.
 //
 // Deliberately not the fan-out this object is attached to: reporting a write
 // failure back through the composite would call this object again.
@@ -93,10 +93,8 @@ END_IF
 
 _Parser.NewDocument();
 
-// GetDocumentNode, NOT GetRootNode. The document node is what an element is
-// attached to; GetRootNode returns the first ELEMENT, which does not exist yet in
-// an empty document. Appending to that one silently does nothing, and the file
-// comes out as a bare XML declaration and 23 bytes.
+// GetDocumentNode is what an element attaches to. GetRootNode returns the first
+// ELEMENT, which an empty document does not have.
 DocumentNode := _Parser.GetDocumentNode();
 
 // The JUnit root. Several suites can sit under it, which is what a sequencer
@@ -218,9 +216,8 @@ IF Written THEN
 	RETURN;
 END_IF
 
-// R3: a write that failed is REPORTED, not discarded. The original threw away
-// both the FALSE and the HRESULT, which made a bad path indistinguishable from a
-// suite that never finished.
+// A write that failed is REPORTED, not discarded. Throwing away the FALSE and the
+// HRESULT makes a bad path indistinguishable from a suite that never finished.
 _WriteFailures := _WriteFailures + 1;
 _LastError	   := Error;
 
@@ -233,10 +230,9 @@ END_IF]]></ST>
     <Property Name="DocumentLength" Id="{83242637-d7e6-4347-8ba2-ee9ec4607ad2}">
       <Declaration><![CDATA[// Size of the document currently in DOM memory, in bytes.
 //
-// Exposed so a test can prove the document is not EMPTY. Nothing in the PLC can
-// read the written file back, and a successful write of an empty document looks
-// exactly like a successful write of a full one - which is how a bare 23-byte
-// declaration went unnoticed until the file was opened by hand.
+// Exposed so a test can prove the document is not EMPTY. Nothing in the PLC reads
+// the written file back, and a successful write of an empty document is
+// indistinguishable from a successful write of a full one.
 PROPERTY DocumentLength : UDINT]]></Declaration>
       <Get Name="Get" Id="{26441a2b-2a7b-4390-9862-1333b20e57a8}">
         <Declaration><![CDATA[VAR
@@ -398,11 +394,8 @@ _IsSaving := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="RunStarted" Id="{64e605b6-2a78-4463-a824-c30b614dc50d}" FolderPath="I_TestReporter\">
-      <Declaration><![CDATA[// Opens the document at the start of the run rather than on the first result to
-// arrive.
-//
-// The lazy version worked and was guesswork: it inferred "a run has begun" from
-// something happening. This is the run saying so.
+      <Declaration><![CDATA[// Opens the document, at the point the run says it has begun rather than when the
+// first result happens to arrive.
 METHOD RunStarted
 VAR_INPUT
 	Label	   : T_MaxString;
@@ -427,7 +420,7 @@ END_VAR]]></Declaration>
 //
 // Deliberately not defaulted. A default that is wrong for the platform writes
 // somewhere nobody looks, and a missing file is indistinguishable from a run that
-// never finished - the very confusion R3 exists to remove.
+// never finished.
 METHOD SetPath
 VAR_INPUT
 	Path : T_MaxString;

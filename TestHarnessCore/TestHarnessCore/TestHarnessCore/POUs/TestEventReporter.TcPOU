@@ -8,18 +8,16 @@
 // not. TestLogReporter remains the sink to reach for when no project setup is
 // wanted.
 //
-// REQUIRES TestHarnessEvents.tmc TO BE IN THE SYSTEM TYPE SYSTEM, not merely
-// present in the PLC project. TwinCAT generates TC_Events.TestHarnessEvents from
-// it, and every event below is a member of that.
+// REQUIRES the TestHarnessEvents event class in the System Type System. TwinCAT
+// generates TC_Events.TestHarnessEvents from it, and every event raised below is a
+// member of that.
 //
-// That dependency is deliberate and is the reason this uses CreateEx rather than
-// Create-with-a-GUID: if the class is not registered, TC_Events.TestHarnessEvents
-// does not resolve and this FAILS TO COMPILE. The alternative was a GUID literal,
-// which compiles either way and raises events the logger has no name for - a
-// silent, cosmetic-looking failure that says nothing about the cause.
+// Naming the generated members rather than a GUID is deliberate: if the class is
+// not registered the symbol does not resolve and this FAILS TO COMPILE, which is a
+// far better failure than raising events the logger has no name for.
 //
-// Severity comes from the definition too, so it cannot drift between the .tmc and
-// this file. One event ID per outcome, each with its severity declared once.
+// Severity comes from the class definition too, so it is declared once - one event
+// ID per outcome, each carrying its own severity.
 //
 // It implements I_TestReporter and NOT I_TestDetailSink. An operator-facing log
 // wants verdicts; an event per individual check would bury them.
@@ -130,9 +128,8 @@ END_VAR
     <Property Name="FailedSends" Id="{5bdfb473-46e2-432d-8393-89b1868e758a}">
       <Declaration><![CDATA[// Create or Send returned a failing HRESULT.
 //
-// Counted rather than swallowed: R3's lesson from the original, where a result
-// file that could not be written was indistinguishable from a suite that never
-// finished.
+// Counted rather than swallowed. A sink that cannot deliver and cannot say so is
+// indistinguishable from a run that never happened.
 PROPERTY FailedSends : UDINT]]></Declaration>
       <Get Name="Get" Id="{21242bcf-f8d0-432a-bf4f-8b729d5fa2ee}">
         <Declaration><![CDATA[VAR
@@ -153,9 +150,9 @@ END_VAR]]></Declaration>
         <ST><![CDATA[// Never silent, never suppressed by verbosity, and never reported as a test
 // failure. This is the framework saying it could not do something.
 //
-// RegistrationRejected is the historical name of this ID - Plan.md section 6 gave
-// it that meaning. It is now every framework error, because the alternative was an
-// event class growing a member for each new one.
+// One ID for every framework error. The alternative was an event class growing a
+// member for each new kind, which puts the class and this file permanently in step
+// with each other.
 THIS^.Emit(TC_Events.TestHarnessEvents.RegistrationRejected,
 		   CONCAT(CONCAT(Source, ': '), Message));]]></ST>
       </Implementation>
