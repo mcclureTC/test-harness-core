@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RegisteredAndReporterCountsAreReadable" Id="{b6224da6-205e-49e8-9bc6-6b6d70904e61}" SpecialFunc="None">
+    <Declaration><![CDATA[// The two counts Plan.md tells CI to assert, and which nothing had ever read.
+//
+// They exist for the same hazard: a test or a sink that silently stops being
+// registered takes its output with it, and the run simply comes out smaller. CI
+// sees fewer passes rather than a failure, which reads as an improvement.
+FUNCTION_BLOCK TEST_RegisteredAndReporterCountsAreReadable IMPLEMENTS I_Test
+VAR
+	Runner	 : TestRun<2>;
+	Suite	 : TestSuite<4>;
+	SpyOne	 : SpyReporter;
+	SpyTwo	 : SpyReporter;
+	A		 : PassingTest;
+	B		 : PassingTest;
+	Budgets	 : ST_TestBudgets;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{b360defd-32cf-45c6-80de-76bd46060c67}" />
+    <Method Name="Run" Id="{e7549d6b-3872-4b91-aed5-6978f7c8a7b8}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Suite.SetLabel('inner');
+Suite.Register(A, 'first', Budgets);
+Suite.Register(B, 'second', Budgets);
+
+ExpectedCount := 2;
+ActualCount	  := Suite.RegisteredCount;
+Test.AssertEqual(ExpectedCount, ActualCount, 'the suite counts what it registered');
+
+Runner.SetLabel('a run');
+Runner.AddReporter(SpyOne);
+Runner.AddReporter(SpyTwo);
+Runner.AddSuite(Suite);
+
+ActualCount := Runner.ReporterCount;
+Test.AssertEqual(ExpectedCount, ActualCount, 'the run counts its sinks');
+
+// Pushed into the suite as well, which is the one attachment point working.
+ActualCount := Suite.ReporterCount;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and the suite received them');
+
+ExpectedCount := 1;
+ActualCount	  := Runner.SuiteCount;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and the run counts its suites');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

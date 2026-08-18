@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_AssertNotEqualRejectsSameness" Id="{bc155658-f845-42ba-a736-f38d4c353565}" SpecialFunc="None">
+    <Declaration><![CDATA[// AssertNotEqual passes when the values DIFFER and fails when they match - which
+// is the one thing about it worth checking, because getting it backwards would
+// leave every test using it passing on the wrong condition.
+FUNCTION_BLOCK TEST_AssertNotEqualRejectsSameness IMPLEMENTS I_Test
+VAR
+	// A private journal and handle. The assertion under test is driven into THESE,
+	// so its verdict can be inspected without the outer suite ever seeing it.
+	Subject : TestJournal;
+	Handle	: TestVerdict;
+	One : DINT := 1;
+	Two : DINT := 2;
+	AlsoOne : DINT := 1;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{97cdc2d8-3414-43bf-af51-415fa4d61aad}" />
+    <Method Name="Run" Id="{f554b0d9-e1a5-4aed-828e-6c008550128a}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Handle.Target(Subject);
+Subject.Begin('not equal', '');
+
+// Different values: this is the passing case.
+Handle.AssertNotEqual(One, Two, 'one is not two');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'differing values pass');
+
+// Same values: this must fail.
+Handle.AssertNotEqual(One, AlsoOne, 'one IS one');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'matching values fail');
+
+ExpectedCount := 2;
+ActualCount	  := Subject.AssertionCount;
+Test.AssertEqual(ExpectedCount, ActualCount, 'both checks were counted');
+
+Handle.Untarget();
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

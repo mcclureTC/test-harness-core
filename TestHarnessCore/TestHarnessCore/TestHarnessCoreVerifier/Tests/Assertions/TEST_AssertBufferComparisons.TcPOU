@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_AssertBufferComparisons" Id="{62d217f5-0a3c-4146-a8f2-fa3872b2c188}" SpecialFunc="None">
+    <Declaration><![CDATA[// The two pointer comparisons, and the distinction between them.
+//
+// AssertMemEqual takes ONE length and compares that many bytes. AssertBufferEqual
+// takes both lengths and checks them FIRST, so a size difference is reported as a
+// SizeMismatch rather than as a difference at whatever byte happens to differ -
+// which would send the reader looking at the wrong thing entirely.
+//
+// A null pointer is Environment, not a value mismatch: nothing was compared, so
+// nothing was shown about the code under test.
+FUNCTION_BLOCK TEST_AssertBufferComparisons IMPLEMENTS I_Test
+VAR
+	// A private journal and handle. The assertion under test is driven into THESE,
+	// so its verdict can be inspected without the outer suite ever seeing it.
+	Subject : TestJournal;
+	Handle	: TestVerdict;
+	Original	 : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#2A, 6, 7, 8];
+	Copy	 : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#2A, 6, 7, 8];
+	Differs	 : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#00, 6, 7, 8];
+	Shorter	 : ARRAY[0..3] OF BYTE := [1, 2, 3, 4];
+	NoBuffer : POINTER TO BYTE;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{9f0c5f52-7af9-446d-979d-81047d0fcf0e}" />
+    <Method Name="Run" Id="{a139356f-e9b5-4612-a27d-96e927221255}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Handle.Target(Subject);
+Subject.Begin('buffers', '');
+
+// --- AssertMemEqual --------------------------------------------------------
+Handle.AssertMemEqual(ADR(Original), ADR(Copy), 8, 'identical buffers');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'identical buffers pass');
+
+Subject.Reset();
+Subject.Begin('buffers', '');
+Handle.AssertMemEqual(ADR(Original), ADR(Differs), 8, 'differing buffers');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'a differing byte fails');
+// Summary is composed by Finish, not as checks are recorded - a test with forty
+// passing checks composes ONE line, at the end. So the journal is finished before
+// its text is read.
+Subject.Finish(E_TestStatus.Passed);
+Test.AssertTrue(FIND(Subject.Summary, 'byte 4') > 0,
+				'and the diagnostic names the offset of the first difference');
+
+// A null pointer is not a value finding.
+Subject.Reset();
+Subject.Begin('buffers', '');
+Handle.AssertMemEqual(NoBuffer, ADR(Copy), 8, 'null expected');
+Test.AssertTrue(Subject.Kind = E_FailureKind.Environment,
+				'a null buffer is environmental, not a mismatch');
+
+// --- AssertBufferEqual: lengths first --------------------------------------
+Subject.Reset();
+Subject.Begin('buffers', '');
+Handle.AssertBufferEqual(ADR(Original), 8, ADR(Copy), 8, 'same length, same content');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'equal buffers pass');
+
+Subject.Reset();
+Subject.Begin('buffers', '');
+Handle.AssertBufferEqual(ADR(Original), 8, ADR(Shorter), 4, 'different lengths');
+Test.AssertTrue(Subject.Kind = E_FailureKind.SizeMismatch,
+				'a length difference is a SIZE mismatch, not a byte one');
+
+Subject.Finish(E_TestStatus.Passed);
+Test.AssertTrue(FIND(Subject.Summary, 'bytes') > 0, 'and the summary names both sizes');
+
+Handle.Untarget();
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

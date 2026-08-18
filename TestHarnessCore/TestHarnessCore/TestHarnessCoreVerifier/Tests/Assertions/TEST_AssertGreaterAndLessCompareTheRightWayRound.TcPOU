@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_AssertGreaterAndLessCompareTheRightWayRound" Id="{527db1d3-fff9-448b-8410-9d1ff1031cf0}" SpecialFunc="None">
+    <Declaration><![CDATA[// The comparison runs in the direction the name says.
+//
+// A reversed comparison is the classic defect here, and it is invisible in
+// ordinary use: every test written against it simply passes on the wrong
+// condition. So both the passing AND the failing direction are checked for each.
+//
+// Also pinned: a non-ordered type is a TYPE mismatch, not a value one. Comparing a
+// string with "greater than" is a mistake in the test, not a finding about the
+// code under test.
+FUNCTION_BLOCK TEST_AssertGreaterAndLessCompareTheRightWayRound IMPLEMENTS I_Test
+VAR
+	// A private journal and handle. The assertion under test is driven into THESE,
+	// so its verdict can be inspected without the outer suite ever seeing it.
+	Subject : TestJournal;
+	Handle	: TestVerdict;
+	Small : DINT := 3;
+	Large : DINT := 9;
+	SomeText : STRING(20) := 'not a number';
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{dd199471-32cf-437e-a5ee-3531ec54e78a}" />
+    <Method Name="Run" Id="{9dda377d-36ba-4e59-89d1-cff226a26628}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Handle.Target(Subject);
+Subject.Begin('ordering', '');
+
+// --- AssertGreater ---------------------------------------------------------
+Handle.AssertGreater(Large, Small, '9 > 3');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'greater passes when it is greater');
+
+Subject.Reset();
+Subject.Begin('ordering', '');
+Handle.AssertGreater(Small, Large, '3 is not > 9');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'and fails when it is not');
+
+// Equal is NOT greater.
+Subject.Reset();
+Subject.Begin('ordering', '');
+Handle.AssertGreater(Small, Small, '3 is not > 3');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'equal is not greater');
+
+// --- AssertLess ------------------------------------------------------------
+Subject.Reset();
+Subject.Begin('ordering', '');
+Handle.AssertLess(Small, Large, '3 < 9');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'less passes when it is less');
+
+Subject.Reset();
+Subject.Begin('ordering', '');
+Handle.AssertLess(Large, Small, '9 is not < 3');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'and fails when it is not');
+
+// --- a non-ordered type ----------------------------------------------------
+Subject.Reset();
+Subject.Begin('ordering', '');
+Handle.AssertGreater(SomeText, Small, 'a string has no order against a number');
+Test.AssertTrue(Subject.Kind = E_FailureKind.TypeMismatch,
+				'an unordered type is a type mismatch, not a value one');
+
+Handle.Untarget();
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

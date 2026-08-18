@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_StopwatchMeasuresAndFreezes" Id="{f6da2a10-fc32-4ab7-8efc-5be29568d402}" SpecialFunc="None">
+    <Declaration><![CDATA[// TestStopwatch. Every duration figure in every report rests on it, and until now
+// nothing touched it - it is the one object carried over from the original
+// unchanged, which is probably why it was never questioned.
+//
+// Resolution is the task period, so a stopwatch read in the same scan it started
+// reads zero. That is honest rather than wrong: at this resolution there is nothing
+// finer to say, and it is why scan counts are the reproducible measure and elapsed
+// time is only reported.
+FUNCTION_BLOCK TEST_StopwatchMeasuresAndFreezes IMPLEMENTS I_Test
+VAR
+	Watch	: TestStopwatch;
+	Before	: LREAL;
+	During	: LREAL;
+	Frozen	: LREAL;
+	Again	: LREAL;
+	Phase	: DINT;
+	Scans	: DINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{afe829bb-ed03-4aa6-845e-f3c0dac4327c}" />
+    <Method Name="Run" Id="{cb99b4fa-bed5-4bc1-9c74-a8cff1e8358e}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the stopwatch never advanced');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Test.AssertFalse(Watch.IsRunning, 'a fresh stopwatch is not running');
+	Before := Watch.Elapsed;
+	Test.AssertTrue(Before = 0.0, 'and reads zero');
+
+	Watch.Start();
+	Test.AssertTrue(Watch.IsRunning, 'and is running once started');
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	// Let real scans pass. Nothing else can make this advance.
+	IF Scans > 20 THEN
+		During := Watch.Elapsed;
+		Phase  := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(During > 0.0, 'it advances while running');
+
+	Frozen := Watch.Stop();
+	Test.AssertFalse(Watch.IsRunning, 'and stops when stopped');
+	Test.AssertTrue(Frozen > 0.0, 'Stop returns what it measured');
+	Phase := 3;
+	Run	  := FALSE;
+
+3:
+	IF Scans > 40 THEN
+		Again := Watch.Elapsed;
+		Phase := 4;
+	END_IF
+	Run := FALSE;
+
+4:
+	// The whole point of stopping: a test that finished twenty scans ago must not
+	// keep accruing time while the suite runs the next one.
+	Test.AssertTrue(Again = Frozen, 'a stopped stopwatch does not keep advancing');
+
+	// Stopping twice returns what it held rather than zero.
+	Test.AssertTrue(Watch.Stop() = Frozen, 'and stopping again returns the same value');
+
+	Watch.Reset();
+	Test.AssertTrue(Watch.Elapsed = 0.0, 'Reset clears it');
+	Test.AssertFalse(Watch.IsRunning, 'and leaves it stopped');
+
+	Run := TRUE;
+
+END_CASE
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

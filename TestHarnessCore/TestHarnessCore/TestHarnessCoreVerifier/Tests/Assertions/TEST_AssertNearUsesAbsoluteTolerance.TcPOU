@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_AssertNearUsesAbsoluteTolerance" Id="{e7c3d7ee-3782-4e9f-aa9d-56133ec3863a}" SpecialFunc="None">
+    <Declaration><![CDATA[// AssertNear takes tolerance in the UNITS OF THE VALUE - millimetres, volts,
+// encoder counts. Its counterpart AssertWithin takes a fraction.
+//
+// The boundary is what matters. A tolerance that excluded its own edge would make
+// every "within 0.1 mm" test subtly stricter than its author intended.
+FUNCTION_BLOCK TEST_AssertNearUsesAbsoluteTolerance IMPLEMENTS I_Test
+VAR
+	// A private journal and handle. The assertion under test is driven into THESE,
+	// so its verdict can be inspected without the outer suite ever seeing it.
+	Subject : TestJournal;
+	Handle	: TestVerdict;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{4e714ec8-6170-4bef-8682-1140166417b0}" />
+    <Method Name="Run" Id="{d8bf7618-3d61-4ba5-901d-f7761645a535}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Handle.Target(Subject);
+Subject.Begin('near', '');
+
+// Inside.
+Handle.AssertNear(10.0, 10.05, 0.1, 'well inside');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'a value inside the band passes');
+
+// Exactly on the boundary - inclusive.
+Subject.Reset();
+Subject.Begin('near', '');
+Handle.AssertNear(10.0, 10.1, 0.1, 'exactly on the edge');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'the boundary itself passes');
+
+// Outside.
+Subject.Reset();
+Subject.Begin('near', '');
+Handle.AssertNear(10.0, 10.2, 0.1, 'outside');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'and outside fails');
+
+// The band travels with the expectation, so a reader can see whether the miss
+// was meant to pass.
+// Summary is composed by Finish, not as checks are recorded - a test with forty
+// passing checks composes ONE line, at the end. So the journal is finished before
+// its text is read.
+Subject.Finish(E_TestStatus.Passed);
+Test.AssertTrue(FIND(Subject.Summary, '+/-') > 0,
+				'the diagnostic names the tolerance, not just the values');
+
+// Symmetric: below the expectation too.
+Subject.Reset();
+Subject.Begin('near', '');
+Handle.AssertNear(10.0, 9.8, 0.1, 'below');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'the band is symmetric');
+
+Handle.Untarget();
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

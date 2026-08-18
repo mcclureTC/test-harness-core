@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_AssertWithinUsesRelativeTolerance" Id="{6d0be22f-ff10-4ec3-8e1b-b4d4ca21a992}" SpecialFunc="None">
+    <Declaration><![CDATA[// AssertWithin takes a FRACTION, so it holds its meaning across magnitudes -
+// 0.1 per cent means the same thing at 1.0 and at 1E9, which an absolute tolerance
+// does not.
+//
+// Near zero it collapses to exact equality: the band is a fraction OF the expected
+// value, and a fraction of nothing is nothing. That is not a defect to paper over
+// with a hidden floor - if zero is the expected value, AssertNear is the method the
+// situation calls for, and the diagnostic says so.
+FUNCTION_BLOCK TEST_AssertWithinUsesRelativeTolerance IMPLEMENTS I_Test
+VAR
+	// A private journal and handle. The assertion under test is driven into THESE,
+	// so its verdict can be inspected without the outer suite ever seeing it.
+	Subject : TestJournal;
+	Handle	: TestVerdict;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{ffa523ec-a9bc-48aa-8b59-58771b3a1ecf}" />
+    <Method Name="Run" Id="{c787fd17-b679-45ac-ad9f-f2c143717932}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Handle.Target(Subject);
+Subject.Begin('within', '');
+
+// 1 per cent of 1000 is 10.
+Handle.AssertWithin(1000.0, 1005.0, 0.01, 'inside one per cent');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'inside the fraction passes');
+
+Subject.Reset();
+Subject.Begin('within', '');
+Handle.AssertWithin(1000.0, 1020.0, 0.01, 'outside one per cent');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'outside it fails');
+
+// The same FRACTION at a different magnitude - which is the whole point.
+Subject.Reset();
+Subject.Begin('within', '');
+Handle.AssertWithin(0.001, 0.001005, 0.01, 'one per cent of a small number');
+Test.AssertTrue(Subject.Kind = E_FailureKind.None,
+				'the fraction means the same thing at any magnitude');
+
+// Zero: only zero is within any fraction of zero.
+Subject.Reset();
+Subject.Begin('within', '');
+Handle.AssertWithin(0.0, 0.001, 0.5, 'nothing is within half of nothing');
+Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'zero admits only zero');
+// Summary is composed by Finish, not as checks are recorded - a test with forty
+// passing checks composes ONE line, at the end. So the journal is finished before
+// its text is read.
+Subject.Finish(E_TestStatus.Passed);
+Test.AssertTrue(FIND(Subject.Summary, 'AssertNear') > 0,
+				'and the diagnostic names the method that would work');
+
+Handle.Untarget();
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

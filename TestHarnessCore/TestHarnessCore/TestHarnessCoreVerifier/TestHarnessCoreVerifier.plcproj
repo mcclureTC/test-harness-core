@@ -126,6 +126,27 @@
     <Compile Include="Tests\Arbiter\TEST_ArbiterVisitsEveryTestOnce.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Assertions\TEST_AssertBufferComparisons.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Assertions\TEST_AssertCompletedWithinCountsCompletedScans.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Assertions\TEST_AssertGreaterAndLessCompareTheRightWayRound.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Assertions\TEST_AssertInRangeIsInclusive.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Assertions\TEST_AssertNearUsesAbsoluteTolerance.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Assertions\TEST_AssertNotEqualRejectsSameness.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Assertions\TEST_AssertWithinUsesRelativeTolerance.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Characterization\CHAR_Capacity.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -237,6 +258,9 @@
     <Compile Include="Tests\PureFunctions\TEST_CompareTextRules.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\PureFunctions\TEST_StopwatchMeasuresAndFreezes.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\PureFunctions\TEST_SummaryLineComposition.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -301,6 +325,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Runner\TEST_RunnerTeardownOverrunKeepsTheVerdict.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RegisteredAndReporterCountsAreReadable.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suite\TEST_RunAnnouncesItselfBeforeAnythingElse.TcPOU">
@@ -383,6 +410,7 @@
     <Folder Include="Tests\EventReporter" />
     <Folder Include="Tests\JUintReporter" />
     <Folder Include="Tests\Characterization" />
+    <Folder Include="Tests\Assertions" />
     <Folder Include="Tests\Watchdog" />
     <Folder Include="Tests\PureFunctions" />
     <Folder Include="Tests\Suite" />

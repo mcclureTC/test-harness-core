@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{0a07a95d-d7a3-4324-a743-7e6d2089b000}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{09743738-8bdb-4d07-a6fb-ca1cd3adc3bb}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, what reports it, and the run that
 // drives it.
 //
@@ -12,7 +12,7 @@
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      87 - assert this. A test that stops being registered vanishes
+//   Total      96 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //   Idle       TRUE once the result document has reached disk. CI MUST WAIT FOR
@@ -48,7 +48,7 @@ VAR
 	// A RUN, not just a suite. RunFinished is a run-level event and only a TestRun
 	// raises it - which is what produces a document at all.
 	Runner : TestRun<2>;
-	Suite  : TestSuite<90>;
+	Suite  : TestSuite<110>;
 
 	// All three sinks, which is the realistic composition: a log line to read at a
 	// glance, an event to filter and route, a document for CI.
@@ -165,6 +165,17 @@ VAR
 	valueRendering	: TEST_ValueRendering;
 	valueBriefShortens	: TEST_ValueBriefShortens;
 
+	// -- Assertions: the public surface every user touches --
+	assertNotEqualRejectsSameness	: TEST_AssertNotEqualRejectsSameness;
+	assertGreaterAndLessCompareTheRightWayRound	: TEST_AssertGreaterAndLessCompareTheRightWayRound;
+	assertNearUsesAbsoluteTolerance	: TEST_AssertNearUsesAbsoluteTolerance;
+	assertWithinUsesRelativeTolerance	: TEST_AssertWithinUsesRelativeTolerance;
+	assertInRangeIsInclusive	: TEST_AssertInRangeIsInclusive;
+	assertBufferComparisons	: TEST_AssertBufferComparisons;
+	assertCompletedWithinCountsCompletedScans	: TEST_AssertCompletedWithinCountsCompletedScans;
+
+	stopwatchMeasuresAndFreezes	: TEST_StopwatchMeasuresAndFreezes;
+	registeredAndReporterCountsAreReadable	: TEST_RegisteredAndReporterCountsAreReadable;
 	// -- Suite watchdog --
 	watchdogAbandonsAStalledSuite	: TEST_WatchdogAbandonsAStalledSuite;
 	watchdogMeasuresProgressNotTime	: TEST_WatchdogMeasuresProgressNotTime;
@@ -304,6 +315,19 @@ END_VAR]]></Declaration>
 	Suite.Register(valueRendering, 'Pure: values render as something, including enums', Budgets);
 	Suite.Register(valueBriefShortens, 'Pure: long values are shortened and marked', Budgets);
 
+	// Assertions - eight of the twelve had never been CALLED by a test. They are
+	// the part of the library every user touches, and were the least covered thing
+	// in the project.
+	Suite.Register(assertNotEqualRejectsSameness, 'Assertion: AssertNotEqual passes on difference, fails on sameness', Budgets);
+	Suite.Register(assertGreaterAndLessCompareTheRightWayRound, 'Assertion: ordering runs the way the name says, both directions', Budgets);
+	Suite.Register(assertNearUsesAbsoluteTolerance, 'Assertion: an absolute band, inclusive and symmetric', Budgets);
+	Suite.Register(assertWithinUsesRelativeTolerance, 'Assertion: a relative band that holds across magnitudes', Budgets);
+	Suite.Register(assertInRangeIsInclusive, 'Assertion: inclusive on both bounds', Budgets);
+	Suite.Register(assertBufferComparisons, 'Assertion: byte offset, size mismatch, and a null buffer', Budgets);
+	Suite.Register(assertCompletedWithinCountsCompletedScans, 'Assertion: the scan in progress is not counted', Budgets);
+
+	Suite.Register(stopwatchMeasuresAndFreezes, 'Pure: the stopwatch advances, freezes and resets', Budgets);
+	Suite.Register(registeredAndReporterCountsAreReadable, 'Suite: the counts CI is told to assert are readable', Budgets);
 	// Suite watchdog - the run is the only object positioned to see a suite that
 	// has stopped, because the suite IS the thing that stopped.
 	Suite.Register(watchdogAbandonsAStalledSuite, 'Watchdog: a stalled suite is named, abandoned and counted', Budgets);
