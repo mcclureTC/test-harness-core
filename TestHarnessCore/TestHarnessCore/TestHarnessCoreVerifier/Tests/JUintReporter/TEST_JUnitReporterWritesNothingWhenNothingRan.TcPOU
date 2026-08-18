@@ -1,10 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JUnitReporterWritesNothingWhenNothingRan" Id="{650bc756-1aa8-4184-89aa-cf8748b947a9}" SpecialFunc="None">
-    <Declaration><![CDATA[// A run with no results produces no document.
+    <Declaration><![CDATA[// A sink that was never part of a run writes nothing.
 //
-// Writing an empty one would read as a run that passed with no tests - which is
-// exactly the silence a missing file is supposed to signal.
+// The distinction is RunStarted. Without it no document was ever opened, so there
+// is nothing to write and inventing one would claim something happened.
+//
+// AN EMPTY RUN IS DIFFERENT and does produce a document, carrying tests="0" - the
+// second half of this test. That is the reverse of the behaviour before RunStarted
+// existed, and deliberately so: a missing file is ambiguous, because a
+// configuration problem and a run with no tests look identical from CI. R3 one
+// level up.
 FUNCTION_BLOCK TEST_JUnitReporterWritesNothingWhenNothingRan IMPLEMENTS I_Test
 VAR
 	Writer : TestJUnitReporter;
@@ -40,7 +46,7 @@ CASE Phase OF
 	Writer.SetPath(Path);
 	Writer.AttachErrorSink(Spy);
 
-	// No TestStarted, no TestFinished, no SuiteFinished. Straight to the end.
+	// No RunStarted either, so no document is ever opened.
 	Tally.SetLabel('nothing');
 	Tally.Begin(0);
 	Tally.Finish();
@@ -61,6 +67,28 @@ CASE Phase OF
 
 	ActualCount := Spy.FrameworkErrorCalls;
 	Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was reported');
+
+	// Now the same run, announced. An empty run IS an outcome and gets a document.
+	Writer.RunStarted(Label := 'nothing', TargetInfo := 'a target');
+	Writer.RunFinished(Status := Tally, TargetInfo := 'a target');
+	Phase := 2;
+	Run	  := FALSE;
+
+2:
+	Writer.CyclicLogic();
+	IF Writer.IsIdle THEN
+		Phase := 3;
+	END_IF
+	Run := FALSE;
+
+3:
+	ExpectedCount := 1;
+	ActualCount	  := Writer.FilesWritten;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'an announced empty run does write');
+
+	ExpectedCount := 0;
+	ActualCount	  := Writer.WriteFailures;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and not as a failure');
 
 	Run := TRUE;
 

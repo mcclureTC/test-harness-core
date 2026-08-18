@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_JUnitReporterOpensOnRunStarted" Id="{319a6c03-fa00-4a90-8116-e9e5476c2b27}" SpecialFunc="None">
+    <Declaration><![CDATA[// The document is opened by RunStarted, not inferred from the first result.
+//
+// Proved by writing a run whose ONLY content is a framework error - no test, no
+// suite. Under the lazy version the document was created by whatever arrived
+// first, so this distinction was invisible; now the run says when it begins and
+// the writer believes it.
+//
+// LENGTHS ARE COMPARED, NOT TESTED AGAINST ZERO. An untouched FB_XmlDomParser
+// already holds a minimal document - 35 bytes on this build - so "no document" is
+// not the same as "no length". This test asserted DocumentLength = 0 on its first
+// run and failed, correctly: the expectation was wrong, not the library.
+FUNCTION_BLOCK TEST_JUnitReporterOpensOnRunStarted IMPLEMENTS I_Test
+VAR
+	Writer : TestJUnitReporter;
+	Spy	   : SpyReporter;
+
+	// Captured rather than assumed. The baseline is whatever an untouched parser
+	// happens to hold, and pinning that number would be testing Beckhoff's
+	// implementation rather than this one.
+	Baseline : UDINT;
+	Opened	 : UDINT;
+	Length	 : UDINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{110b8427-696a-450b-bb10-68c3afb1d7e0}" />
+    <Method Name="Run" Id="{467b6517-1410-4a75-934c-2b07b0a9e4f6}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Writer.AttachErrorSink(Spy);
+
+// Whatever an untouched parser holds.
+Baseline := Writer.DocumentLength;
+
+Writer.RunStarted(Label := 'a run', TargetInfo := 'a target');
+
+// Opened: it now carries structure, if not yet results.
+Opened := Writer.DocumentLength;
+Test.AssertTrue(Opened > Baseline, 'RunStarted opened the document');
+
+Writer.FrameworkError(Source := 'somewhere', Message := 'something went wrong');
+
+Length := Writer.DocumentLength;
+Test.AssertTrue(Length > Opened,
+				'and a framework error is recorded in it, with no test involved');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

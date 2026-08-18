@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_FanoutForwardsRunStarted" Id="{275f9f4a-c0a9-4fd3-8957-ac6110f88e77}" SpecialFunc="None">
+    <Declaration><![CDATA[// RunStarted reaches every sink, and is silenced by Suspend like any other
+// notification.
+//
+// It is the counterpart of I_TestDetailSink.TestStarted: a sink that BUILDS
+// something needs telling when to open it, rather than inferring it from the first
+// thing that happens to arrive.
+FUNCTION_BLOCK TEST_FanoutForwardsRunStarted IMPLEMENTS I_Test
+VAR
+	Fanout	: TestReporterFanout;
+	SpyOne	: SpyReporter;
+	SpyTwo	: SpyReporter;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{c96d9a83-e83d-423d-b686-6c0b7d8494e0}" />
+    <Method Name="Run" Id="{c2070df4-ab05-4c49-b965-9cec39cebed3}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Fanout.Attach(SpyOne);
+Fanout.Attach(SpyTwo);
+
+Fanout.RunStarted(Label := 'a run', TargetInfo := 'a target');
+
+ExpectedCount := 1;
+ActualCount	  := SpyOne.RunStartedCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'the first sink was told');
+ActualCount := SpyTwo.RunStartedCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and so was the second');
+
+// Suspended, as an individual re-run does.
+Fanout.Suspend();
+Fanout.RunStarted(Label := 'ignored', TargetInfo := '');
+
+ActualCount := SpyOne.RunStartedCalls;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and Suspend silences it too');
+
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

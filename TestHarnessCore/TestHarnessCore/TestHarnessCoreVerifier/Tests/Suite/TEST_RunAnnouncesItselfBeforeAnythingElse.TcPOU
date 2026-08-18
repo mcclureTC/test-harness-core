@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunAnnouncesItselfBeforeAnythingElse" Id="{48c14d01-59f4-441b-84fe-504ad2dae41f}" SpecialFunc="None">
+    <Declaration><![CDATA[// A run says it has begun BEFORE any result in it arrives.
+//
+// The ordering IS the contract, not a detail of it. A sink that opens a document
+// on RunStarted has nowhere to put a result that arrived first - which is exactly
+// what the JUnit writer used to work around by creating its document lazily, on
+// whatever showed up first. That worked and was guesswork.
+//
+// StartedBeforeAnything is captured by the spy at the moment RunStarted arrives, so
+// this cannot pass by the calls merely having happened in some order afterwards.
+FUNCTION_BLOCK TEST_RunAnnouncesItselfBeforeAnythingElse IMPLEMENTS I_Test
+VAR
+	Runner	: TestRun<2>;
+	Suite	: TestSuite<2>;
+	Spy		: SpyReporter;
+	Subject : PassingTest;
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{86b564dd-e088-4f4b-ad7e-780a40257101}" />
+    <Method Name="Run" Id="{d51cbeb1-a4ae-4855-bc66-ffb0bc263477}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Suite.SetLabel('inner');
+	Suite.Register(Subject, 'a test', Budgets);
+
+	Runner.SetLabel('a run');
+	Runner.SetTargetInfo('a target');
+	Runner.AddReporter(Spy);
+	Runner.AddSuite(Suite);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 1;
+	ActualCount	  := Spy.RunStartedCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the run announced itself once');
+
+	// The point of the test.
+	Test.AssertTrue(Spy.StartedBeforeAnything,
+					'and before any test or suite result arrived');
+
+	ActualCount := Spy.RunFinishedCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and finished once');
+
+	// Both ends, so a sink can bracket what it builds.
+	ActualCount := Spy.SuiteFinishedCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'with one suite between them');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

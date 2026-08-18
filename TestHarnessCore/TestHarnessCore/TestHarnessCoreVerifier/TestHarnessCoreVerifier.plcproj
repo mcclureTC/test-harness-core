@@ -159,6 +159,9 @@
     <Compile Include="Tests\Fanout\TEST_FanoutCarriesTheSuiteResultThrough.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Fanout\TEST_FanoutForwardsRunStarted.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Fanout\TEST_FanoutIsIdleIsTheAndOfEverySink.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -190,6 +193,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\JUintReporter\TEST_JUnitReporterIsBusyWhileWriting.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterOpensOnRunStarted.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\JUintReporter\TEST_JUnitReporterRefusesWithNoPath.TcPOU">
@@ -292,6 +298,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Runner\TEST_RunnerTeardownOverrunKeepsTheVerdict.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RunAnnouncesItselfBeforeAnythingElse.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suite\TEST_SuiteClosesRegistrationOnFirstEnable.TcPOU">

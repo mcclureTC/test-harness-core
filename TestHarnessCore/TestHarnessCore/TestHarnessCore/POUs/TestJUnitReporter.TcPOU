@@ -360,8 +360,15 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF NOT _HasDocument THEN
-	// Nothing ran, so there is nothing to write. Silently producing an empty
-	// document would read as a run that passed with no tests.
+	// No document was ever opened, which means RunStarted never arrived - this sink
+	// was never part of a run. Writing now would invent an artifact for something
+	// that did not happen.
+	//
+	// An EMPTY run is different and does produce a document, carrying tests="0".
+	// That was the opposite of the behaviour before RunStarted existed, and the
+	// change is deliberate: a missing file is ambiguous - a configuration problem
+	// and a run with no tests look identical - while tests="0" says which. It is the
+	// same reasoning as R3, one level up.
 	RETURN;
 END_IF
 
