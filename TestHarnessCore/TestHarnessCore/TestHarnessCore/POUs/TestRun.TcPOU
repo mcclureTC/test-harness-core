@@ -21,6 +21,10 @@
 // A RE-RUN is a run-level operation too, for the same reason: it must produce a
 // fresh document, and only this object can announce one.
 //
+// IT ALSO CARRIES THE SUITE WATCHDOG. A suite that stops progressing cannot see
+// that about itself - it is the thing that has stopped - so the object owning the
+// sequence is the only one positioned to notice.
+//
 // Suites run ONE AT A TIME, in the order they were added. That is where coarse
 // exclusion comes from - two suites touching the same axis cannot overlap, because
 // only one is ever enabled.
@@ -45,6 +49,15 @@ VAR
 	_IsOpen		: BOOL := TRUE;
 
 	_PendingErrors : UDINT;
+
+	// -- the suite watchdog ----------------------------------------------------
+	// Scans the ACTIVE suite has gone without completing a test, and the budget it
+	// is measured against.
+	_WatchdogCycles : UDINT := TestHarnessParameter.SuiteWatchdogCycles;
+	_StallCycles	: UDINT;
+	// Verdicts the active suite had reached when it was last seen to progress.
+	_LastProgress	: UDINT;
+	_StalledSuites	: UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(*
@@ -140,6 +153,70 @@ END_FOR
 AddSuite := TRUE;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="CheckWatchdog" Id="{c39f0699-b0b7-4e1f-8337-116dab054817}">
+      <Declaration><![CDATA[// Has the active suite stopped making progress?
+//
+// PROGRESS, not duration. The measure is how many tests the suite has brought to
+// a verdict - passed, failed, errored or skipped. A slow suite still moves that
+// number; a stalled one does not, and counting scans since it STARTED would fire
+// on the slow rather than the stuck.
+//
+// A suite cannot see this about itself: it is the thing that has stopped. The run
+// owns the sequence, so it is the only object positioned to notice - which is what
+// Plan.md 6.1 means by the watchdog belonging here and nowhere else.
+METHOD CheckWatchdog
+VAR_INPUT
+	Index : DINT;
+END_VAR
+
+VAR
+	Progress : UDINT;
+	Suite	 : I_TestSuite;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF _WatchdogCycles = 0 THEN
+	RETURN;
+END_IF
+
+Suite := _Suites[Index];
+
+IF Suite = 0 THEN
+	RETURN;
+END_IF
+
+// Every verdict the suite has reached so far.
+Progress := Suite.PassedCount + Suite.FailedCount
+		  + Suite.ErrorCount + Suite.SkippedCount;
+
+IF Progress <> _LastProgress THEN
+	_LastProgress := Progress;
+	_StallCycles  := 0;
+	RETURN;
+END_IF
+
+_StallCycles := _StallCycles + 1;
+
+IF _StallCycles < _WatchdogCycles THEN
+	RETURN;
+END_IF
+
+// Stalled. Named, counted, and left behind.
+_StalledSuites := _StalledSuites + 1;
+THIS^.RaiseFrameworkError(CONCAT(CONCAT(
+	'suite stalled and was abandoned: ', Suite.Label),
+	CONCAT(', no verdict for ', UDINT_TO_STRING(_WatchdogCycles))));
+
+// One call with Enable FALSE, so the suite can put its own state back. Its return
+// is ignored: a suite that has stopped will not answer this either, and waiting
+// for it would reproduce the stall the watchdog exists to break.
+Suite.Run(Enable := FALSE);
+
+// Whatever it did manage still counts.
+_Tally.Absorb(Suite);
+
+THIS^.NextSuite();]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="ErrorCount" Id="{4de1e66d-a44c-4731-943a-d9b36bff4ac7}" FolderPath="I_TestRunStatus\">
       <Declaration><![CDATA[PROPERTY ErrorCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{35d4b358-7bfc-4d93-aa40-878b4c494207}">
@@ -203,6 +280,16 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Method Name="NextSuite" Id="{95d3f6f1-8145-4fd2-9de5-ffe8b2e7e68a}">
+      <Declaration><![CDATA[// Move to the next suite and reset the watchdog with it. One place, so the reset
+// cannot be forgotten on one of the paths that advances.
+METHOD NextSuite]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Index		  := _Index + 1;
+_StallCycles  := 0;
+_LastProgress := 0;]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="Outcome" Id="{275571eb-16d4-487d-be54-3af0acca3464}" FolderPath="I_TestRunStatus\">
       <Declaration><![CDATA[PROPERTY Outcome : E_RunOutcome]]></Declaration>
       <Get Name="Get" Id="{37c15751-03c5-4306-8eec-f82839638e32}">
@@ -320,7 +407,9 @@ END_FOR
 // Counts start again from nothing, and Finish will raise RunFinished a second
 // time - which is what produces the fresh document.
 _Tally.Begin(0);
-_Index := 0;]]></ST>
+_Index		  := 0;
+_StallCycles  := 0;
+_LastProgress := 0;]]></ST>
       </Implementation>
     </Method>
     <Method Name="Run" Id="{50d69b9b-e2c5-4ab8-a121-14a2d7281f35}" FolderPath="I_TestExecution\">
@@ -375,7 +464,9 @@ IF _Suites[Index].Run(Enable := TRUE) THEN
 	// Counts TESTS, not suites, so the figures mean the same thing at every level
 	// of a nest.
 	_Tally.Absorb(_Suites[Index]);
-	_Index := _Index + 1;
+	THIS^.NextSuite();
+ELSE
+	THIS^.CheckWatchdog(Index);
 END_IF
 
 Run := _Tally.IsComplete;]]></ST>
@@ -405,6 +496,25 @@ END_VAR]]></Declaration>
         <ST><![CDATA[_TargetInfo := TargetInfo;]]></ST>
       </Implementation>
     </Method>
+    <Method Name="SetWatchdog" Id="{69aa321c-608f-4414-8de1-33957e1b56cd}">
+      <Declaration><![CDATA[// How many scans a suite may go WITHOUT COMPLETING A TEST before the run
+// abandons it. Zero disables the watchdog.
+//
+// A backstop, not a deadline. Per-test budgets already bound every test that did
+// not disable them; this catches the two things they cannot - a framework defect,
+// and a test that turned its own deadlines off and then hung.
+//
+// Raise it for a suite with a single legitimately long test: the count is scans
+// between VERDICTS, so one test taking longer than the budget looks identical to
+// a suite that has stopped.
+METHOD SetWatchdog
+VAR_INPUT
+	Cycles : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_WatchdogCycles := Cycles;]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="Skip" Id="{6dd1433a-3977-491c-a70e-5b53462a5dae}" FolderPath="I_TestExecution\">
       <Declaration><![CDATA[// Nothing to run. The run reports complete rather than waiting, so anything
 // aggregating it is not held open.
@@ -428,6 +538,20 @@ END_VAR
 ]]></Declaration>
         <Implementation>
           <ST><![CDATA[SkippedCount := _Tally.SkippedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="StalledSuites" Id="{b9b555ec-8627-4cc9-b93b-10331c61e587}">
+      <Declaration><![CDATA[// Suites the watchdog abandoned. Assert it is zero in CI: a stalled suite is a
+// framework or test defect, never a normal outcome, and the run it belongs to
+// cannot be trusted.
+PROPERTY StalledSuites : UDINT]]></Declaration>
+      <Get Name="Get" Id="{65c91cfb-aace-4306-a5f2-73c85f1529d4}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[StalledSuites := _StalledSuites;]]></ST>
         </Implementation>
       </Get>
     </Property>

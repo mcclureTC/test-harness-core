@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="StallingSuite" Id="{306a32a4-65a2-4c03-8f79-4a046262b8f6}" SpecialFunc="None">
+    <Declaration><![CDATA[// A suite that never completes and never brings a test to a verdict.
+//
+// The only failure the suite watchdog exists to catch. Per-test deadlines already
+// bound every test that did not disable them, so what is left is a framework
+// defect or a test that turned its own deadlines off - and from outside, both look
+// exactly like this.
+//
+// Implements I_TestSuite, which is I_TestExecution plus I_TestRunStatus. It does
+// not implement I_TestConfiguration, so a run pushing reporters into it finds
+// nothing through __QUERYINTERFACE and moves on - which is worth exercising too.
+FUNCTION_BLOCK StallingSuite IMPLEMENTS I_TestSuite
+VAR
+	_RunCalls	  : UDINT;
+	_AbandonCalls : UDINT;
+	_PassedCount  : UDINT;
+	_Skipped	  : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Labelled" Id="{05c45462-bc72-496e-bbd6-bbca7954818f}" />
+    <Folder Name="I_TestExecution" Id="{cf040c41-7919-4767-af09-429f7f938efe}" />
+    <Folder Name="I_TestRunStatus" Id="{504d3ad1-dee8-49c0-b4f8-594af4d66b44}" />
+    <Property Name="AbandonCalls" Id="{7ba9642d-f590-4a64-a0ab-67e4cb3b3920}">
+      <Declaration><![CDATA[// Exactly 1 after the watchdog fires, however many scans the run has left.
+PROPERTY AbandonCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{30be5e54-1ab1-4a15-b41e-e22d3e1c63c1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AbandonCalls := _AbandonCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="CompleteOneTest" Id="{9fc5b352-1001-4571-9b96-857acc9b82ac}">
+      <Declaration><![CDATA[// Bring one test to a verdict, so a test can prove the watchdog measures PROGRESS
+// and not elapsed time: a suite that keeps completing tests is never abandoned,
+// however long it takes.
+METHOD CompleteOneTest]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_PassedCount := _PassedCount + 1;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ErrorCount" Id="{f9523802-7c4c-4eeb-8ae3-f0fd7f51ddab}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY ErrorCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{a1719374-36a8-4ff0-a7ac-0a22920f062b}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ErrorCount := 0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FailedCount" Id="{435a62fd-bc52-41a9-aeb4-011405e04f8d}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY FailedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{31030546-f0b6-4062-8dd5-98a9a99be087}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FailedCount := 0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="IsComplete" Id="{e2b59ba7-b339-422c-82bc-adbb677c7021}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY IsComplete : BOOL]]></Declaration>
+      <Get Name="Get" Id="{24d38bbc-e563-410d-9fa6-6a025c5a4e8d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IsComplete := FALSE;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Label" Id="{87fd586a-0945-4526-adc5-07c17aeb0c1e}" FolderPath="I_Labelled\">
+      <Declaration><![CDATA[PROPERTY Label : T_MaxString]]></Declaration>
+      <Get Name="Get" Id="{0d327163-9a03-48e2-a851-27276503e7d5}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Label := 'a stalled suite';]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="Outcome" Id="{11c98689-dec0-433a-b161-297c9698061e}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY Outcome : E_RunOutcome]]></Declaration>
+      <Get Name="Get" Id="{0dd53559-4fa1-4f50-9a3f-0eb53e2b49ad}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Outcome := E_RunOutcome.Running;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PassedCount" Id="{09f6927a-2c78-41c6-8feb-2ff188e521a6}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY PassedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{9d17ee24-d3ba-4d9f-9176-9bd6bb44a6e9}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PassedCount := _PassedCount;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Run" Id="{04369c0d-8493-42b3-843f-75d995f47288}" FolderPath="I_TestExecution\">
+      <Declaration><![CDATA[// Never finishes, and never brings a test to a verdict. The only thing the
+// watchdog can catch.
+METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT Enable THEN
+	// The abandon call. Counted so a test can prove the run made exactly one.
+	_AbandonCalls := _AbandonCalls + 1;
+	// Deliberately does NOT report itself finished. A suite that has stopped will
+	// not answer this either, and the run must not wait for it.
+	Run := FALSE;
+	RETURN;
+END_IF
+
+_RunCalls := _RunCalls + 1;
+Run		  := FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="RunCalls" Id="{2d8fed03-bde7-46fd-b4c3-0fbd3a569577}">
+      <Declaration><![CDATA[PROPERTY RunCalls : UDINT]]></Declaration>
+      <Get Name="Get" Id="{c828e0d3-1b0c-4164-bb48-7b315684a3ea}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[RunCalls := _RunCalls;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Skip" Id="{1300f6fa-0031-4bbb-9336-3cbed4c9432d}" FolderPath="I_TestExecution\">
+      <Declaration><![CDATA[METHOD Skip]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[_Skipped := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SkippedCount" Id="{21f51ead-de4a-4d5a-80cd-51a579367347}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY SkippedCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{dddf0e0c-9659-444f-b31a-b30b6ad7e646}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SkippedCount := 0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TestCount" Id="{cdacd2f4-2852-4116-a3ab-1bd6d455cdc7}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY TestCount : UDINT]]></Declaration>
+      <Get Name="Get" Id="{11a1b35f-9d01-4ff9-b47b-68a603c3e73b}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TestCount := 2;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TotalDuration" Id="{5500bdf6-2abe-400a-8c01-50ee616beae5}" FolderPath="I_TestRunStatus\">
+      <Declaration><![CDATA[PROPERTY TotalDuration : LREAL]]></Declaration>
+      <Get Name="Get" Id="{d7781ea1-2c29-4a33-a14c-8e922e8d09e2}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TotalDuration := 0.0;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

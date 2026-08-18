@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_WatchdogMeasuresProgressNotTime" Id="{47b3cc71-3e82-4488-bf77-6cc5f51add57}" SpecialFunc="None">
+    <Declaration><![CDATA[// The measure is VERDICTS REACHED, not scans elapsed.
+//
+// A rig suite waiting on hardware can sit for minutes and be perfectly healthy -
+// it still finishes its tests one at a time. Counting scans since the suite
+// STARTED would abandon the slow along with the stuck, which would make the
+// watchdog worse than not having one.
+//
+// Here the suite completes a test every few scans and never finishes. It must run
+// far past its own watchdog budget untouched.
+FUNCTION_BLOCK TEST_WatchdogMeasuresProgressNotTime IMPLEMENTS I_Test
+VAR
+	Runner	 : TestRun<2>;
+	Slow	 : StallingSuite;
+	Recorder : RecordingReporter;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	Ticks	 : DINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{d7a0f403-b187-494b-8111-f020ba6aa6c9}" />
+    <Method Name="Run" Id="{675ad37c-a52a-4a89-8a88-ddc451d0f639}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+
+CASE Phase OF
+
+0:
+	Runner.SetLabel('a run');
+	Runner.AddReporter(Recorder);
+	Runner.AddSuite(Slow);
+	Runner.SetWatchdog(10);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	// Well past 10 scans in total, but never 10 WITHOUT a verdict.
+	Runner.Run(Enable := TRUE);
+	Ticks := Ticks + 1;
+
+	IF (Ticks MOD 5) = 0 THEN
+		Slow.CompleteOneTest();
+	END_IF
+
+	IF Ticks >= 60 THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	// Sixty scans against a ten-scan budget, and still running.
+	ExpectedCount := 0;
+	ActualCount	  := Runner.StalledSuites;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'a progressing suite is never abandoned');
+
+	ActualCount := Slow.AbandonCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and was never asked to stop');
+
+	ActualCount := Recorder.ErrorCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was reported');
+
+	Test.AssertFalse(Runner.IsComplete, 'the run is still going, as it should be');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
-  <POU Name="PRG_UnitTests" Id="{17aab8b5-1f97-4a45-a273-14e29868bf29}" SpecialFunc="None">
+  <POU Name="PRG_UnitTests" Id="{0a07a95d-d7a3-4324-a743-7e6d2089b000}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, what reports it, and the run that
 // drives it.
 //
@@ -12,7 +12,7 @@
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      84 - assert this. A test that stops being registered vanishes
+//   Total      87 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //   Idle       TRUE once the result document has reached disk. CI MUST WAIT FOR
@@ -165,6 +165,11 @@ VAR
 	valueRendering	: TEST_ValueRendering;
 	valueBriefShortens	: TEST_ValueBriefShortens;
 
+	// -- Suite watchdog --
+	watchdogAbandonsAStalledSuite	: TEST_WatchdogAbandonsAStalledSuite;
+	watchdogMeasuresProgressNotTime	: TEST_WatchdogMeasuresProgressNotTime;
+	watchdogZeroDisablesIt	: TEST_WatchdogZeroDisablesIt;
+
 	// -- Characterization: the acceptance contract --
 	cHAR_Capacity	: CHAR_Capacity;
 	cHAR_OverflowStatistics	: CHAR_OverflowStatistics;
@@ -298,6 +303,12 @@ END_VAR]]></Declaration>
 	Suite.Register(summaryLineComposition, 'Pure: composition order; the message is dropped whole, not cut', Budgets);
 	Suite.Register(valueRendering, 'Pure: values render as something, including enums', Budgets);
 	Suite.Register(valueBriefShortens, 'Pure: long values are shortened and marked', Budgets);
+
+	// Suite watchdog - the run is the only object positioned to see a suite that
+	// has stopped, because the suite IS the thing that stopped.
+	Suite.Register(watchdogAbandonsAStalledSuite, 'Watchdog: a stalled suite is named, abandoned and counted', Budgets);
+	Suite.Register(watchdogMeasuresProgressNotTime, 'Watchdog: a progressing suite is never abandoned, however slow', Budgets);
+	Suite.Register(watchdogZeroDisablesIt, 'Watchdog: a zero budget never fires', Budgets);
 
 	// Characterization - seven of the eight the ORIGINAL library was pinned by.
 	// CHAR_Watchdog is not among them: it retires, because the suite driving the

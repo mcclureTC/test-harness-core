@@ -72,6 +72,9 @@
     <Compile Include="Doubles\SpyReporter.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Doubles\StallingSuite.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Doubles\VerdictOnlyReporter.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -357,6 +360,15 @@
     <Compile Include="Tests\Verdict\TEST_VerdictZeroChecksIsErrored.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Watchdog\TEST_WatchdogAbandonsAStalledSuite.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Watchdog\TEST_WatchdogMeasuresProgressNotTime.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Watchdog\TEST_WatchdogZeroDisablesIt.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DUTs" />
@@ -371,6 +383,7 @@
     <Folder Include="Tests\EventReporter" />
     <Folder Include="Tests\JUintReporter" />
     <Folder Include="Tests\Characterization" />
+    <Folder Include="Tests\Watchdog" />
     <Folder Include="Tests\PureFunctions" />
     <Folder Include="Tests\Suite" />
     <Folder Include="Tests\Runner" />

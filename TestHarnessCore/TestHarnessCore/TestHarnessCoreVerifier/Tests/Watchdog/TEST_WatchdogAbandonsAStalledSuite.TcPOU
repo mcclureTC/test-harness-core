@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_WatchdogAbandonsAStalledSuite" Id="{8c7718bd-212b-418a-94f1-a2947c2ccddb}" SpecialFunc="None">
+    <Declaration><![CDATA[// A suite that stops progressing is named, counted and left behind, rather than
+// holding the run open forever.
+//
+// A suite cannot detect this about itself - it IS the thing that has stopped - so
+// the run is the only object positioned to notice. That is what Plan.md 6.1 means
+// by the watchdog belonging here and nowhere else.
+FUNCTION_BLOCK TEST_WatchdogAbandonsAStalledSuite IMPLEMENTS I_Test
+VAR
+	Runner	 : TestRun<2>;
+	Stalled	 : StallingSuite;
+	Recorder : RecordingReporter;
+	Phase	 : DINT;
+	Scans	 : DINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{8b80e2c3-5155-44ac-b77c-e0707e7709dd}" />
+    <Method Name="Run" Id="{a829ffd3-906e-4e96-82e1-ebdb2418c307}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 500 THEN
+	// The watchdog itself failing to fire looks exactly like the run hanging, which
+	// is why this guard exists rather than trusting it.
+	Test.Fail('the watchdog never fired');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Runner.SetLabel('a run');
+	Runner.AddReporter(Recorder);
+	Runner.AddSuite(Stalled);
+	// Small, so the test is cheap. The default is generous because it is a backstop
+	// and a legitimately slow suite must not trip it.
+	Runner.SetWatchdog(20);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(Runner.IsComplete, 'the run completed rather than hanging');
+
+	ExpectedCount := 1;
+	ActualCount	  := Runner.StalledSuites;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'one suite was abandoned');
+
+	// One call with Enable FALSE, and its return ignored.
+	ActualCount := Stalled.AbandonCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'abandoned with exactly one call');
+
+	// Named, so a reader knows WHICH suite stopped.
+	Test.AssertTrue(Recorder.ErrorCount > 0, 'the stall was reported');
+	Test.AssertTrue(Recorder.ErrorContains('a stalled suite'),
+					'and the report names the suite');
+
+	// A stall is a framework error, never a test failure - nothing about the code
+	// under test was shown.
+	Test.AssertTrue(Runner.Outcome = E_RunOutcome.Errored,
+					'and the run cannot be trusted');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

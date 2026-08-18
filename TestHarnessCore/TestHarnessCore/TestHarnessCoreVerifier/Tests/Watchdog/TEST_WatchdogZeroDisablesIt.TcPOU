@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_WatchdogZeroDisablesIt" Id="{2f088330-01aa-40fc-a9bd-cc7eb0359e4d}" SpecialFunc="None">
+    <Declaration><![CDATA[// Zero disables, as every other deadline in this library does.
+//
+// For a rig where a single test legitimately outlasts any sane budget and the
+// operator would rather wait than be second-guessed.
+FUNCTION_BLOCK TEST_WatchdogZeroDisablesIt IMPLEMENTS I_Test
+VAR
+	Runner	 : TestRun<2>;
+	Stalled	 : StallingSuite;
+	Recorder : RecordingReporter;
+	Phase	 : DINT;
+	Ticks	 : DINT;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{f083df23-2550-47a3-bcdc-7dfe4917a137}" />
+    <Method Name="Run" Id="{861d4b7b-8ea5-4eec-8dfa-1c283f47314e}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE Phase OF
+
+0:
+	Runner.SetLabel('a run');
+	Runner.AddReporter(Recorder);
+	Runner.AddSuite(Stalled);
+	Runner.SetWatchdog(0);
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	Runner.Run(Enable := TRUE);
+	Ticks := Ticks + 1;
+	IF Ticks >= 100 THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	// A hundred scans with no progress at all, and untouched.
+	ExpectedCount := 0;
+	ActualCount	  := Runner.StalledSuites;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'a zero budget never fires');
+
+	ActualCount := Stalled.AbandonCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was abandoned');
+
+	Test.AssertFalse(Runner.IsComplete, 'the run waits, which is what was asked for');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

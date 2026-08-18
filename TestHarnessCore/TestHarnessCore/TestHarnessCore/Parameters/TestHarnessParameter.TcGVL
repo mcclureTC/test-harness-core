@@ -24,6 +24,20 @@ VAR_GLOBAL CONSTANT
 	// I/O - so this is small on purpose, and overridable per instance as a generic
 	// argument like Capacity.
 	SuiteCapacity	 : UDINT := 8;
+	// Scans a suite may go WITHOUT COMPLETING A TEST before the run abandons it.
+	//
+	// Not scans since the suite started - that would fire on a slow suite rather
+	// than a stuck one. A rig suite waiting on hardware can sit for minutes and be
+	// perfectly healthy, but it still finishes its tests one at a time; a stalled one
+	// finishes none.
+	//
+	// Generous on purpose. This is a BACKSTOP: per-test deadlines already bound
+	// every test that did not disable them, so the only things left for this to catch
+	// are a framework defect and a test that turned its own deadlines off and hung.
+	// A single legitimate test that takes longer than this needs it raised.
+	//
+	// Zero disables it, like every other deadline in this library.
+	SuiteWatchdogCycles : UDINT := 60000;
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>
