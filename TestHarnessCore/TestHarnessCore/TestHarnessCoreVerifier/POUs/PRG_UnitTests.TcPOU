@@ -20,24 +20,22 @@
 //              different events, and copying between them yields a truncated
 //              artifact that reads as a broken pipeline
 //
-// WHERE A FAILURE SHOWS UP, now that sinks are attached:
-//   - the Logged Events window, as a line and as an event
+// WHERE A FAILURE SHOWS UP:
+//   - the Logged Events window, as a log line and as an event
 //   - C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreResults.xml
 //
-// It used to be neither. The counts below were the whole result and a failing test
-// had to be read out of journal internals in a watch window - which is precisely
-// what this library exists to avoid. Attaching no reporter was the right call while
-// none existed and stale for some time after.
+// Read the failure there rather than from journal internals in a watch window.
+// Making that unnecessary is what this library is for.
 //
 // THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests drive DELIBERATE
 // failures into a private journal; the Suite tests register doubles that fail and
 // error on purpose; the JUnit tests write to a folder that does not exist. They all
 // pass. What they prove is that going wrong works.
 //
-// THE CHARACTERIZATION TESTS ARE THE ACCEPTANCE CONTRACT: seven of the eight the
-// original library was pinned by. They are the only tests that ask questions of the
-// ARTIFACT, and they found three defects nothing else did - all of them about runs
-// and re-runs. Plan.md section 10.5 records them.
+// THE CHARACTERIZATION TESTS ARE THE ACCEPTANCE CONTRACT - behaviour a project
+// depending on this library is entitled to rely on. They are also the only tests
+// that ask questions of the ARTIFACT: how many cases the document carries, what
+// type attribute a failure got, whether a timeout message names the wall clock.
 //
 // MULTI-SCAN TESTS hold a private runner, suite or run and step it one scan per
 // call, returning FALSE until it finishes - the same mechanism they are verifying,
@@ -305,9 +303,9 @@ END_VAR]]></Declaration>
 	Suite.Register(jUnitReporterRefusesWithNoPath, 'JUnitReporter: no path set is a failure, not silence', Budgets);
 	Suite.Register(jUnitReporterWritesNothingWhenNothingRan, 'JUnitReporter: an empty run produces no document', Budgets);
 
-	// Pure functions - ported from the OLD verifier. These pin what equality and
-	// rendering MEAN. The object tests exercise them incidentally, which is not the
-	// same thing: nothing else would notice R1 returning.
+	// Pure functions - what equality and rendering MEAN. The object tests exercise
+	// them incidentally, whenever some test happens to call AssertEqual, which is
+	// not the same as pinning the rules themselves.
 	Suite.Register(compareNumericRules, 'Pure: numeric rules: value across widths, exact floats, the hint', Budgets);
 	Suite.Register(compareTextRules, 'Pure: string rules: content not capacity, and WSTRING as WSTRING (R1)', Budgets);
 	Suite.Register(compareOtherRules, 'Pure: structs, arrays and enums; a size difference is a type difference', Budgets);
@@ -315,9 +313,9 @@ END_VAR]]></Declaration>
 	Suite.Register(valueRendering, 'Pure: values render as something, including enums', Budgets);
 	Suite.Register(valueBriefShortens, 'Pure: long values are shortened and marked', Budgets);
 
-	// Assertions - eight of the twelve had never been CALLED by a test. They are
-	// the part of the library every user touches, and were the least covered thing
-	// in the project.
+	// Assertions - the part of the library every user touches. Each of these checks
+	// the direction that would be silently wrong, not just the happy path: a
+	// reversed comparison passes every test written against it.
 	Suite.Register(assertNotEqualRejectsSameness, 'Assertion: AssertNotEqual passes on difference, fails on sameness', Budgets);
 	Suite.Register(assertGreaterAndLessCompareTheRightWayRound, 'Assertion: ordering runs the way the name says, both directions', Budgets);
 	Suite.Register(assertNearUsesAbsoluteTolerance, 'Assertion: an absolute band, inclusive and symmetric', Budgets);
@@ -334,9 +332,9 @@ END_VAR]]></Declaration>
 	Suite.Register(watchdogMeasuresProgressNotTime, 'Watchdog: a progressing suite is never abandoned, however slow', Budgets);
 	Suite.Register(watchdogZeroDisablesIt, 'Watchdog: a zero budget never fires', Budgets);
 
-	// Characterization - seven of the eight the ORIGINAL library was pinned by.
-	// CHAR_Watchdog is not among them: it retires, because the suite driving the
-	// tests makes an orphaned slot impossible. Plan.md section 10 records that.
+	// Characterization - the acceptance contract. Behaviour a project depending on
+	// this library is entitled to rely on, and the only tests that ask questions of
+	// the result document rather than of a counter.
 	Suite.Register(cHAR_Capacity, 'Contract: capacity holds what it says; overflow is reported', Budgets);
 	Suite.Register(cHAR_OverflowStatistics, 'Contract: errors are counted apart from failures', Budgets);
 	Suite.Register(cHAR_ReRunTests, 'Contract: one suite node per run; a re-run produces a fresh document', Budgets);

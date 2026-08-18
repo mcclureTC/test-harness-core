@@ -3,12 +3,11 @@
   <POU Name="ConcurrencyWitness" Id="{ca0af444-af45-44d7-a1a9-f6350d96227d}" SpecialFunc="None">
     <Declaration><![CDATA[// Counts how many tests are inside their body at the same moment.
 //
-// Serial execution used to be observable test-to-test: a test could fetch another
-// and read its State. It cannot now - a test is handed nothing but its own
+// A test cannot observe this about another test - it is handed nothing but its own
 // assertion handle, which is the founding constraint working as intended.
 //
-// So the tests report in and out of a shared witness instead, and the contract
-// becomes one number: MaxConcurrent must never exceed 1.
+// So tests report in and out of a shared witness instead, and the contract becomes
+// one number: MaxConcurrent must never exceed 1.
 FUNCTION_BLOCK ConcurrencyWitness
 VAR
 	_Active		   : DINT;

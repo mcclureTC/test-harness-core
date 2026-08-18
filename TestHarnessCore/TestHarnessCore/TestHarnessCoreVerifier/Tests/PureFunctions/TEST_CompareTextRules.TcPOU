@@ -1,17 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_CompareTextRules" Id="{df96fe3c-fe7f-4ad5-a6e8-f9260a962ed8}" SpecialFunc="None">
-    <Declaration><![CDATA[// PORTED. TestValueCompare, string rules.
+    <Declaration><![CDATA[// TestValueCompare, string rules.
 //
 // Strings compare by CONTENT. The declared capacity is not the subject - an author
 // writing AssertEqual is testing a value, and for a string diSize is the capacity
 // of the variable rather than the length of what is in it.
 //
-// THE WSTRING CASE IS R1, and it is the reason this port matters. Under the
-// original comparison two different WSTRINGs reported EQUAL: the bytes were copied
-// into a STRING buffer and compared with <>, which terminates at the first NUL -
-// and every second byte of ASCII WSTRING content is NUL. Tests went green on values
-// that differed. Nothing in the other 75 tests would notice that returning.
+// THE WSTRING CASE IS THE ONE THAT MATTERS. Copying WSTRING bytes into a STRING
+// buffer and comparing with <> terminates at the first NUL - and every second byte
+// of ASCII WSTRING content is NUL, so two different WSTRINGs compare EQUAL and
+// tests go green on values that differ. Nothing else in this project would notice
+// that happening.
 FUNCTION_BLOCK TEST_CompareTextRules IMPLEMENTS I_Test
 VAR
 	Result : ST_CompareResult;
@@ -59,7 +59,7 @@ Test.AssertEqual(ExpectFalse, ActualEqual, 'different text is not equal');
 ActualKind := Result.Kind;
 Test.AssertEqual(ExpectValue, ActualKind, 'reported as a value difference');
 
-// --- R1: WSTRING is compared AS WSTRING ------------------------------------
+// --- WSTRING is compared AS WSTRING ----------------------------------------
 // "homed" and "homer" differ only at the fifth character. Read as a STRING the
 // comparison stops at the first NUL - the second byte - and reports equal.
 Result		:= TestValueCompare(WideA, WideB);

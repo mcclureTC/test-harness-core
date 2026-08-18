@@ -1,17 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_OverflowStatistics" Id="{2d5c2b67-25ba-498d-a810-451ab94c8e15}" SpecialFunc="None">
-    <Declaration><![CDATA[// PORTED. Pins the Errors figure as distinct from Failures.
+    <Declaration><![CDATA[// Part of the acceptance contract: the Errors figure is distinct from Failures.
 //
-// The overflow is a framework error, not a failed assertion, and conflating them
-// sends whoever reads the report hunting a defect that is not there. Three tests
-// registered and passing, one refused, and the statistics must say exactly that.
-//
-// ONE BEHAVIOUR DID NOT SURVIVE, and it did not need to. The original also pinned
-// that overflow was reported ONCE rather than once per cycle, because Test('D')
-// was called every scan and the latch was what stopped duplicates. Registration
-// happens once at startup now, so the scenario cannot arise - the latch has
-// nothing to latch. That is a structural removal, not a lost check.
+// An overflow is a framework error, not a failed assertion. Conflating them sends
+// whoever reads the report hunting a defect that is not there. Three tests
+// registered and passing, one refused, and the statistics say exactly that - and
+// the result document is still written.
 FUNCTION_BLOCK CHAR_OverflowStatistics IMPLEMENTS I_Test
 VAR
 	Inner	 : TestSuite<3>;

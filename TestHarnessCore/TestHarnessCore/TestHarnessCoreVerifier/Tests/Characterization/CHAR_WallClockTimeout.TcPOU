@@ -1,8 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_WallClockTimeout" Id="{57fbfd8a-8cfe-412b-8c7c-2a96f33fbfe5}" SpecialFunc="None">
-    <Declaration><![CDATA[// PORTED. Pins the wall-clock deadline, which had no coverage at all in the
-// original verifier (R14) - only the cycle budget was exercised.
+    <Declaration><![CDATA[// Part of the acceptance contract: the wall-clock deadline fires, and says so.
+//
+// The scan budget is the easier one to reach for and the easier one to test, so
+// this is the deadline most likely to go unexercised.
 //
 // The inner test never finishes, so only a deadline can end it. Its CYCLE budget
 // is set to zero so the wall clock is unambiguously what fired; without that, at a

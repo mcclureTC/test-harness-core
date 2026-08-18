@@ -4,8 +4,8 @@
     <Declaration><![CDATA[// A registry declared with three slots holds three, and the fourth is refused as
 // Full rather than accepted or written past the end.
 //
-// The original declared ARRAY[0..MaxTestCount], so a suite asked for two held
-// three - and reported "maximum test count exceeded - 2" while holding three.
+// Declaring ARRAY[0..Capacity] rather than ARRAY[0..Capacity - 1] would make a
+// suite asked for two hold three, and report a limit of two while holding them.
 FUNCTION_BLOCK TEST_RegistryCapacityAndOverflow IMPLEMENTS I_Test
 VAR
 	Registry : TestRegistry<3>;

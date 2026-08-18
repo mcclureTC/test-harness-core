@@ -3,10 +3,9 @@
   <POU Name="TEST_ValueRendering" Id="{a9fbf52d-03ae-4b20-9144-e54d1d12af36}" SpecialFunc="None">
     <Declaration><![CDATA[// PORTED. TestValueString and the two type predicates.
 //
-// The original returned an empty string for anything it did not recognise, so a
-// failed comparison of two enums produced 'expected , actual ' - a diagnostic that
-// told the reader nothing at the moment they most needed it. Unhandled type classes
-// render as hex now, which is not friendly but is true.
+// Anything unrecognised renders as hex rather than as an empty string. Not
+// friendly, but true: a failed comparison of two enums reading 'expected , actual '
+// tells the reader nothing at the moment they most need something.
 FUNCTION_BLOCK TEST_ValueRendering IMPLEMENTS I_Test
 VAR
 	Rendered : T_MaxString;
@@ -51,7 +50,7 @@ Test.AssertTrue(FIND(Rendered, 'wide') > 0, 'a WSTRING renders all of its conten
 Rendered := TestValueString(SomeBool);
 Test.AssertTrue(FIND(Rendered, 'TRUE') > 0, 'a BOOL renders as TRUE or FALSE');
 
-// The original defect: an unrecognised type class rendered as nothing at all.
+// The case that matters: an unrecognised type class must not render as nothing.
 Rendered := TestValueString(SomeColour);
 Test.AssertTrue(LEN(Rendered) > 0, 'an enum renders as something rather than nothing');
 

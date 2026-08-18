@@ -1,22 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_SerialExecution" Id="{d1d56516-d3ca-454e-a921-402bfbd76ed4}" SpecialFunc="None">
-    <Declaration><![CDATA[// PORTED, and weaker than the original by design.
+    <Declaration><![CDATA[// Part of the acceptance contract: no test body runs while another is running.
 //
-// The original detected overlap by having each test fetch another and read its
-// State. A test cannot do that now - it is handed nothing but its own assertion
-// handle, which is the founding constraint working as intended. So the tests
-// report in and out of a shared witness and the contract becomes one number.
+// Tests share the scan and usually share fixtures, so predictable and slow beats
+// fast and flaky. Serial execution is structural here - the arbiter hands out one
+// test and the runner drives one - so this is a guard against a future change
+// rather than a check on today's code, and it would be caught here and nowhere
+// else.
 //
-// It is also no longer possible to FAIL the way it once could. The original
-// tracked an active-test index and handed every other caller a no-op sentinel;
-// index 0 doubling as "none" would have let a test in the first slot run
-// alongside the next. There is no index and no sentinel now - the arbiter hands
-// out one test and the runner drives one - so serial execution is structural.
-//
-// Pinned anyway. A future change that made the runner concurrent would be caught
-// here and nowhere else, and TotalEntries stops a MaxConcurrent of 1 being
-// achieved by nothing running at all.
+// A test cannot observe this about another test: it is handed nothing but its own
+// assertion handle. So the tests report in and out of a shared witness and the
+// contract becomes one number, MaxConcurrent. TotalEntries stops that number being
+// satisfied by nothing running at all.
 FUNCTION_BLOCK CHAR_SerialExecution IMPLEMENTS I_Test
 VAR
 	Inner	 : TestSuite<4>;

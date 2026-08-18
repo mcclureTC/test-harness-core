@@ -4,9 +4,7 @@
     <Declaration><![CDATA[// A run says it has begun BEFORE any result in it arrives.
 //
 // The ordering IS the contract, not a detail of it. A sink that opens a document
-// on RunStarted has nowhere to put a result that arrived first - which is exactly
-// what the JUnit writer used to work around by creating its document lazily, on
-// whatever showed up first. That worked and was guesswork.
+// on RunStarted has nowhere to put a result that arrived first.
 //
 // StartedBeforeAnything is captured by the spy at the moment RunStarted arrives, so
 // this cannot pass by the calls merely having happened in some order afterwards.

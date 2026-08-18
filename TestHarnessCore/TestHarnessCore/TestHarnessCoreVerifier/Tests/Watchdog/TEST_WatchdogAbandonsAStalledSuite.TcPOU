@@ -5,8 +5,7 @@
 // holding the run open forever.
 //
 // A suite cannot detect this about itself - it IS the thing that has stopped - so
-// the run is the only object positioned to notice. That is what Plan.md 6.1 means
-// by the watchdog belonging here and nowhere else.
+// the run, which owns the sequence, is the only object positioned to notice.
 FUNCTION_BLOCK TEST_WatchdogAbandonsAStalledSuite IMPLEMENTS I_Test
 VAR
 	Runner	 : TestRun<2>;

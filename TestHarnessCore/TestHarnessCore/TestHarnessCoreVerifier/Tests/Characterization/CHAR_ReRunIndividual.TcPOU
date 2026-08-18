@@ -5,7 +5,7 @@
 // document - letting it append would corrupt the CI artifact with duplicate
 // entries.
 //
-// Three things, exactly as the original asserted them: the test really did run
+// Three things, all of which must hold: the test really did run
 // again, no new case was recorded, and no new document was produced. Without the
 // first, the test would pass even if ReRunSingle did nothing at all.
 FUNCTION_BLOCK CHAR_ReRunIndividual IMPLEMENTS I_Test

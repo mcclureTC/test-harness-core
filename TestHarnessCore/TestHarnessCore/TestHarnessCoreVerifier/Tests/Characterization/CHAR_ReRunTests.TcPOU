@@ -15,8 +15,7 @@ VAR
 	Inner	 : TestSuite<4>;
 	Recorder : RecordingReporter;
 	// A run, not just a suite. The DOCUMENT boundary belongs to the run, so a
-	// re-run that is to produce a fresh artifact has to be re-run at this level -
-	// which is the gap this test found.
+	// re-run that is to produce a fresh artifact has to be re-run at this level.
 	Runner	 : TestRun<2>;
 	Budgets	 : ST_TestBudgets;
 	Phase	 : DINT;

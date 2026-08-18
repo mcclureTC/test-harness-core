@@ -2,8 +2,8 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_StopwatchMeasuresAndFreezes" Id="{f6da2a10-fc32-4ab7-8efc-5be29568d402}" SpecialFunc="None">
     <Declaration><![CDATA[// TestStopwatch. Every duration figure in every report rests on it, and until now
-// nothing touched it - it is the one object carried over from the original
-// unchanged, which is probably why it was never questioned.
+// it is small, old and unglamorous, which is exactly the sort of thing that
+// escapes attention.
 //
 // Resolution is the task period, so a stopwatch read in the same scan it started
 // reads zero. That is honest rather than wrong: at this resolution there is nothing

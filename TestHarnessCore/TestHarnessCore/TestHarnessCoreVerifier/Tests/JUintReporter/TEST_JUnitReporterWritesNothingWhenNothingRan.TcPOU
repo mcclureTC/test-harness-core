@@ -7,10 +7,8 @@
 // is nothing to write and inventing one would claim something happened.
 //
 // AN EMPTY RUN IS DIFFERENT and does produce a document, carrying tests="0" - the
-// second half of this test. That is the reverse of the behaviour before RunStarted
-// existed, and deliberately so: a missing file is ambiguous, because a
-// configuration problem and a run with no tests look identical from CI. R3 one
-// level up.
+// second half of this test. A missing file is ambiguous, because a configuration
+// problem and a run with no tests look identical from CI; tests="0" says which.
 FUNCTION_BLOCK TEST_JUnitReporterWritesNothingWhenNothingRan IMPLEMENTS I_Test
 VAR
 	Writer : TestJUnitReporter;

@@ -9,11 +9,11 @@
 // Numerics compare BY VALUE across widths - INT#5 equals DINT#5, because the
 // storage width is incidental to what the author is checking.
 //
-// Floats compare EXACTLY. The original hid an epsilon of 1E-6 inside AssertEqual,
-// so a test passing at 1E-7 looked identical to one passing exactly. Tolerance has
-// its own methods now and choosing it is visible at the call site. Because exact
-// float equality is a well-known trap, a near miss appends a hint naming those
-// methods - and a hint nobody sees is worth nothing, so that is pinned too.
+// Floats compare EXACTLY. A hidden epsilon inside AssertEqual makes a test passing
+// at 1E-7 look identical to one passing exactly; tolerance has its own methods, so
+// choosing it is visible at the call site. Because exact float equality is a
+// well-known trap, a near miss appends a hint naming those methods - and a hint
+// nobody sees is worth nothing, so that is pinned too.
 FUNCTION_BLOCK TEST_CompareNumericRules IMPLEMENTS I_Test
 VAR
 	Result : ST_CompareResult;

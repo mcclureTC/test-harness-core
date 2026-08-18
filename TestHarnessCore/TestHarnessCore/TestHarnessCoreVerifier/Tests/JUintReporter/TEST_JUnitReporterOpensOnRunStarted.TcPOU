@@ -3,15 +3,13 @@
   <POU Name="TEST_JUnitReporterOpensOnRunStarted" Id="{319a6c03-fa00-4a90-8116-e9e5476c2b27}" SpecialFunc="None">
     <Declaration><![CDATA[// The document is opened by RunStarted, not inferred from the first result.
 //
-// Proved by writing a run whose ONLY content is a framework error - no test, no
-// suite. Under the lazy version the document was created by whatever arrived
-// first, so this distinction was invisible; now the run says when it begins and
-// the writer believes it.
+// Proved by driving a run whose ONLY content is a framework error - no test and no
+// suite - so nothing but RunStarted could have opened the document.
 //
 // LENGTHS ARE COMPARED, NOT TESTED AGAINST ZERO. An untouched FB_XmlDomParser
-// already holds a minimal document - 35 bytes on this build - so "no document" is
-// not the same as "no length". This test asserted DocumentLength = 0 on its first
-// run and failed, correctly: the expectation was wrong, not the library.
+// already holds a minimal document, so "no document" is not "no length", and
+// pinning the exact figure would be testing Beckhoff's implementation rather than
+// this one.
 FUNCTION_BLOCK TEST_JUnitReporterOpensOnRunStarted IMPLEMENTS I_Test
 VAR
 	Writer : TestJUnitReporter;

@@ -76,8 +76,6 @@ CASE Phase OF
 	// TWO, not three. The journal is ticked AFTER the body runs, so on the body's
 	// Nth call it has consumed N-1 scans. The first call reports 0, which is what
 	// makes IsFirstCycle and ElapsedCycles agree with each other.
-	//
-	// This expectation was wrong on the first run and the library was right.
 	ExpectedCount := 2;
 	ActualCount	  := Subject.CyclesAtFinish;
 	Test.AssertEqual(ExpectedCount, ActualCount, 'ElapsedCycles excludes the call in progress');

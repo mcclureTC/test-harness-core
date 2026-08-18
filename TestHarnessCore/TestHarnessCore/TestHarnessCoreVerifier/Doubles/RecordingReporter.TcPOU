@@ -4,9 +4,8 @@
     <Declaration><![CDATA[// Captures results in memory instead of writing them, so a test can ask questions
 // of the ARTIFACT rather than of a counter.
 //
-// This is the new equivalent of the original library's RecordingResultFile, and
-// every characterization test depends on it. Those tests do not ask "did a failure
-// happen" - the existing 68 already do - they ask how many cases the document
+// Every characterization test depends on it. Those tests do not ask "did a failure
+// happen" - the object tests already do - they ask how many cases the document
 // would carry, what type attribute a failure got, and whether a timeout message
 // names the wall clock. None of that is answerable from a spy that only counts.
 //

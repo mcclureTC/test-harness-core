@@ -7,7 +7,7 @@
 // FailedSends is what distinguishes "the event class is not registered" from
 // "everything is fine" - both look identical from the PLC otherwise, because a
 // failed Create produces exactly as much visible output as a successful one that
-// nobody is watching. R3's lesson, applied to a different sink.
+// nobody is watching.
 FUNCTION_BLOCK TEST_EventReporterSendsAndDoesNotFail IMPLEMENTS I_Test
 VAR
 	Sink : TestEventReporter;
