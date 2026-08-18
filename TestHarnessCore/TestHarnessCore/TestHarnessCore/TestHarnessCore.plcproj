@@ -210,12 +210,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Documentation\TestHarnessCore.md">
-      <SubType>Content</SubType>
-    </Content>
-    <Content Include="Documentation\UPDATE_13.md">
-      <SubType>Content</SubType>
-    </Content>
     <None Include="ExternalTypes.tmc">
       <SubType>Content</SubType>
     </None>
@@ -258,6 +252,17 @@
       <Namespace>Tc3_Module</Namespace>
       <SystemLibrary>true</SystemLibrary>
     </PlaceholderReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Documentation\Implementation_Guide.md">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Documentation\Maintenance_Guide.md">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="Documentation\ReadMe.md">
+      <SubType>Content</SubType>
+    </Content>
   </ItemGroup>
   <ProjectExtensions>
     <PlcProjectOptions>
