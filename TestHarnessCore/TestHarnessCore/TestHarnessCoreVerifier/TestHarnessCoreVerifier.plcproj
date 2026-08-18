@@ -216,22 +216,22 @@
     <Compile Include="Tests\Journal\TEST_JournalZeroBudgetDisablesTheDeadline.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterIsBusyWhileWriting.TcPOU">
+    <Compile Include="Tests\JUnitReporter\TEST_JUnitReporterIsBusyWhileWriting.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterOpensOnRunStarted.TcPOU">
+    <Compile Include="Tests\JUnitReporter\TEST_JUnitReporterOpensOnRunStarted.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterRefusesWithNoPath.TcPOU">
+    <Compile Include="Tests\JUnitReporter\TEST_JUnitReporterRefusesWithNoPath.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterReportsAFailedWrite.TcPOU">
+    <Compile Include="Tests\JUnitReporter\TEST_JUnitReporterReportsAFailedWrite.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterWritesNothingWhenNothingRan.TcPOU">
+    <Compile Include="Tests\JUnitReporter\TEST_JUnitReporterWritesNothingWhenNothingRan.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Tests\JUintReporter\TEST_JUnitReporterWritesTheDocument.TcPOU">
+    <Compile Include="Tests\JUnitReporter\TEST_JUnitReporterWritesTheDocument.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\LogReporter\TEST_LogReporterAlwaysWritesFrameworkErrors.TcPOU">
@@ -408,7 +408,7 @@
     <Folder Include="Tests\Fanout" />
     <Folder Include="Tests\LogReporter" />
     <Folder Include="Tests\EventReporter" />
-    <Folder Include="Tests\JUintReporter" />
+    <Folder Include="Tests\JUnitReporter" />
     <Folder Include="Tests\Characterization" />
     <Folder Include="Tests\Assertions" />
     <Folder Include="Tests\Watchdog" />
