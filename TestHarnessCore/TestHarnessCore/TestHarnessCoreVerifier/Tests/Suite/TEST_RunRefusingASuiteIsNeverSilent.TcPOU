@@ -1,0 +1,132 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunRefusingASuiteIsNeverSilent" Id="{4d59a082-6d12-4afc-aedd-f840d808ea23}" SpecialFunc="None">
+    <Declaration><![CDATA[// A suite refused at composition still turns the run red.
+//
+// THE FAILURE THIS GUARDS IS SILENT. A refused suite takes every one of its tests
+// with it, so the totals simply come out smaller - and smaller totals with nothing
+// failing read as a healthy run. Anyone watching pass counts sees an improvement.
+//
+// The refusal happens while the run is still OPEN, before the aggregate exists, so
+// it has nowhere to record itself at the moment it is raised. It is held and
+// re-applied when the run starts. This test is what proves the second half of that
+// actually happens.
+//
+// A re-run re-applies it too: a suite that never made it in is still missing.
+FUNCTION_BLOCK TEST_RunRefusingASuiteIsNeverSilent IMPLEMENTS I_Test
+VAR
+	// One slot, two suites offered.
+	Runner	 : TestRun<1>;
+	Accepted : TestSuite<2>;
+	Refused	 : TestSuite<2>;
+	Recorder : RecordingReporter;
+
+	FirstTest  : PassingTest;
+	SecondTest : PassingTest;
+
+	Budgets : ST_TestBudgets;
+	TookFirst  : BOOL;
+	TookSecond : BOOL;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{474e3f7d-5dcd-4ac8-a3d1-642245748b79}" />
+    <Method Name="Run" Id="{4864729f-664a-416e-bfbb-e95b1653d35a}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 500 THEN
+	Test.Fail('the inner run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Accepted.SetLabel('accepted');
+	Accepted.Register(FirstTest, 'a test', Budgets);
+
+	Refused.SetLabel('refused');
+	Refused.Register(SecondTest, 'a test that will never run', Budgets);
+
+	Runner.SetLabel('a run');
+	Runner.AddReporter(Recorder);
+
+	TookFirst  := Runner.AddSuite(Accepted);
+	// One too many for a TestRun<1>.
+	TookSecond := Runner.AddSuite(Refused);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(TookFirst, 'the first suite was taken');
+	Test.AssertFalse(TookSecond, 'and the second was refused');
+
+	ExpectedCount := 1;
+	ActualCount	  := Runner.SuiteCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'only one suite is in the run');
+
+	// The whole point. The refusal happened before the aggregate existed.
+	ActualCount := Runner.ErrorCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and the refusal reached the counts');
+
+	ExpectedOutcome := E_RunOutcome.Errored;
+	ActualOutcome	:= Runner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'so the run cannot be trusted');
+
+	// It also reached a sink, so the failure is visible without inspecting counts.
+	Test.AssertTrue(Recorder.ErrorCount > 0, 'and was reported');
+
+	// The test in the refused suite never ran - which is exactly what makes a
+	// silent refusal dangerous.
+	ExpectedCount := 0;
+	ActualCount	  := SecondTest.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'its tests never ran');
+
+	Runner.ReRun();
+	Phase := 3;
+	Run	  := FALSE;
+
+3:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 4;
+	END_IF
+	Run := FALSE;
+
+4:
+	// Still missing, so still red. A re-run must not launder a bad composition.
+	ExpectedCount := 1;
+	ActualCount	  := Runner.ErrorCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the re-run is red for the same reason');
+
+	ExpectedOutcome := E_RunOutcome.Errored;
+	ActualOutcome	:= Runner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'and reports it');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

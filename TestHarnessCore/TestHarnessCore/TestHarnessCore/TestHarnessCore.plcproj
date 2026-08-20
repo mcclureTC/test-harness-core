@@ -21,7 +21,7 @@
     <Company>None</Company>
     <Released>false</Released>
     <Title>TestHarnessCore</Title>
-    <ProjectVersion>0.0.2</ProjectVersion>
+    <ProjectVersion>0.0.3</ProjectVersion>
     <VirtualLibrary>true</VirtualLibrary>
   </PropertyGroup>
   <ItemGroup>

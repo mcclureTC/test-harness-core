@@ -333,6 +333,9 @@
     <Compile Include="Tests\Suite\TEST_RunAnnouncesItselfBeforeAnythingElse.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Suite\TEST_RunRefusingASuiteIsNeverSilent.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Suite\TEST_SuiteClosesRegistrationOnFirstEnable.TcPOU">
       <SubType>Code</SubType>
     </Compile>
