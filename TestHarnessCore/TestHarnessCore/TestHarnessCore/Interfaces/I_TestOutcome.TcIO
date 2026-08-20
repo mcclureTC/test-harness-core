@@ -2,22 +2,36 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestOutcome" Id="{6308f609-4f93-4344-a943-466865e6747a}">
     <Declaration><![CDATA[// The verdict surface: recording what a check found, and reading what has been
+
 // recorded so far.
+
 //
+
 // This is the narrow type a domain helper should take. AssertAxisAtPosition needs
+
 // to record a pass or a failure and nothing else - it has no use for the built-in
+
 // comparisons, and taking the full assertion interface would suggest otherwise.
+
 //
+
 // RecordPass and RecordFailure are the primitive pair everything else is built on,
+
 // inside this library and outside it. Fail() alone gives no way to record
+
 // a pass, so an external helper had to write AssertTrue(TRUE) - which produced a
+
 // meaningless message when it went wrong.
 INTERFACE I_TestOutcome EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Property Name="AssertionCount" Id="{2a24c9c5-e76b-4bae-9396-860be61dbefa}">
       <Declaration><![CDATA[// Checks recorded so far, passed and failed.
+
 //
+
 // A test that finishes having recorded none is reported as Errored, not Passed. A
+
 // body that checked nothing usually means a branch never ran - a silent false pass
+
 // wearing a green badge.
 PROPERTY AssertionCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{3c9f9a2a-90f3-4c0d-b193-ed90a8d40dc1}">
@@ -35,20 +49,26 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="RecordFailure" Id="{92033e6d-f0ca-451b-b0a1-d6825a0b3efd}">
       <Declaration><![CDATA[// Record one failed check and set the verdict to Failed. Later checks are still
+
 // evaluated and recorded, but the verdict cannot return to Passed.
 METHOD RecordFailure
 VAR_INPUT
-	Kind	   : E_FailureKind;
+	Kind : E_FailureKind;
+
 	// The generated part - values, sizes, byte offset. Composed into the summary
+
 	// after the step label and ahead of the author's message.
 	Diagnostic : T_MaxString;
+
 	// The author's words. The first element dropped from the summary if it does
+
 	// not fit, and always present in full in the detail.
-	Message	   : T_MaxString;
+	Message : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
     <Method Name="RecordPass" Id="{0f372ef0-ecc5-4ee1-aaf2-3222c0f842b4}">
       <Declaration><![CDATA[// Record one satisfied check. Does not end the test - a test ends when its Run
+
 // method returns TRUE.
 METHOD RecordPass
 VAR_INPUT
@@ -58,7 +78,9 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="ReportError" Id="{a3560446-4dd6-42f6-861e-817f94b08254}">
       <Declaration><![CDATA[// The test could not run - a precondition absent, a target unreachable, a route
+
 // missing. Distinct from failing: the code under test was never exercised, so
+
 // reporting this as a failure would send the reader after the wrong thing.
 METHOD ReportError
 VAR_INPUT
@@ -67,10 +89,15 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="SetStep" Id="{5589ae06-7273-4946-aee7-6adc2209dada}">
       <Declaration><![CDATA[// Label the phase the test is currently in. Purely diagnostic, and worth setting
+
 // even in a test with a single check.
+
 //
+
 // Its value shows in a timeout, which is the dominant failure mode for anything
+
 // multi-scan. 'Home: timed out after 5000 cycles' usually ends an investigation;
+
 // 'timed out after 5000 cycles' starts one.
 METHOD SetStep
 VAR_INPUT
@@ -79,9 +106,13 @@ END_VAR]]></Declaration>
     </Method>
     <Property Name="Status" Id="{91ddc729-8eb9-419d-9a38-c03dbe0657e7}">
       <Declaration><![CDATA[// Read-only, deliberately. The original exposed a setter, which let a test body
+
 // write its own verdict and corrupt the run.
+
 //
+
 // Worth reading in a teardown body, which runs whatever the outcome and may need
+
 // to behave differently after a failure.
 PROPERTY Status : E_TestStatus]]></Declaration>
       <Get Name="Get" Id="{c57672cd-713a-4c5d-a591-f327b1d9020b}">

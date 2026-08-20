@@ -2,16 +2,22 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_LogReporterSummarisesASuite" Id="{d067f4c5-4c13-4697-ad83-f0c0859fe48a}" SpecialFunc="None">
     <Declaration><![CDATA[// One line per suite, carrying the counts, with severity following the outcome -
+
 // so a log filtered to errors still shows WHICH suite was responsible rather than
+
 // only the individual failures.//
+
 // WHAT THIS CANNOT CHECK: whether the line actually reached the TwinCAT log, or
+
 // what it says. ADSLOGSTR gives no answer back. The counters prove which BRANCH
+
 // was taken; the wording has to be read once, by eye, in the Logged Events window.
+
 // Saying so is better than a test that implies more than it establishes.
 FUNCTION_BLOCK TEST_LogReporterSummarisesASuite IMPLEMENTS I_Test
 VAR
-	Sink  : TestLogReporter;
-	Tally : TestRunTally;
+	Sink		  : TestLogReporter;
+	Tally		  : TestRunTally;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -32,13 +38,10 @@ Tally.Record(Verdict := E_TestStatus.Passed, ElapsedTime := 0.1);
 Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.1);
 Tally.Record(Verdict := E_TestStatus.Skipped, ElapsedTime := 0.0);
 Tally.Finish();
-
 Sink.SuiteFinished(Tally);
-
 ExpectedCount := 1;
 ActualCount	  := Sink.SuitesSeen;
 Test.AssertEqual(ExpectedCount, ActualCount, 'the suite was summarised');
-
 ActualCount := Sink.LinesWritten;
 Test.AssertEqual(ExpectedCount, ActualCount, 'in exactly one line');
 
@@ -46,7 +49,6 @@ Test.AssertEqual(ExpectedCount, ActualCount, 'in exactly one line');
 Sink.SuiteFinished(0);
 ActualCount := Sink.SuitesSeen;
 Test.AssertEqual(ExpectedCount, ActualCount, 'a null status is ignored, not fatal');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

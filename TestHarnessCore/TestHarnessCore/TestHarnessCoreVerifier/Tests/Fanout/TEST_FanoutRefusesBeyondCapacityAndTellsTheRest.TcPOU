@@ -2,22 +2,29 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_FanoutRefusesBeyondCapacityAndTellsTheRest" Id="{ef4902ce-9f05-4936-977d-b18fdb801c32}" SpecialFunc="None">
     <Declaration><![CDATA[// A refused attachment is reported through the sinks ALREADY attached. That reads
+
 // circular and is not: the ones already there are exactly the ones that can still
+
 // report it.
+
 //
+
 // A rejection with nothing attached at all is genuinely silent, which is why Count
+
 // exists - assert it in CI. A sink that stops being attached takes its output with
+
 // it, and a result file that never appears reads as a broken build rather than a
+
 // missing sink.
 FUNCTION_BLOCK TEST_FanoutRefusesBeyondCapacityAndTellsTheRest IMPLEMENTS I_Test
 VAR
-	Fanout	 : TestReporterFanout;
-	Spies	 : ARRAY[0..8] OF SpyReporter;
-	NoSink	 : I_TestReporter;
-	i		 : DINT;
-	Accepted : BOOL;
-	Refused	 : BOOL;
-	RefusedNull : BOOL;
+	Fanout		  : TestReporterFanout;
+	Spies		  : ARRAY[0..8] OF SpyReporter;
+	NoSink		  : I_TestReporter;
+	i			  : DINT;
+	Accepted	  : BOOL;
+	Refused		  : BOOL;
+	RefusedNull	  : BOOL;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -41,19 +48,15 @@ END_FOR
 ExpectedCount := TestHarnessParameter.ReporterCapacity;
 ActualCount	  := Fanout.Count;
 Test.AssertEqual(ExpectedCount, ActualCount, 'Count matches capacity');
-
 Refused := Fanout.Attach(Spies[8]);
 Test.AssertFalse(Refused, 'one beyond capacity is refused');
-
 ActualCount := Fanout.Count;
 Test.AssertEqual(ExpectedCount, ActualCount, 'and took no slot');
 
 // Reported through the sinks that were already there.
 Test.AssertTrue(Spies[0].FrameworkErrorCalls > 0, 'the refusal was reported');
-
 RefusedNull := Fanout.Attach(NoSink);
 Test.AssertFalse(RefusedNull, 'a null reporter is refused too');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

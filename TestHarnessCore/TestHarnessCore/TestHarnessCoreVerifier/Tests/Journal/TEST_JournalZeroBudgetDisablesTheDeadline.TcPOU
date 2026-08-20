@@ -2,7 +2,9 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JournalZeroBudgetDisablesTheDeadline" Id="{97154330-128f-4378-93a8-71f0f5c7e9c1}" SpecialFunc="None">
     <Declaration><![CDATA[// Zero disables. That is why "not specified" needs its own flag and cannot be
+
 // inferred from the value - a long-running rig test may legitimately want no scan
+
 // budget at all.
 FUNCTION_BLOCK TEST_JournalZeroBudgetDisablesTheDeadline IMPLEMENTS I_Test
 VAR
@@ -22,12 +24,10 @@ VAR_INPUT
 	Test   : I_TestAssertions;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Budgets.Body.Cycles	     := 0;
+        <ST><![CDATA[Budgets.Body.Cycles		 := 0;
 Budgets.Body.IsCyclesSet := TRUE;
 Subject.SetBudgets(Budgets);
-
 Subject.Begin('unbounded', '');
-
 FOR i := 1 TO 50 DO
 	IF Subject.Tick() THEN
 		Expired := TRUE;
@@ -36,7 +36,6 @@ END_FOR
 
 Test.AssertFalse(Expired, 'a zero budget never expires');
 Test.AssertTrue(Subject.Status = E_TestStatus.Running, 'and the test is still going');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

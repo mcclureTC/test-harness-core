@@ -2,21 +2,28 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JUnitReporterWritesNothingWhenNothingRan" Id="{650bc756-1aa8-4184-89aa-cf8748b947a9}" SpecialFunc="None">
     <Declaration><![CDATA[// A sink that was never part of a run writes nothing.
+
 //
+
 // The distinction is RunStarted. Without it no document was ever opened, so there
+
 // is nothing to write and inventing one would claim something happened.
+
 //
+
 // AN EMPTY RUN IS DIFFERENT and does produce a document, carrying tests="0" - the
+
 // second half of this test. A missing file is ambiguous, because a configuration
+
 // problem and a run with no tests look identical from CI; tests="0" says which.
 FUNCTION_BLOCK TEST_JUnitReporterWritesNothingWhenNothingRan IMPLEMENTS I_Test
 VAR
-	Writer : TestJUnitReporter;
-	Spy	   : SpyReporter;
-	Tally  : TestRunTally;
-	Phase  : DINT;
-	Scans  : DINT;
-	Path : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier_Empty.xml';
+	Writer		  : TestJUnitReporter;
+	Spy			  : SpyReporter;
+	Tally		  : TestRunTally;
+	Phase		  : DINT;
+	Scans		  : DINT;
+	Path		  : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier_Empty.xml';
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -39,57 +46,52 @@ IF Scans > 2000 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Writer.SetPath(Path);
+		Writer.AttachErrorSink(Spy);
 
-0:
-	Writer.SetPath(Path);
-	Writer.AttachErrorSink(Spy);
+		// No RunStarted either, so no document is ever opened.
+		Tally.SetLabel('nothing');
+		Tally.Begin(0);
+		Tally.Finish();
+		Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
+		Phase := 1;
+		Run	  := FALSE;
 
-	// No RunStarted either, so no document is ever opened.
-	Tally.SetLabel('nothing');
-	Tally.Begin(0);
-	Tally.Finish();
-	Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
-	Phase := 1;
-	Run	  := FALSE;
+	1:
+		Test.AssertTrue(Writer.IsIdle, 'no write was started');
+		ExpectedCount := 0;
+		ActualCount	  := Writer.FilesWritten;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was written');
 
-1:
-	Test.AssertTrue(Writer.IsIdle, 'no write was started');
+		// Not an error either - an empty run is a legitimate deployment.
+		ActualCount := Writer.WriteFailures;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and that is not a failure');
+		ActualCount := Spy.FrameworkErrorCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was reported');
 
-	ExpectedCount := 0;
-	ActualCount	  := Writer.FilesWritten;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was written');
+		// Now the same run, announced. An empty run IS an outcome and gets a document.
+		Writer.RunStarted(Label := 'nothing', TargetInfo := 'a target');
+		Writer.RunFinished(Status := Tally, TargetInfo := 'a target');
+		Phase := 2;
+		Run	  := FALSE;
 
-	// Not an error either - an empty run is a legitimate deployment.
-	ActualCount := Writer.WriteFailures;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and that is not a failure');
+	2:
+		Writer.CyclicLogic();
+		IF Writer.IsIdle THEN
+			Phase := 3;
+		END_IF
 
-	ActualCount := Spy.FrameworkErrorCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was reported');
+		Run := FALSE;
 
-	// Now the same run, announced. An empty run IS an outcome and gets a document.
-	Writer.RunStarted(Label := 'nothing', TargetInfo := 'a target');
-	Writer.RunFinished(Status := Tally, TargetInfo := 'a target');
-	Phase := 2;
-	Run	  := FALSE;
-
-2:
-	Writer.CyclicLogic();
-	IF Writer.IsIdle THEN
-		Phase := 3;
-	END_IF
-	Run := FALSE;
-
-3:
-	ExpectedCount := 1;
-	ActualCount	  := Writer.FilesWritten;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'an announced empty run does write');
-
-	ExpectedCount := 0;
-	ActualCount	  := Writer.WriteFailures;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and not as a failure');
-
-	Run := TRUE;
-
+	3:
+		ExpectedCount := 1;
+		ActualCount	  := Writer.FilesWritten;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'an announced empty run does write');
+		ExpectedCount := 0;
+		ActualCount	  := Writer.WriteFailures;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and not as a failure');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

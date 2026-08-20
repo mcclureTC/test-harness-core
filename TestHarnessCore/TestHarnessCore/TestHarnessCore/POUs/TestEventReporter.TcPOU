@@ -2,34 +2,57 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestEventReporter" Id="{c563d83e-cc22-4998-aa3c-85ca54f658fa}" SpecialFunc="None">
     <Declaration><![CDATA[// Raises TwinCAT 3 EventLogger events for test results.
+
 //
+
 // The sink for anything an operator or an HMI will see: structured, timestamped,
+
 // localizable, and filterable by event class and ID - which ADSLOGSTR output is
+
 // not. TestLogReporter remains the sink to reach for when no project setup is
+
 // wanted.
+
 //
+
 // REQUIRES the TestHarnessEvents event class in the System Type System. TwinCAT
+
 // generates TC_Events.TestHarnessEvents from it, and every event raised below is a
+
 // member of that.
+
 //
+
 // Naming the generated members rather than a GUID is deliberate: if the class is
+
 // not registered the symbol does not resolve and this FAILS TO COMPILE, which is a
+
 // far better failure than raising events the logger has no name for.
+
 //
+
 // Severity comes from the class definition too, so it is declared once - one event
+
 // ID per outcome, each carrying its own severity.
+
 //
+
 // It implements I_TestReporter and NOT I_TestDetailSink. An operator-facing log
+
 // wants verdicts; an event per individual check would bury them.
+
 //
+
 // Severity is not decoration. A FAILURE is Error - the code was shown to be wrong.
+
 // An ERROR is Warning - the test could not run, so nothing was shown about the
+
 // code at all. A build should react differently to each, and so should whoever is
+
 // looking at the Logged Events window.
 FUNCTION_BLOCK TestEventReporter IMPLEMENTS I_TestReporter
 VAR
-	_Message : FB_TcMessage;
-
+	_Message	   : FB_TcMessage;
 	_IncludePasses : BOOL;
 	_EventsSent	   : UDINT;
 	_FailedSends   : UDINT;
@@ -45,6 +68,7 @@ END_VAR]]></Declaration>
     <Folder Name="I_TestReporter" Id="{eb5d03d1-f814-4a82-80ce-4a2ba5cd6554}" />
     <Method Name="CyclicLogic" Id="{b3f143c4-10e2-439b-851c-725f42e5f985}" FolderPath="I_Cyclic\">
       <Declaration><![CDATA[// Nothing to advance. Send hands the message to the EventLogger and returns; the
+
 // logger owns what happens next.
 METHOD CyclicLogic]]></Declaration>
       <Implementation>
@@ -56,10 +80,12 @@ METHOD CyclicLogic]]></Declaration>
     </Method>
     <Method Name="Emit" Id="{6be08ab7-2884-4c3e-b7cd-4e3fdb4bf04d}">
       <Declaration><![CDATA[// The one place an event is raised. Private, so the class, the severity mapping
+
 // and the argument handling cannot drift between call sites.
 METHOD Emit
 VAR_INPUT
 	// A member of TC_Events.TestHarnessEvents. Carries the class GUID, the ID and
+
 	// the severity, all three declared once in the .tmc.
 	EventEntry : TcEventEntry;
 	Line	   : T_MaxString;
@@ -71,24 +97,26 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[// CreateEx, not Create: it takes the whole definition, so the class, the ID and
+
 // the severity all come from the .tmc and none of them is restated here.
+
 //
+
 // ipSourceInfo 0 means "generate it", which yields the symbol path of this
+
 // instance - the reason a raised event names the test that raised it without
 // being told.
-Result := _Message.CreateEx(stEventEntry := EventEntry,
-							ipSourceInfo := 0);
-
+Result := _Message.CreateEx(stEventEntry := EventEntry, ipSourceInfo := 0);
 IF Result < 0 THEN
-	_LastError	  := Result;
+	_LastError	 := Result;
 	_FailedSends := _FailedSends + 1;
 	RETURN;
 END_IF
 
 // ipArguments is a PROPERTY returning an interface. TwinCAT will not take a member
+
 // off the result of a call, so it goes into a variable first.
 Arguments := _Message.ipArguments;
-
 IF Arguments <> 0 THEN
 	// Cleared every time: the instance is reused, and arguments left over from the
 	// previous event would be appended to this one.
@@ -98,9 +126,8 @@ END_IF
 
 // 0 means "use the current timestamp".
 Result := _Message.Send(0);
-
 IF Result < 0 THEN
-	_LastError	  := Result;
+	_LastError	 := Result;
 	_FailedSends := _FailedSends + 1;
 	RETURN;
 END_IF
@@ -108,7 +135,9 @@ END_IF
 _EventsSent := _EventsSent + 1;
 
 // Release the instance the logger created. Without it, a long run leaks one per
+
 // event - which would show up as memory growth rather than as anything obviously
+
 // wrong with the test results.
 _Message.Release();]]></ST>
       </Implementation>
@@ -118,8 +147,7 @@ _Message.Release();]]></ST>
 PROPERTY EventsSent : UDINT]]></Declaration>
       <Get Name="Get" Id="{1f32d25d-deec-4c1a-9d11-1fe68a5ef3ec}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[EventsSent := _EventsSent;]]></ST>
         </Implementation>
@@ -127,14 +155,16 @@ END_VAR
     </Property>
     <Property Name="FailedSends" Id="{5bdfb473-46e2-432d-8393-89b1868e758a}">
       <Declaration><![CDATA[// Create or Send returned a failing HRESULT.
+
 //
+
 // Counted rather than swallowed. A sink that cannot deliver and cannot say so is
+
 // indistinguishable from a run that never happened.
 PROPERTY FailedSends : UDINT]]></Declaration>
       <Get Name="Get" Id="{21242bcf-f8d0-432a-bf4f-8b729d5fa2ee}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FailedSends := _FailedSends;]]></ST>
         </Implementation>
@@ -148,23 +178,26 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Never silent, never suppressed by verbosity, and never reported as a test
+
 // failure. This is the framework saying it could not do something.
+
 //
+
 // One ID for every framework error. The alternative was an event class growing a
+
 // member for each new kind, which puts the class and this file permanently in step
 // with each other.
-THIS^.Emit(TC_Events.TestHarnessEvents.RegistrationRejected,
-		   CONCAT(CONCAT(Source, ': '), Message));]]></ST>
+THIS^.Emit(TC_Events.TestHarnessEvents.RegistrationRejected, CONCAT(CONCAT(Source, ': '), Message));]]></ST>
       </Implementation>
     </Method>
     <Property Name="IsIdle" Id="{9b3f9276-0d9f-4717-b4e9-ea19f336c50a}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Always TRUE. Send hands the message over and returns; this sink never holds a
+
 // run open waiting for the logger.
 PROPERTY IsIdle : BOOL]]></Declaration>
       <Get Name="Get" Id="{90e79664-fec0-41a0-8159-b6112f68a77e}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsIdle := TRUE;]]></ST>
         </Implementation>
@@ -175,8 +208,7 @@ END_VAR
 PROPERTY LastError : HRESULT]]></Declaration>
       <Get Name="Get" Id="{c35100b8-808b-417a-99ef-840cde211e71}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastError := _LastError;]]></ST>
         </Implementation>
@@ -198,9 +230,9 @@ END_VAR]]></Declaration>
 END_IF
 
 // TargetInfo identifies where the run happened. Without it a matrix run across
+
 // several targets produces events that cannot be told apart.
 Line := CONCAT(CONCAT(THIS^.Tally(Status), '  on '), TargetInfo);
-
 IF Status.Outcome = E_RunOutcome.Passed THEN
 	THIS^.Emit(TC_Events.TestHarnessEvents.RunPassed, Line);
 ELSE
@@ -210,10 +242,15 @@ END_IF]]></ST>
     </Method>
     <Method Name="RunStarted" Id="{a8aa82f7-7050-404f-8f72-6c6d8aa5ba4c}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Deliberately raises nothing.
+
 //
+
 // A banner is a LOG device: it exists because log lines are an undifferentiated
+
 // stream that a reader scrolls through. Events are already discrete, timestamped
+
 // and filterable by class and ID, so bracketing them would add noise to a view
+
 // that does not need it.
 METHOD RunStarted
 VAR_INPUT
@@ -228,10 +265,15 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="SetVerbosity" Id="{abf54c99-adfa-48cc-b0cf-60c993b4812e}">
       <Declaration><![CDATA[// Whether passing and skipped tests raise an event of their own.
+
 //
+
 // Off by default. Eighty Info events bury the two Errors, and the counts are
+
 // already available through I_TestRunStatus. The Verbose severity exists for this
+
 // and is filtered out of most views anyway - but not raising them at all is
+
 // cheaper still.
 METHOD SetVerbosity
 VAR_INPUT
@@ -259,18 +301,22 @@ END_IF
 Line := CONCAT(CONCAT(Status.Label, ': '), THIS^.Tally(Status));
 
 // Read into a variable: a property call is a call, and TwinCAT will not take a
+
 // CASE selector off one any more than it will take a member.
 Outcome := Status.Outcome;
-
 // A distinct event ID per outcome, so a filtered view can show suite results
+
 // without showing every individual failure.
 CASE Outcome OF
-E_RunOutcome.Passed:
-	THIS^.Emit(TC_Events.TestHarnessEvents.SuitePassed, Line);
-E_RunOutcome.Skipped:
-	THIS^.Emit(TC_Events.TestHarnessEvents.SuiteSkipped, Line);
-E_RunOutcome.Errored:
-	THIS^.Emit(TC_Events.TestHarnessEvents.SuiteErrored, Line);
+	E_RunOutcome.Passed:
+		THIS^.Emit(TC_Events.TestHarnessEvents.SuitePassed, Line);
+
+	E_RunOutcome.Skipped:
+		THIS^.Emit(TC_Events.TestHarnessEvents.SuiteSkipped, Line);
+
+	E_RunOutcome.Errored:
+		THIS^.Emit(TC_Events.TestHarnessEvents.SuiteErrored, Line);
+
 ELSE
 	THIS^.Emit(TC_Events.TestHarnessEvents.SuiteFailed, Line);
 END_CASE]]></ST>
@@ -278,6 +324,7 @@ END_CASE]]></ST>
     </Method>
     <Method Name="Tally" Id="{a7d13f69-7f30-45a0-ae1c-eef409e22f81}">
       <Declaration><![CDATA[// The counts as one readable phrase. Shared by the suite and run events so the two
+
 // cannot drift apart.
 METHOD Tally : T_MaxString
 VAR_INPUT
@@ -317,24 +364,19 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Line := CONCAT(CONCAT(SuiteLabel, ' / '), TestLabel);
-
 CASE Status OF
+	E_TestStatus.Failed:
+		THIS^.Emit(TC_Events.TestHarnessEvents.TestFailed, CONCAT(CONCAT(Line, ': '), Summary));
 
-E_TestStatus.Failed:
-	THIS^.Emit(TC_Events.TestHarnessEvents.TestFailed,
-			   CONCAT(CONCAT(Line, ': '), Summary));
-
-E_TestStatus.Errored:
-	// Warning, not Error. The code under test was never shown to be wrong, and a
-	// build should react differently to the two.
-	THIS^.Emit(TC_Events.TestHarnessEvents.TestErrored,
-			   CONCAT(CONCAT(Line, ': '), Summary));
+	E_TestStatus.Errored:
+		// Warning, not Error. The code under test was never shown to be wrong, and a
+		// build should react differently to the two.
+		THIS^.Emit(TC_Events.TestHarnessEvents.TestErrored, CONCAT(CONCAT(Line, ': '), Summary));
 
 ELSE
 	IF _IncludePasses THEN
 		THIS^.Emit(TC_Events.TestHarnessEvents.TestPassed, Line);
 	END_IF
-
 END_CASE]]></ST>
       </Implementation>
     </Method>

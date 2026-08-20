@@ -2,27 +2,40 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestRegistrar" Id="{557c4b00-3260-49a2-9f62-679fecc02001}">
     <Declaration><![CDATA[// Putting tests into the registry, and shutting the door. Held by the suite, and
+
 // reached only from the suite's own startup face - a test body cannot get here.
+
 //
+
 // One of three faces on TestRegistry, split by audience for the same reason a
+
 // suite has six. This one WRITES; the arbiter and runner hold I_TestRoster and
+
 // cannot.
+
 //
+
 // The registry is the one generic object in the library, so every consumer reaches
+
 // it through an interface: a generic instance cannot be passed by its concrete
+
 // type at all.
-INTERFACE I_TestRegistrar EXTENDS __SYSTEM.IQueryInterface
-]]></Declaration>
+INTERFACE I_TestRegistrar EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Method Name="Close" Id="{ec359e65-90ba-4be3-bee6-93ecab22d70f}">
       <Declaration><![CDATA[// Registration is over. Called when the suite is first enabled - not after the
+
 // first scan, because a machine project may need several scans to decide what to
+
 // register.
+
 //
+
 // A re-run does not reopen it.
 METHOD Close]]></Declaration>
     </Method>
     <Property Name="IsOpen" Id="{b45711ae-9f87-4452-a9d0-01140e20db4b}">
       <Declaration><![CDATA[// TRUE until Close. A composition root can assert this rather than discover the
+
 // boundary by being refused.
 PROPERTY IsOpen : BOOL]]></Declaration>
       <Get Name="Get" Id="{482da403-20b3-495d-9d03-e1cb4ba03633}">
@@ -31,8 +44,11 @@ PROPERTY IsOpen : BOOL]]></Declaration>
     </Property>
     <Method Name="TryClaim" Id="{a4fe7f27-d17e-4b69-b164-37e36f0ca507}">
       <Declaration><![CDATA[// Take the next free slot. Returns None on success, or why it was refused.
+
 //
+
 // Order of claiming is order of execution. The optional hooks are resolved here,
+
 // once, so no __QUERYINTERFACE happens in cyclic code.
 METHOD TryClaim : E_RegistrationFault
 VAR_INPUT

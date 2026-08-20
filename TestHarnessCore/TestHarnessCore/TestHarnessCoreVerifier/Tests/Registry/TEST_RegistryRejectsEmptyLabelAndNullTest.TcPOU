@@ -2,15 +2,16 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RegistryRejectsEmptyLabelAndNullTest" Id="{327a8414-466d-4d07-b3bf-13355d587e73}" SpecialFunc="None">
     <Declaration><![CDATA[// Two different mistakes with two different answers. Folding them together would
+
 // send the reader to the wrong argument: an empty label is usually a missing
+
 // string, a null test a missing instance.
 FUNCTION_BLOCK TEST_RegistryRejectsEmptyLabelAndNullTest IMPLEMENTS I_Test
 VAR
-	Registry  : TestRegistry<4>;
-	Fake	  : FakeTest;
-	NoTestRef : I_Test;
-	Budgets	  : ST_TestBudgets;
-
+	Registry	  : TestRegistry<4>;
+	Fake		  : FakeTest;
+	NoTestRef	  : I_Test;
+	Budgets		  : ST_TestBudgets;
 	ExpectedFault : E_RegistrationFault;
 	ActualFault	  : E_RegistrationFault;
 	ExpectedCount : UDINT;
@@ -30,15 +31,12 @@ END_VAR]]></Declaration>
         <ST><![CDATA[ActualFault	  := Registry.TryClaim(Fake, '', Budgets);
 ExpectedFault := E_RegistrationFault.EmptyLabel;
 Test.AssertEqual(ExpectedFault, ActualFault, 'empty label refused');
-
 ActualFault	  := Registry.TryClaim(NoTestRef, 'Has a label but no test', Budgets);
 ExpectedFault := E_RegistrationFault.NoTest;
 Test.AssertEqual(ExpectedFault, ActualFault, 'null test refused as NoTest');
-
 ExpectedCount := 0;
 ActualCount	  := Registry.Count;
 Test.AssertEqual(ExpectedCount, ActualCount, 'neither took a slot');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

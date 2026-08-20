@@ -2,41 +2,43 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="SpyReporter" Id="{e0a15c8b-7328-4369-b37d-81a0c3cb775f}" SpecialFunc="None">
     <Declaration><![CDATA[// A reporter that records what it was told, and nothing else.
+
 //
+
 // Implements BOTH faces: I_TestReporter for verdicts, I_TestDetailSink for
+
 // individual checks. VerdictOnlyReporter is the counterpart that implements only
+
 // the first, and the pair together are what proves the fan-out asks each sink what
+
 // it actually wants rather than calling everything on everyone.
 FUNCTION_BLOCK SpyReporter IMPLEMENTS I_TestReporter, I_TestDetailSink
 VAR
-	_CyclicCalls		 : UDINT;
-	_TestFinishedCalls	 : UDINT;
-	_SuiteFinishedCalls	 : UDINT;
-	_RunFinishedCalls	 : UDINT;
-	_RunStartedCalls	 : UDINT;
+	_CyclicCalls		   : UDINT;
+	_TestFinishedCalls	   : UDINT;
+	_SuiteFinishedCalls	   : UDINT;
+	_RunFinishedCalls	   : UDINT;
+	_RunStartedCalls	   : UDINT;
 	_StartedBeforeAnything : BOOL;
-	_FrameworkErrorCalls : UDINT;
-	_TestStartedCalls	 : UDINT;
-	_CheckCalls			 : UDINT;
-	_CheckPassedCalls	 : UDINT;
-	_CheckFailedCalls	 : UDINT;
-
-	_LastTestLabel	  : T_MaxString;
-	_LastSuiteLabel	  : T_MaxString;
-	_LastSummary	  : T_MaxString;
-	_LastExpected	  : T_MaxString;
-	_LastActual		  : T_MaxString;
-	_LastErrorSource  : T_MaxString;
-	_LastErrorMessage : T_MaxString;
-	_LastStatus		  : E_TestStatus;
-	_LastSuiteOutcome : E_RunOutcome;
-	_LastSuitePassed  : UDINT;
-
-	_StartedBeforeChecks : BOOL;
-	_IsBusy				 : BOOL;
-
-	_Ordinal : UDINT;
-	_Witness : I_ProbeWitness;
+	_FrameworkErrorCalls   : UDINT;
+	_TestStartedCalls	   : UDINT;
+	_CheckCalls			   : UDINT;
+	_CheckPassedCalls	   : UDINT;
+	_CheckFailedCalls	   : UDINT;
+	_LastTestLabel		   : T_MaxString;
+	_LastSuiteLabel		   : T_MaxString;
+	_LastSummary		   : T_MaxString;
+	_LastExpected		   : T_MaxString;
+	_LastActual			   : T_MaxString;
+	_LastErrorSource	   : T_MaxString;
+	_LastErrorMessage	   : T_MaxString;
+	_LastStatus			   : E_TestStatus;
+	_LastSuiteOutcome	   : E_RunOutcome;
+	_LastSuitePassed	   : UDINT;
+	_StartedBeforeChecks   : BOOL;
+	_IsBusy				   : BOOL;
+	_Ordinal			   : UDINT;
+	_Witness			   : I_ProbeWitness;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -48,8 +50,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY CheckCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{bb5cba73-8858-4472-b504-a1ef896bee4a}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[CheckCalls := _CheckCalls;]]></ST>
         </Implementation>
@@ -66,18 +67,17 @@ VAR_INPUT
 	Message	   : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_CheckCalls		 := _CheckCalls + 1;
+        <ST><![CDATA[_CheckCalls		  := _CheckCalls + 1;
 _CheckFailedCalls := _CheckFailedCalls + 1;
-_LastExpected	 := Expected;
-_LastActual		 := Actual;]]></ST>
+_LastExpected	  := Expected;
+_LastActual		  := Actual;]]></ST>
       </Implementation>
     </Method>
     <Property Name="CheckFailedCalls" Id="{1762dc93-df2e-4458-8311-8e1a9bc5c4c7}">
       <Declaration><![CDATA[PROPERTY CheckFailedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{3103d872-a900-4425-be32-af82f48da6a6}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[CheckFailedCalls := _CheckFailedCalls;]]></ST>
         </Implementation>
@@ -90,7 +90,7 @@ VAR_INPUT
 	Detail	  : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_CheckCalls		 := _CheckCalls + 1;
+        <ST><![CDATA[_CheckCalls		  := _CheckCalls + 1;
 _CheckPassedCalls := _CheckPassedCalls + 1;]]></ST>
       </Implementation>
     </Method>
@@ -98,8 +98,7 @@ _CheckPassedCalls := _CheckPassedCalls + 1;]]></ST>
       <Declaration><![CDATA[PROPERTY CheckPassedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{040e9ad7-e4bf-4baa-9302-d905933a3604}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[CheckPassedCalls := _CheckPassedCalls;]]></ST>
         </Implementation>
@@ -121,8 +120,7 @@ _Witness := Witness;]]></ST>
       <Declaration><![CDATA[PROPERTY CyclicCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{b3f8e21a-d5af-4d54-99ec-089aa73656ef}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[CyclicCalls := _CyclicCalls;]]></ST>
         </Implementation>
@@ -150,8 +148,7 @@ _LastErrorMessage	 := Message;]]></ST>
       <Declaration><![CDATA[PROPERTY FrameworkErrorCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{bdb7cc24-b13f-4c4e-887c-5b487766d8ed}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FrameworkErrorCalls := _FrameworkErrorCalls;]]></ST>
         </Implementation>
@@ -162,8 +159,7 @@ END_VAR
 PROPERTY IsIdle : BOOL]]></Declaration>
       <Get Name="Get" Id="{7e5982d5-e02c-4eae-a553-ee9f6758f079}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsIdle := NOT _IsBusy;]]></ST>
         </Implementation>
@@ -173,8 +169,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastActual : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{9ad69909-be6f-41bd-8147-d22b49ec32be}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastActual := _LastActual;]]></ST>
         </Implementation>
@@ -184,8 +179,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastErrorMessage : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{63bdca11-9f9f-4d09-b5a6-78b0433d015c}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastErrorMessage := _LastErrorMessage;]]></ST>
         </Implementation>
@@ -195,8 +189,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastErrorSource : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{79af712d-8971-486a-ae32-bfd9522540cd}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastErrorSource := _LastErrorSource;]]></ST>
         </Implementation>
@@ -206,8 +199,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastExpected : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{9db91a51-1871-4190-9fce-fb176d657779}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastExpected := _LastExpected;]]></ST>
         </Implementation>
@@ -217,8 +209,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastStatus : E_TestStatus]]></Declaration>
       <Get Name="Get" Id="{d66ee953-2e04-46f7-983e-9e080e650682}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastStatus := _LastStatus;]]></ST>
         </Implementation>
@@ -228,8 +219,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastSuiteLabel : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{21ee705f-b587-4dc9-9221-7636229b5aeb}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastSuiteLabel := _LastSuiteLabel;]]></ST>
         </Implementation>
@@ -239,8 +229,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastSuiteOutcome : E_RunOutcome]]></Declaration>
       <Get Name="Get" Id="{f3549d18-27ec-43c6-a258-704ee30b6360}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastSuiteOutcome := _LastSuiteOutcome;]]></ST>
         </Implementation>
@@ -250,8 +239,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastSuitePassed : UDINT]]></Declaration>
       <Get Name="Get" Id="{f2183ca4-8f55-4806-8493-c8d1653f88cd}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastSuitePassed := _LastSuitePassed;]]></ST>
         </Implementation>
@@ -261,8 +249,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastSummary : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{13facbf7-a59b-42b4-905c-c0be8017c8ca}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastSummary := _LastSummary;]]></ST>
         </Implementation>
@@ -272,8 +259,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY LastTestLabel : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{7ca8da91-7f6e-4f0d-9805-1db712f39355}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastTestLabel := _LastTestLabel;]]></ST>
         </Implementation>
@@ -293,8 +279,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY RunFinishedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{9970d8ee-acaa-42d3-87ad-a1a95d29b736}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[RunFinishedCalls := _RunFinishedCalls;]]></ST>
         </Implementation>
@@ -302,6 +287,7 @@ END_VAR
     </Property>
     <Method Name="RunStarted" Id="{d394cb4a-705e-454c-b38b-1a12efcc9322}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Counted, and the label kept - so a test can prove the run announced itself
+
 // BEFORE anything else in it arrived, which is the whole point of the call.
 METHOD RunStarted
 VAR_INPUT
@@ -309,7 +295,7 @@ VAR_INPUT
 	TargetInfo : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_RunStartedCalls := _RunStartedCalls + 1;
+        <ST><![CDATA[_RunStartedCalls	   := _RunStartedCalls + 1;
 _StartedBeforeAnything := (_TestFinishedCalls = 0) AND (_SuiteFinishedCalls = 0);]]></ST>
       </Implementation>
     </Method>
@@ -317,8 +303,7 @@ _StartedBeforeAnything := (_TestFinishedCalls = 0) AND (_SuiteFinishedCalls = 0)
       <Declaration><![CDATA[PROPERTY RunStartedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{144e7e30-92f1-4040-a62e-160d0c00b2b0}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[RunStartedCalls := _RunStartedCalls;]]></ST>
         </Implementation>
@@ -326,6 +311,7 @@ END_VAR
     </Property>
     <Method Name="SetBusy" Id="{59cf7a44-723b-4a89-b398-166a4c85d503}">
       <Declaration><![CDATA[// Pretend to have asynchronous work in flight, so IsIdle can be checked without a
+
 // real file write.
 METHOD SetBusy
 VAR_INPUT
@@ -337,13 +323,14 @@ END_VAR]]></Declaration>
     </Method>
     <Property Name="StartedBeforeAnything" Id="{b9947f3f-27a8-4fc6-989a-be358c7c8864}">
       <Declaration><![CDATA[// TRUE if RunStarted arrived before any test or suite result. The ordering IS the
+
 // contract - a sink that opens a document on this call has nowhere to put a result
+
 // that arrived first.
 PROPERTY StartedBeforeAnything : BOOL]]></Declaration>
       <Get Name="Get" Id="{33bb6a23-aa93-4d06-a0fe-d0462cec7f14}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[StartedBeforeAnything := _StartedBeforeAnything;]]></ST>
         </Implementation>
@@ -351,13 +338,14 @@ END_VAR
     </Property>
     <Property Name="StartedBeforeChecks" Id="{0985fc30-f9d9-4250-b868-46ad8808c3df}">
       <Declaration><![CDATA[// TRUE if TestStarted arrived before any check did. The ordering guarantee is the
+
 // whole reason TestStarted exists - a sink building a document has nowhere to put
+
 // a check until it has been told to open an element.
 PROPERTY StartedBeforeChecks : BOOL]]></Declaration>
       <Get Name="Get" Id="{57578b07-b1df-41d9-a8c6-fc3ca8ea0600}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[StartedBeforeChecks := _StartedBeforeChecks;]]></ST>
         </Implementation>
@@ -380,8 +368,7 @@ END_IF]]></ST>
       <Declaration><![CDATA[PROPERTY SuiteFinishedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{8c4c8a95-42ba-4ca6-8285-430fd23ddd42}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SuiteFinishedCalls := _SuiteFinishedCalls;]]></ST>
         </Implementation>
@@ -406,8 +393,8 @@ _LastTestLabel	   := TestLabel;
 _LastSuiteLabel	   := SuiteLabel;
 _LastStatus		   := Status;
 _LastSummary	   := Summary;
-
 // Order of notification is order of attachment. Each spy stamps itself into a
+
 // shared witness so a test can read the sequence back.
 IF _Witness <> 0 THEN
 	_Witness.Note(_Ordinal);
@@ -418,8 +405,7 @@ END_IF]]></ST>
       <Declaration><![CDATA[PROPERTY TestFinishedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{aded91bb-c84e-4100-a523-6c775346dccc}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TestFinishedCalls := _TestFinishedCalls;]]></ST>
         </Implementation>
@@ -433,7 +419,7 @@ VAR_INPUT
 	Location   : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_TestStartedCalls := _TestStartedCalls + 1;
+        <ST><![CDATA[_TestStartedCalls	 := _TestStartedCalls + 1;
 _StartedBeforeChecks := (_CheckCalls = 0);]]></ST>
       </Implementation>
     </Method>
@@ -441,8 +427,7 @@ _StartedBeforeChecks := (_CheckCalls = 0);]]></ST>
       <Declaration><![CDATA[PROPERTY TestStartedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{18a66005-5351-45a6-88ed-0e3cbb290d6d}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TestStartedCalls := _TestStartedCalls;]]></ST>
         </Implementation>

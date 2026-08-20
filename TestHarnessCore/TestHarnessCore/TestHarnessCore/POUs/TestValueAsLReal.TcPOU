@@ -1,15 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.0">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestValueAsLReal" Id="{022dc952-906c-444f-85a9-410ef1ea8c0e}" SpecialFunc="None">
     <Declaration><![CDATA[// Widens any numeric value to LREAL so ordering comparisons can be written once
+
 // instead of per type.
+
 //
+
 // Returns ST_NumericValue rather than a value plus an output parameter.
+
 // IsNumeric is FALSE for strings, structs, arrays and anything else with no
+
 // ordering - the caller reports a TypeMismatch rather than comparing rubbish.
+
 //
+
 // LREAL carries 53 bits of mantissa, so LINT and ULINT values beyond 2^53 lose
+
 // precision here. That matters for AssertGreater and AssertLess at extreme
+
 // magnitudes and nowhere else; equality never goes through this path.
 FUNCTION TestValueAsLReal : ST_NumericValue
 VAR_INPUT
@@ -28,13 +37,8 @@ END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[TestValueAsLReal.Value	   := 0.0;
 TestValueAsLReal.IsNumeric := TRUE;
-
 CASE Value.TypeClass OF
-
-	__SYSTEM.TYPE_CLASS.TYPE_BYTE,	__SYSTEM.TYPE_CLASS.TYPE_USINT,
-	__SYSTEM.TYPE_CLASS.TYPE_WORD,	__SYSTEM.TYPE_CLASS.TYPE_UINT,
-	__SYSTEM.TYPE_CLASS.TYPE_DWORD, __SYSTEM.TYPE_CLASS.TYPE_UDINT,
-	__SYSTEM.TYPE_CLASS.TYPE_LWORD, __SYSTEM.TYPE_CLASS.TYPE_ULINT:
+	__SYSTEM.TYPE_CLASS.TYPE_BYTE, __SYSTEM.TYPE_CLASS.TYPE_USINT, __SYSTEM.TYPE_CLASS.TYPE_WORD, __SYSTEM.TYPE_CLASS.TYPE_UINT, __SYSTEM.TYPE_CLASS.TYPE_DWORD, __SYSTEM.TYPE_CLASS.TYPE_UDINT, __SYSTEM.TYPE_CLASS.TYPE_LWORD, __SYSTEM.TYPE_CLASS.TYPE_ULINT:
 		MEMCPY(ADR(Unsigned), Value.pValue, TO_UDINT(Value.diSize));
 		TestValueAsLReal.Value := TO_LREAL(Unsigned);
 

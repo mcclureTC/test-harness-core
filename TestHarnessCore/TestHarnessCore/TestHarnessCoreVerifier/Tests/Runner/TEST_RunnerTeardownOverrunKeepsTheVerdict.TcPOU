@@ -2,30 +2,36 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RunnerTeardownOverrunKeepsTheVerdict" Id="{feeb2e59-b7d0-4d76-9715-38f6e6606e43}" SpecialFunc="None">
     <Declaration><![CDATA[// A passing test whose cleanup hangs still proved the code correct. The verdict
+
 // stands.
+
 //
+
 // The overrun is reported separately - TeardownOverran, with a diagnostic and the
+
 // label - because the SUITE has to raise a framework error for it and the runner
+
 // holds no reporters. On a rig this may mean an axis left powered, so it must be
+
 // loud without being a lie about the test.
 FUNCTION_BLOCK TEST_RunnerTeardownOverrunKeepsTheVerdict IMPLEMENTS I_Test
 VAR
 	// A private runner, driven one scan per call. The outer test spans scans by
-	// returning FALSE, which is exactly the mechanism being verified one level down.
-	Registry : TestRegistry<1>;
-	Runner	 : TestRunner;
-	Handle	 : TestVerdict;
-	Budgets	 : ST_TestBudgets;
-	Journal	 : REFERENCE TO TestJournal;
-	Slot	 : ST_TestSlot;
-	Outcome	 : E_PhaseOutcome;
-	Loaded	 : BOOL;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	Subject : HangingTeardownTest;
 
-	ExpectedTwo : UDINT;
-	ActualCount : UDINT;
+	// returning FALSE, which is exactly the mechanism being verified one level down.
+	Registry	   : TestRegistry<1>;
+	Runner		   : TestRunner;
+	Handle		   : TestVerdict;
+	Budgets		   : ST_TestBudgets;
+	Journal		   : REFERENCE TO TestJournal;
+	Slot		   : ST_TestSlot;
+	Outcome		   : E_PhaseOutcome;
+	Loaded		   : BOOL;
+	Phase		   : DINT;
+	Scans		   : DINT;
+	Subject		   : HangingTeardownTest;
+	ExpectedTwo	   : UDINT;
+	ActualCount	   : UDINT;
 	ExpectedStatus : E_TestStatus;
 	ActualStatus   : E_TestStatus;
 	Diagnostic	   : T_MaxString;
@@ -51,51 +57,46 @@ IF Scans > 200 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Budgets.Teardown.Cycles		 := 2;
+		Budgets.Teardown.IsCyclesSet := TRUE;
+		Registry.TryClaim(Subject, 'teardown hangs', Budgets);
+		Runner.Attach(Roster := Registry, Verdict := Handle);
+		Slot   := Registry.Slot(0);
+		Loaded := Runner.Load(Slot);
+		Phase  := 1;
+		Run	   := FALSE;
 
-0:
-	Budgets.Teardown.Cycles		 := 2;
-	Budgets.Teardown.IsCyclesSet := TRUE;
+	1:
+		Outcome := Runner.Advance(Enable := TRUE);
+		IF Outcome <> E_PhaseOutcome.Running THEN
+			// Read before anything else can unload it.
+			Diagnostic	:= Runner.TeardownDiagnostic;
+			ActiveLabel := Runner.ActiveLabel;
+			Phase		:= 2;
+		END_IF
 
-	Registry.TryClaim(Subject, 'teardown hangs', Budgets);
-	Runner.Attach(Roster := Registry, Verdict := Handle);
-	Slot   := Registry.Slot(0);
-	Loaded := Runner.Load(Slot);
-	Phase   := 1;
-	Run	   := FALSE;
+		Run := FALSE;
 
-1:
-	Outcome := Runner.Advance(Enable := TRUE);
-	IF Outcome <> E_PhaseOutcome.Running THEN
-		// Read before anything else can unload it.
-		Diagnostic	:= Runner.TeardownDiagnostic;
-		ActiveLabel := Runner.ActiveLabel;
-		Phase		:= 2;
-	END_IF
-	Run := FALSE;
+	2:
+		Test.AssertTrue(Outcome = E_PhaseOutcome.TeardownOverran, 'reported as an overrun');
+		ExpectedTwo := 2;
+		ActualCount := Subject.TeardownCalls;
+		Test.AssertEqual(ExpectedTwo, ActualCount, 'teardown got its own budget');
+		Test.AssertTrue(Diagnostic <> '', 'a diagnostic was composed');
+		Test.AssertTrue(FIND(Diagnostic, 'teardown') > 0, 'and it names the phase');
+		ExpectedLabel := 'teardown hangs';
+		Test.AssertEqual(ExpectedLabel, ActiveLabel, 'and the test that hung');
 
-2:
-	Test.AssertTrue(Outcome = E_PhaseOutcome.TeardownOverran, 'reported as an overrun');
+		// The point of the whole test.
+		Journal REF= Registry.Journal(0);
+		IF __ISVALIDREF(Journal) THEN
+			ExpectedStatus := E_TestStatus.Passed;
+			ActualStatus   := Journal.Status;
+			Test.AssertEqual(ExpectedStatus, ActualStatus, 'the verdict is untouched');
+		END_IF
 
-	ExpectedTwo := 2;
-	ActualCount := Subject.TeardownCalls;
-	Test.AssertEqual(ExpectedTwo, ActualCount, 'teardown got its own budget');
-
-	Test.AssertTrue(Diagnostic <> '', 'a diagnostic was composed');
-	Test.AssertTrue(FIND(Diagnostic, 'teardown') > 0, 'and it names the phase');
-
-	ExpectedLabel := 'teardown hangs';
-	Test.AssertEqual(ExpectedLabel, ActiveLabel, 'and the test that hung');
-
-	// The point of the whole test.
-	Journal REF= Registry.Journal(0);
-	IF __ISVALIDREF(Journal) THEN
-		ExpectedStatus := E_TestStatus.Passed;
-		ActualStatus   := Journal.Status;
-		Test.AssertEqual(ExpectedStatus, ActualStatus, 'the verdict is untouched');
-	END_IF
-
-	Run := TRUE;
-
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

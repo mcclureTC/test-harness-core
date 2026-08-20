@@ -2,17 +2,23 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_VerdictUntargetedHandleIsInert" Id="{c10cadf8-b2f0-446b-b486-99bb6f4b9537}" SpecialFunc="None">
     <Declaration><![CDATA[// A handle pointing at nothing records nothing, rather than writing into whatever
+
 // journal happens to be nearby.
+
 //
+
 // The runner untargets after every test. Without this holding, a stray call from a
+
 // test that kept the handle would land in the NEXT test's record.
 FUNCTION_BLOCK TEST_VerdictUntargetedHandleIsInert IMPLEMENTS I_Test
 VAR
 	// A private journal and handle, so a DELIBERATE failure can be recorded and
+
 	// inspected without the suite's own verdict ever seeing it. The test itself
+
 	// passes; what it proves is that failing works.
-	Subject : TestJournal;
-	Handle	: TestVerdict;
+	Subject		  : TestJournal;
+	Handle		  : TestVerdict;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -29,23 +35,18 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Handle.Target(Subject);
 Subject.Begin('inert', '');
-
 Handle.AssertTrue(TRUE, 'one real check');
-
 Handle.Untarget();
 
 // Everything below must reach nothing at all.
 Handle.AssertTrue(FALSE, 'must not be recorded');
 Handle.Fail('must not be recorded');
 Handle.ReportError('must not be recorded');
-
 ExpectedCount := 1;
 ActualCount	  := Subject.AssertionCount;
 Test.AssertEqual(ExpectedCount, ActualCount, 'nothing landed after Untarget');
-
 Subject.Finish(E_TestStatus.Passed);
 Test.AssertTrue(Subject.Status = E_TestStatus.Passed, 'and the verdict is untouched');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

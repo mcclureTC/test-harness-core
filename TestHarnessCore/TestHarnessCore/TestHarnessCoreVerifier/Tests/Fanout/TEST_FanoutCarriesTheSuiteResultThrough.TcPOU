@@ -2,15 +2,17 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_FanoutCarriesTheSuiteResultThrough" Id="{493a289c-f9c0-4457-9517-cf66c9ba68bb}" SpecialFunc="None">
     <Declaration><![CDATA[// SuiteFinished hands the sink the read model, not a copy of the numbers. A sink
+
 // asking a live I_TestRunStatus is what lets a JUnit writer emit counts it did not
+
 // have to be told.
 FUNCTION_BLOCK TEST_FanoutCarriesTheSuiteResultThrough IMPLEMENTS I_Test
 VAR
-	Fanout : TestReporterFanout;
-	Spy	   : SpyReporter;
-	Tally  : TestRunTally;
-	ExpectedCount : UDINT;
-	ActualCount	  : UDINT;
+	Fanout			: TestReporterFanout;
+	Spy				: SpyReporter;
+	Tally			: TestRunTally;
+	ExpectedCount	: UDINT;
+	ActualCount		: UDINT;
 	ExpectedOutcome : E_RunOutcome;
 	ActualOutcome	: E_RunOutcome;
 END_VAR]]></Declaration>
@@ -26,15 +28,12 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Fanout.Attach(Spy);
-
 Tally.SetLabel('a suite');
 Tally.Begin(2);
 Tally.Record(Verdict := E_TestStatus.Passed, ElapsedTime := 0.1);
 Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.2);
 Tally.Finish();
-
 Fanout.SuiteFinished(Tally);
-
 ExpectedCount := 1;
 ActualCount	  := Spy.SuiteFinishedCalls;
 Test.AssertEqual(ExpectedCount, ActualCount, 'the sink was told once');
@@ -42,11 +41,9 @@ Test.AssertEqual(ExpectedCount, ActualCount, 'the sink was told once');
 // Read back THROUGH the interface the sink was handed.
 ActualCount := Spy.LastSuitePassed;
 Test.AssertEqual(ExpectedCount, ActualCount, 'and could read the counts');
-
 ExpectedOutcome := E_RunOutcome.Failed;
 ActualOutcome	:= Spy.LastSuiteOutcome;
 Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'and the outcome');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

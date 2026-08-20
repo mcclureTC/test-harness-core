@@ -2,17 +2,23 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_VerdictReportErrorIsNotAFailure" Id="{5d30e474-3cd6-47ad-919c-c60dfe729302}" SpecialFunc="None">
     <Declaration><![CDATA[// Errored is distinct from Failed: the code under test was never shown to be
+
 // wrong. A precondition was absent or a target unreachable.
+
 //
+
 // Conflating them sends whoever reads the report hunting a defect that is not
+
 // there.
 FUNCTION_BLOCK TEST_VerdictReportErrorIsNotAFailure IMPLEMENTS I_Test
 VAR
 	// A private journal and handle, so a DELIBERATE failure can be recorded and
+
 	// inspected without the suite's own verdict ever seeing it. The test itself
+
 	// passes; what it proves is that failing works.
-	Subject : TestJournal;
-	Handle	: TestVerdict;
+	Subject		   : TestJournal;
+	Handle		   : TestVerdict;
 	ExpectedStatus : E_TestStatus;
 	ActualStatus   : E_TestStatus;
 	ExpectedKind   : E_FailureKind;
@@ -31,21 +37,15 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Handle.Target(Subject);
 Subject.Begin('could not run', '');
-
 Handle.ReportError('the axis would not power');
-
 ExpectedKind := E_FailureKind.Environment;
 ActualKind	 := Subject.Kind;
 Test.AssertEqual(ExpectedKind, ActualKind, 'recorded as environmental');
-
 Subject.Finish(E_TestStatus.Passed);
-
 ExpectedStatus := E_TestStatus.Errored;
 ActualStatus   := Subject.Status;
 Test.AssertEqual(ExpectedStatus, ActualStatus, 'Errored, not Failed');
-
 Handle.Untarget();
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

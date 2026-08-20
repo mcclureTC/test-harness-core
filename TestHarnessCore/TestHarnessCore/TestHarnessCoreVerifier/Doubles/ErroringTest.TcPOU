@@ -2,7 +2,9 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="ErroringTest" Id="{f68e3fa6-263c-4b5e-8986-0b856d8d6e50}" SpecialFunc="None">
     <Declaration><![CDATA[// Reports an environmental problem rather than a failure. The code under test was
+
 // never exercised, so the run cannot be trusted - which is a different signal from
+
 // the code being wrong, and must be counted separately.
 FUNCTION_BLOCK ErroringTest IMPLEMENTS I_Test
 VAR
@@ -14,12 +16,12 @@ END_VAR]]></Declaration>
     <Folder Name="I_Test" Id="{9ccff4c3-87c3-4fa2-8f2b-cbbfef052170}" />
     <Property Name="BodyCalls" Id="{97252434-5b9f-46c6-a09d-981745a427b5}">
       <Declaration><![CDATA[// How many times a suite has run this. A re-run doubles it; an individual re-run
+
 // raises it without touching any count the suite reports.
 PROPERTY BodyCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{372b5551-e04c-464f-b0a0-105096bb6a63}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
         </Implementation>

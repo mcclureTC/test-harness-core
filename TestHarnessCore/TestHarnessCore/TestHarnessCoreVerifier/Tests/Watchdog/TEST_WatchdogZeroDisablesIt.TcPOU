@@ -2,16 +2,19 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_WatchdogZeroDisablesIt" Id="{2f088330-01aa-40fc-a9bd-cc7eb0359e4d}" SpecialFunc="None">
     <Declaration><![CDATA[// Zero disables, as every other deadline in this library does.
+
 //
+
 // For a rig where a single test legitimately outlasts any sane budget and the
+
 // operator would rather wait than be second-guessed.
 FUNCTION_BLOCK TEST_WatchdogZeroDisablesIt IMPLEMENTS I_Test
 VAR
-	Runner	 : TestRun<2>;
-	Stalled	 : StallingSuite;
-	Recorder : RecordingReporter;
-	Phase	 : DINT;
-	Ticks	 : DINT;
+	Runner		  : TestRun<2>;
+	Stalled		  : StallingSuite;
+	Recorder	  : RecordingReporter;
+	Phase		  : DINT;
+	Ticks		  : DINT;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -27,36 +30,32 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[CASE Phase OF
+	0:
+		Runner.SetLabel('a run');
+		Runner.AddReporter(Recorder);
+		Runner.AddSuite(Stalled);
+		Runner.SetWatchdog(0);
+		Phase := 1;
+		Run	  := FALSE;
 
-0:
-	Runner.SetLabel('a run');
-	Runner.AddReporter(Recorder);
-	Runner.AddSuite(Stalled);
-	Runner.SetWatchdog(0);
-	Phase := 1;
-	Run	  := FALSE;
+	1:
+		Runner.Run(Enable := TRUE);
+		Ticks := Ticks + 1;
+		IF Ticks >= 100 THEN
+			Phase := 2;
+		END_IF
 
-1:
-	Runner.Run(Enable := TRUE);
-	Ticks := Ticks + 1;
-	IF Ticks >= 100 THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+		Run := FALSE;
 
-2:
-	// A hundred scans with no progress at all, and untouched.
-	ExpectedCount := 0;
-	ActualCount	  := Runner.StalledSuites;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'a zero budget never fires');
-
-	ActualCount := Stalled.AbandonCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was abandoned');
-
-	Test.AssertFalse(Runner.IsComplete, 'the run waits, which is what was asked for');
-
-	Run := TRUE;
-
+	2:
+		// A hundred scans with no progress at all, and untouched.
+		ExpectedCount := 0;
+		ActualCount	  := Runner.StalledSuites;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'a zero budget never fires');
+		ActualCount := Stalled.AbandonCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing was abandoned');
+		Test.AssertFalse(Runner.IsComplete, 'the run waits, which is what was asked for');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

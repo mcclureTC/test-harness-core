@@ -2,9 +2,13 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="HangingTeardownTest" Id="{c0f5c382-366d-4dc6-8b62-6a2c8ea627e7}" SpecialFunc="None">
     <Declaration><![CDATA[// Passes cleanly, then hangs on the way out.
+
 //
+
 // The verdict must survive: a passing test whose cleanup hung still proved the
+
 // code correct. The overrun is a framework error, not a test failure - but on a
+
 // rig it may mean an axis left powered, so it must be loud.
 FUNCTION_BLOCK HangingTeardownTest IMPLEMENTS I_Test, I_TestTeardown
 VAR
@@ -20,8 +24,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY BodyCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{18bf104e-ab74-4bdf-b206-2dabb67d4310}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
         </Implementation>
@@ -38,6 +41,7 @@ END_VAR]]></Declaration>
 	_BodyCalls := _BodyCalls + 1;
 	Test.AssertTrue(TRUE, 'the body was fine');
 END_IF
+
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>
@@ -51,6 +55,7 @@ END_VAR]]></Declaration>
         <ST><![CDATA[IF Enable THEN
 	_TeardownCalls := _TeardownCalls + 1;
 END_IF
+
 Teardown := FALSE;]]></ST>
       </Implementation>
     </Method>
@@ -58,8 +63,7 @@ Teardown := FALSE;]]></ST>
       <Declaration><![CDATA[PROPERTY TeardownCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{17ad5b8a-ceaf-4d85-ad35-097de5ceaf37}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TeardownCalls := _TeardownCalls;]]></ST>
         </Implementation>

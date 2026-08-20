@@ -2,21 +2,27 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_SuiteWithNothingRegisteredIsComplete" Id="{53d87416-3b65-4934-b4f8-c05f4dd5622b}" SpecialFunc="None">
     <Declaration><![CDATA[// A project may legitimately deploy a suite with nothing registered. That is a
+
 // clean result, not a failure - and it must be COMPLETE, or a sequencer above it
+
 // waits forever.
+
 //
+
 // TestCount of zero is the signal for anyone who cares.
 FUNCTION_BLOCK TEST_SuiteWithNothingRegisteredIsComplete IMPLEMENTS I_Test
 VAR
 	// A private suite, driven one scan per call. The outer test spans scans by
+
 	// returning FALSE - which is the mechanism the inner suite is being asked to
+
 	// drive, one level down.
-	Inner	: TestSuite<4>;
-	Budgets : ST_TestBudgets;
-	Phase	: DINT;
-	Scans	: DINT;
-	ExpectedCount : UDINT;
-	ActualCount	  : UDINT;
+	Inner			: TestSuite<4>;
+	Budgets			: ST_TestBudgets;
+	Phase			: DINT;
+	Scans			: DINT;
+	ExpectedCount	: UDINT;
+	ActualCount		: UDINT;
 	ExpectedOutcome : E_RunOutcome;
 	ActualOutcome	: E_RunOutcome;
 END_VAR]]></Declaration>
@@ -39,34 +45,29 @@ IF Scans > 200 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Inner.SetLabel('empty');
+		Phase := 1;
+		Run	  := FALSE;
 
-0:
-	Inner.SetLabel('empty');
-	Phase := 1;
-	Run	  := FALSE;
+	1:
+		IF Inner.Run(Enable := TRUE) THEN
+			Phase := 2;
+		END_IF
 
-1:
-	IF Inner.Run(Enable := TRUE) THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+		Run := FALSE;
 
-2:
-	Test.AssertTrue(Inner.IsComplete, 'complete on the first scan');
-
-	ExpectedCount := 0;
-	ActualCount	  := Inner.TestCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'nothing registered');
-
-	ActualCount := Inner.ErrorCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and that is not an error');
-
-	ExpectedOutcome := E_RunOutcome.Passed;
-	ActualOutcome	:= Inner.Outcome;
-	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'an empty run is not red');
-
-	Run := TRUE;
-
+	2:
+		Test.AssertTrue(Inner.IsComplete, 'complete on the first scan');
+		ExpectedCount := 0;
+		ActualCount	  := Inner.TestCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'nothing registered');
+		ActualCount := Inner.ErrorCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and that is not an error');
+		ExpectedOutcome := E_RunOutcome.Passed;
+		ActualOutcome	:= Inner.Outcome;
+		Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'an empty run is not red');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

@@ -2,25 +2,42 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestRunStatus" Id="{c8fc3484-8a44-4188-ab19-c846b99d133b}">
     <Declaration><![CDATA[// The read model. Implemented by a suite, and by a sequencer aggregating suites -
+
 // which is what makes sequencers nest and lets a consumer poll one symbol
+
 // regardless of how many suites exist.
+
 //
+
 // Read-only, and separate from the driving surface on purpose: something that only
+
 // wants to know whether the run finished should not also be handed the ability to
+
 // restart it.
+
 //
+
 // Computing all of this every scan and exposing none of it is the trap. The counts
+
 // were private and absent from any interface, so nothing could ask whether a run
+
 // had finished - the only signals were a file appearing on disk and a line in a
+
 // log, both of which have to be scraped.
+
 //
+
 // A flat struct carrying the same values is published alongside, so ADS, TwinCAT
+
 // HMI and OPC UA read it as plain symbols without RPC. That is the portable path,
+
 // and the one CI polls.
 INTERFACE I_TestRunStatus EXTENDS I_Labelled]]></Declaration>
     <Property Name="ErrorCount" Id="{c138f240-399f-4f01-af72-fcc145dd94ba}">
       <Declaration><![CDATA[// Tests that could not run, plus framework errors. Kept apart from FailedCount
+
 // because a build should react differently: a failure means the code is wrong, an
+
 // error means the run cannot be trusted.
 PROPERTY ErrorCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{9626a572-8a18-4b74-9afd-531c0ef18442}">
@@ -40,8 +57,11 @@ END_VAR
     </Property>
     <Property Name="IsComplete" Id="{b4347bcd-2013-432d-8a4b-b20e2a29e5d6}">
       <Declaration><![CDATA[// Reached a terminal state - NOT 'ran everything'.
+
 //
+
 // A skipped suite reports complete. If it did not, any aggregate containing one
+
 // would wait for it forever.
 PROPERTY IsComplete : BOOL]]></Declaration>
       <Get Name="Get" Id="{95d0781c-b9c8-46e7-8b2a-7ca8e9460ec5}">
@@ -52,6 +72,7 @@ END_VAR
     </Property>
     <Property Name="Outcome" Id="{8892a887-c10e-4dd4-aced-f9ca9adacf43}">
       <Declaration><![CDATA[// Readable while the run is in progress, not only at the end: Outcome
+
 // distinguishes Running from every terminal value.
 PROPERTY Outcome : E_RunOutcome]]></Declaration>
       <Get Name="Get" Id="{9a60f19a-cd2d-4dd3-9413-4a7a171de037}">
@@ -88,11 +109,17 @@ END_VAR
     </Property>
     <Property Name="TotalDuration" Id="{5b22496c-7227-498a-90d6-dbb9729e135c}">
       <Declaration><![CDATA[// Seconds for the whole run: a suite sums its tests, a sequencer sums its
+
 // suites.
+
 //
+
 // Named apart from I_TestTiming.ElapsedTime deliberately. The two are not one
+
 // concept declared twice - one is how long a single test has been going, the
+
 // other an aggregate over many. Two interfaces declaring the same member is a
+
 // design error even when the types match, and here the meanings differ too.
 PROPERTY TotalDuration : LREAL]]></Declaration>
       <Get Name="Get" Id="{ee62fec0-dd92-4cf5-91aa-251665d4b065}">

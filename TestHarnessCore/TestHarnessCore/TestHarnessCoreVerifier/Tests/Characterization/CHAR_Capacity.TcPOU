@@ -2,36 +2,48 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_Capacity" Id="{f49e65f2-870d-4a08-a9a3-792a986c870d}" SpecialFunc="None">
     <Declaration><![CDATA[// Part of the acceptance contract: behaviour a project depending on this library
+
 // is entitled to rely on.
+
 //
+
 // Two things. CAPACITY HOLDS WHAT IT SAYS - a TestSuite<3> takes three tests and
+
 // refuses the fourth. And OVERFLOW IS REPORTED rather than suppressed: the run
+
 // still finishes and the result document is still written, because a missing
+
 // artifact reads to CI as a broken pipeline rather than as a rejected test.
+
 //
+
 // The refusal is a FRAMEWORK ERROR, not a testcase. Registration is explicit, so a
+
 // rejected test is refused at the call and never becomes a case - but it is never
+
 // silent, which is the part that matters.
 FUNCTION_BLOCK CHAR_Capacity IMPLEMENTS I_Test
 VAR
 	Inner	 : TestSuite<3>;
 	Recorder : RecordingReporter;
-	// A run, not just a suite. RunFinished is a run-level event and only a TestRun
-	// raises it - which is what produces a result document at all. Without one, a
-	// single-suite project writes nothing, and this test is what found that.
-	Runner	 : TestRun<2>;
-	Budgets	 : ST_TestBudgets;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	A : PassingTest;
-	B : PassingTest;
-	C : PassingTest;
-	D : PassingTest;
 
-	AcceptedA : BOOL;
-	AcceptedB : BOOL;
-	AcceptedC : BOOL;
-	AcceptedD : BOOL;
+	// A run, not just a suite. RunFinished is a run-level event and only a TestRun
+
+	// raises it - which is what produces a result document at all. Without one, a
+
+	// single-suite project writes nothing, and this test is what found that.
+	Runner		  : TestRun<2>;
+	Budgets		  : ST_TestBudgets;
+	Phase		  : DINT;
+	Scans		  : DINT;
+	A			  : PassingTest;
+	B			  : PassingTest;
+	C			  : PassingTest;
+	D			  : PassingTest;
+	AcceptedA	  : BOOL;
+	AcceptedB	  : BOOL;
+	AcceptedC	  : BOOL;
+	AcceptedD	  : BOOL;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -54,51 +66,47 @@ IF Scans > 500 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Inner.SetLabel('CHAR_Capacity_Subject');
+		Runner.SetLabel('CHAR_Capacity_Subject_Run');
 
-0:
-	Inner.SetLabel('CHAR_Capacity_Subject');
+		// Attached to the RUN, which pushes it into every suite. One attachment point.
+		Runner.AddReporter(Recorder);
+		Runner.AddSuite(Inner);
+		AcceptedA := Inner.Register(A, 'A', Budgets);
+		AcceptedB := Inner.Register(B, 'B', Budgets);
+		AcceptedC := Inner.Register(C, 'C', Budgets);
 
-	Runner.SetLabel('CHAR_Capacity_Subject_Run');
-	// Attached to the RUN, which pushes it into every suite. One attachment point.
-	Runner.AddReporter(Recorder);
-	Runner.AddSuite(Inner);
+		// One too many.
+		AcceptedD := Inner.Register(D, 'D', Budgets);
+		Phase	  := 1;
+		Run		  := FALSE;
 
-	AcceptedA := Inner.Register(A, 'A', Budgets);
-	AcceptedB := Inner.Register(B, 'B', Budgets);
-	AcceptedC := Inner.Register(C, 'C', Budgets);
-	// One too many.
-	AcceptedD := Inner.Register(D, 'D', Budgets);
+	1:
+		IF Runner.Run(Enable := TRUE) THEN
+			Phase := 2;
+		END_IF
 
-	Phase := 1;
-	Run	  := FALSE;
+		Run := FALSE;
 
-1:
-	IF Runner.Run(Enable := TRUE) THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+	2:
+		Test.AssertTrue(AcceptedA, 'the first fits');
+		Test.AssertTrue(AcceptedB, 'the second fits');
+		Test.AssertTrue(AcceptedC, 'three tests fit a TestSuite<3>');
+		Test.AssertFalse(AcceptedD, 'the fourth overflows');
 
-2:
-	Test.AssertTrue(AcceptedA, 'the first fits');
-	Test.AssertTrue(AcceptedB, 'the second fits');
-	Test.AssertTrue(AcceptedC, 'three tests fit a TestSuite<3>');
-	Test.AssertFalse(AcceptedD, 'the fourth overflows');
+		// Never silent.
+		Test.AssertTrue(Recorder.ErrorCount > 0, 'the overflow was reported');
+		Test.AssertTrue(Recorder.ErrorContains('D'), 'and named the test it refused');
+		ExpectedCount := 3;
+		ActualCount	  := Recorder.CaseCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'three cases were recorded');
 
-	// Never silent.
-	Test.AssertTrue(Recorder.ErrorCount > 0, 'the overflow was reported');
-	Test.AssertTrue(Recorder.ErrorContains('D'), 'and named the test it refused');
-
-	ExpectedCount := 3;
-	ActualCount	  := Recorder.CaseCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'three cases were recorded');
-
-	// Overflow must not suppress the artifact.
-	ExpectedCount := 1;
-	ActualCount	  := Recorder.SaveCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and the document was still written');
-
-	Run := TRUE;
-
+		// Overflow must not suppress the artifact.
+		ExpectedCount := 1;
+		ActualCount	  := Recorder.SaveCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and the document was still written');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

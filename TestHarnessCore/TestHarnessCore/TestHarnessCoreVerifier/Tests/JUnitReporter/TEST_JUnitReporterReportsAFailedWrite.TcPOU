@@ -2,23 +2,29 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JUnitReporterReportsAFailedWrite" Id="{00f2fd4a-cb5b-498f-a900-457c0d87275a}" SpecialFunc="None">
     <Declaration><![CDATA[// R3, and the reason this test exists at all.
+
 //
+
 // Discarding the FALSE and the HRESULT from SaveDocumentToFile would make a bad
+
 // path indistinguishable from a suite that never finished. A successful write
+
 // proves nothing about that; only a failing one does.
+
 //
+
 // The path names a folder that does not exist.
 FUNCTION_BLOCK TEST_JUnitReporterReportsAFailedWrite IMPLEMENTS I_Test
 VAR
-	Writer : TestJUnitReporter;
-	Spy	   : SpyReporter;
-	Tally  : TestRunTally;
-	Phase  : DINT;
-	Scans  : DINT;
-	BadPath : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\NoSuchFolder_TestHarness\r.xml';
+	Writer		  : TestJUnitReporter;
+	Spy			  : SpyReporter;
+	Tally		  : TestRunTally;
+	Phase		  : DINT;
+	Scans		  : DINT;
+	BadPath		  : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\NoSuchFolder_TestHarness\r.xml';
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
-	Error : HRESULT;
+	Error		  : HRESULT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -39,61 +45,64 @@ IF Scans > 2000 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Writer.SetPath(BadPath);
+		Writer.AttachErrorSink(Spy);
+		Tally.SetLabel('a suite');
+		Tally.Begin(1);
+		Writer.TestStarted(SuiteLabel := 'a suite', TestLabel := 'a test', Location := 'Verifier.Somewhere');
+		Writer.CheckPassed(StepLabel := '', Detail := '');
+		Writer.CheckFailed(StepLabel  := 'Home',
+						   Kind		  := E_FailureKind.ValueMismatch,
+						   Expected	  := '1',
+						   Actual	  := '2',
+						   Diagnostic := 'expected 1, actual 2',
+						   Message	  := 'deliberate');
 
-0:
-	Writer.SetPath(BadPath);
-	Writer.AttachErrorSink(Spy);
+		Writer.TestFinished(SuiteLabel	  := 'a suite',
+							TestLabel	  := 'a test',
+							Location	  := 'Verifier.Somewhere',
+							Status		  := E_TestStatus.Failed,
+							Kind		  := E_FailureKind.ValueMismatch,
+							Summary		  := 'Home: expected 1, actual 2 - deliberate',
+							ElapsedTime	  := 0.01,
+							ElapsedCycles := 1,
+							Assertions	  := 2);
 
-	Tally.SetLabel('a suite');
-	Tally.Begin(1);
+		Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.01);
+		Tally.Finish();
+		Writer.SuiteFinished(Tally);
+		Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
+		Phase := 1;
+		Run	  := FALSE;
 
-	Writer.TestStarted(SuiteLabel := 'a suite', TestLabel := 'a test',
-					   Location := 'Verifier.Somewhere');
-	Writer.CheckPassed(StepLabel := '', Detail := '');
-	Writer.CheckFailed(StepLabel := 'Home', Kind := E_FailureKind.ValueMismatch,
-					   Expected := '1', Actual := '2',
-					   Diagnostic := 'expected 1, actual 2', Message := 'deliberate');
-	Writer.TestFinished(SuiteLabel := 'a suite', TestLabel := 'a test',
-						Location := 'Verifier.Somewhere', Status := E_TestStatus.Failed,
-						Kind := E_FailureKind.ValueMismatch,
-						Summary := 'Home: expected 1, actual 2 - deliberate',
-						ElapsedTime := 0.01, ElapsedCycles := 1, Assertions := 2);
+	1:
+		Writer.CyclicLogic();
+		IF Writer.IsIdle THEN
+			Phase := 2;
+		END_IF
 
-	Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.01);
-	Tally.Finish();
-	Writer.SuiteFinished(Tally);
-	Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
-	Phase := 1;
-	Run	  := FALSE;
+		Run := FALSE;
 
-1:
-	Writer.CyclicLogic();
-	IF Writer.IsIdle THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+	2:
+		ExpectedCount := 0;
+		ActualCount	  := Writer.FilesWritten;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was written');
+		ExpectedCount := 1;
+		ActualCount	  := Writer.WriteFailures;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and the failure was counted');
 
-2:
-	ExpectedCount := 0;
-	ActualCount	  := Writer.FilesWritten;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was written');
+		// Not swallowed: the HRESULT says WHY.
+		Error := Writer.LastError;
+		Test.AssertTrue(Error <> 0, 'the HRESULT was kept');
 
-	ExpectedCount := 1;
-	ActualCount	  := Writer.WriteFailures;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and the failure was counted');
+		// And it reached a sink, so the failure is visible without inspecting this
 
-	// Not swallowed: the HRESULT says WHY.
-	Error := Writer.LastError;
-	Test.AssertTrue(Error <> 0, 'the HRESULT was kept');
-
-	// And it reached a sink, so the failure is visible without inspecting this
-	// object.
-	ExpectedCount := 1;
-	ActualCount	  := Spy.FrameworkErrorCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and was reported as a framework error');
-
-	Run := TRUE;
-
+		// object.
+		ExpectedCount := 1;
+		ActualCount	  := Spy.FrameworkErrorCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and was reported as a framework error');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

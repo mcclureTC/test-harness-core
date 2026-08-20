@@ -2,26 +2,38 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_WallClockTimeout" Id="{57fbfd8a-8cfe-412b-8c7c-2a96f33fbfe5}" SpecialFunc="None">
     <Declaration><![CDATA[// Part of the acceptance contract: the wall-clock deadline fires, and says so.
+
 //
+
 // The scan budget is the easier one to reach for and the easier one to test, so
+
 // this is the deadline most likely to go unexercised.
+
 //
+
 // The inner test never finishes, so only a deadline can end it. Its CYCLE budget
+
 // is set to zero so the wall clock is unambiguously what fired; without that, at a
+
 // fast task period a cycle budget could expire first and the test would pass for
+
 // the wrong reason.
+
 //
+
 // The second assertion is the one that matters: the failure must NAME the wall
+
 // clock. A deadline that fires correctly but says the wrong thing is still a
+
 // defect - the message is what someone reads at three in the morning.
 FUNCTION_BLOCK CHAR_WallClockTimeout IMPLEMENTS I_Test
 VAR
-	Inner	 : TestSuite<4>;
-	Recorder : RecordingReporter;
-	Budgets	 : ST_TestBudgets;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	Spinner : HangingBodyTest;
+	Inner		  : TestSuite<4>;
+	Recorder	  : RecordingReporter;
+	Budgets		  : ST_TestBudgets;
+	Phase		  : DINT;
+	Scans		  : DINT;
+	Spinner		  : HangingBodyTest;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -44,40 +56,33 @@ IF Scans > 500 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		// Zero disables the scan budget. Explicitly SET, not merely left alone - an
+		// unset field inherits the suite default instead of disabling anything.
+		Budgets.Body.Cycles		  := 0;
+		Budgets.Body.IsCyclesSet  := TRUE;
+		Budgets.Body.Timeout	  := T#200MS;
+		Budgets.Body.IsTimeoutSet := TRUE;
+		Inner.SetLabel('CHAR_WallClock_Subject');
+		Inner.AddReporter(Recorder);
+		Inner.Register(Spinner, 'Spinner', Budgets);
+		Phase := 1;
+		Run	  := FALSE;
 
-0:
-	// Zero disables the scan budget. Explicitly SET, not merely left alone - an
-	// unset field inherits the suite default instead of disabling anything.
-	Budgets.Body.Cycles		  := 0;
-	Budgets.Body.IsCyclesSet  := TRUE;
-	Budgets.Body.Timeout	  := T#200MS;
-	Budgets.Body.IsTimeoutSet := TRUE;
+	1:
+		IF Inner.Run(Enable := TRUE) THEN
+			Phase := 2;
+		END_IF
 
-	Inner.SetLabel('CHAR_WallClock_Subject');
-	Inner.AddReporter(Recorder);
-	Inner.Register(Spinner, 'Spinner', Budgets);
-	Phase := 1;
-	Run	  := FALSE;
+		Run := FALSE;
 
-1:
-	IF Inner.Run(Enable := TRUE) THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
-
-2:
-	ExpectedCount := 1;
-	ActualCount	  := Recorder.StatFailures;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the spinning test failed');
-
-	Test.AssertTrue(Recorder.CaseFailureKind('Spinner') = E_FailureKind.Timeout,
-					'and failed as a timeout');
-
-	Test.AssertTrue(Recorder.FailureContains('Spinner', 'wall time'),
-					'the failure names the wall-clock deadline');
-
-	Run := TRUE;
-
+	2:
+		ExpectedCount := 1;
+		ActualCount	  := Recorder.StatFailures;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the spinning test failed');
+		Test.AssertTrue(Recorder.CaseFailureKind('Spinner') = E_FailureKind.Timeout, 'and failed as a timeout');
+		Test.AssertTrue(Recorder.FailureContains('Spinner', 'wall time'), 'the failure names the wall-clock deadline');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

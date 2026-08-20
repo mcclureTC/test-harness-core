@@ -2,17 +2,22 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_EventReporterWorksThroughTheFanout" Id="{3db1b01b-9f08-4df4-8045-22c56a99b94b}" SpecialFunc="None">
     <Declaration><![CDATA[// It is an ordinary I_TestReporter, so the fan-out takes it beside any other sink
+
 // and both receive everything.
+
 //
+
 // Also the case that matters for a build: the ADSLOGSTR sink and the EventLogger
+
 // sink attached together, because they answer different questions and a rig
+
 // usually wants both.
 FUNCTION_BLOCK TEST_EventReporterWorksThroughTheFanout IMPLEMENTS I_Test
 VAR
-	Fanout	  : TestReporterFanout;
-	Events	  : TestEventReporter;
+	Fanout		  : TestReporterFanout;
+	Events		  : TestEventReporter;
 	LogSink		  : TestLogReporter;
-	Attached  : BOOL;
+	Attached	  : BOOL;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -29,13 +34,10 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Attached := Fanout.Attach(Events) AND Fanout.Attach(LogSink);
 Test.AssertTrue(Attached, 'both sinks attached');
-
 Fanout.FrameworkError(Source := 'the fan-out', Message := 'reached both sinks');
-
 ExpectedCount := 1;
 ActualCount	  := Events.EventsSent;
 Test.AssertEqual(ExpectedCount, ActualCount, 'the event sink raised one');
-
 ActualCount := LogSink.FrameworkErrorsLogged;
 Test.AssertEqual(ExpectedCount, ActualCount, 'and the log sink wrote one');
 
@@ -48,7 +50,6 @@ Fanout.Suspend();
 Fanout.FrameworkError(Source := 'the fan-out', Message := 'must not be raised');
 ActualCount := Events.EventsSent;
 Test.AssertEqual(ExpectedCount, ActualCount, 'and Suspend silences it too');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

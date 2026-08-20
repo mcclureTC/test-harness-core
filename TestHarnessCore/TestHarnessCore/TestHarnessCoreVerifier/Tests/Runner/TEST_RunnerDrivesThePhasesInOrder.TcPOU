@@ -2,26 +2,30 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RunnerDrivesThePhasesInOrder" Id="{324de54d-8862-4be6-bab4-0ea652562644}" SpecialFunc="None">
     <Declaration><![CDATA[// Setup, then body, then teardown - each exactly once, in that order.
+
 //
+
 // Order is the whole contract of the three-phase model and nothing else in the
+
 // library checks it. Teardown also reads the verdict, which must already be
+
 // terminal by the time it runs.
 FUNCTION_BLOCK TEST_RunnerDrivesThePhasesInOrder IMPLEMENTS I_Test
 VAR
 	// A private runner, driven one scan per call. The outer test spans scans by
-	// returning FALSE, which is exactly the mechanism being verified one level down.
-	Registry : TestRegistry<1>;
-	Runner	 : TestRunner;
-	Handle	 : TestVerdict;
-	Budgets	 : ST_TestBudgets;
-	Journal	 : REFERENCE TO TestJournal;
-	Slot	 : ST_TestSlot;
-	Outcome	 : E_PhaseOutcome;
-	Loaded	 : BOOL;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	Subject : OrderedHooksTest;
 
+	// returning FALSE, which is exactly the mechanism being verified one level down.
+	Registry	   : TestRegistry<1>;
+	Runner		   : TestRunner;
+	Handle		   : TestVerdict;
+	Budgets		   : ST_TestBudgets;
+	Journal		   : REFERENCE TO TestJournal;
+	Slot		   : ST_TestSlot;
+	Outcome		   : E_PhaseOutcome;
+	Loaded		   : BOOL;
+	Phase		   : DINT;
+	Scans		   : DINT;
+	Subject		   : OrderedHooksTest;
 	ExpectedCount  : UDINT;
 	ActualCount	   : UDINT;
 	ExpectedStatus : E_TestStatus;
@@ -46,52 +50,46 @@ IF Scans > 200 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Registry.TryClaim(Subject, 'ordered', Budgets);
+		Runner.Attach(Roster := Registry, Verdict := Handle);
+		Slot   := Registry.Slot(0);
+		Loaded := Runner.Load(Slot);
+		Phase  := 1;
+		Run	   := FALSE;
 
-0:
-	Registry.TryClaim(Subject, 'ordered', Budgets);
-	Runner.Attach(Roster := Registry, Verdict := Handle);
-	Slot   := Registry.Slot(0);
-	Loaded := Runner.Load(Slot);
-	Phase   := 1;
-	Run	   := FALSE;
+	1:
+		Outcome := Runner.Advance(Enable := TRUE);
+		IF Outcome <> E_PhaseOutcome.Running THEN
+			Phase := 2;
+		END_IF
 
-1:
-	Outcome := Runner.Advance(Enable := TRUE);
-	IF Outcome <> E_PhaseOutcome.Running THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+		Run := FALSE;
 
-2:
-	Test.AssertTrue(Loaded, 'the runner accepted the test');
-	Test.AssertTrue(Outcome = E_PhaseOutcome.Finished, 'finished cleanly');
+	2:
+		Test.AssertTrue(Loaded, 'the runner accepted the test');
+		Test.AssertTrue(Outcome = E_PhaseOutcome.Finished, 'finished cleanly');
+		ExpectedCount := 1;
+		ActualCount	  := Subject.SetupCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'setup called once');
+		ActualCount := Subject.BodyCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'body called once');
+		ActualCount := Subject.TeardownCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'teardown called once');
+		Test.AssertTrue(Subject.BodyAfterSetup, 'body ran after setup');
+		Test.AssertTrue(Subject.TeardownAfterBody, 'teardown ran after the body');
 
-	ExpectedCount := 1;
-	ActualCount	  := Subject.SetupCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'setup called once');
+		// Terminal before teardown, so cleanup can branch on the outcome.
+		ExpectedStatus := E_TestStatus.Passed;
+		ActualStatus   := Subject.StatusInTeardown;
+		Test.AssertEqual(ExpectedStatus, ActualStatus, 'teardown saw a settled verdict');
+		Journal REF= Registry.Journal(0);
+		IF __ISVALIDREF(Journal) THEN
+			ActualStatus := Journal.Status;
+			Test.AssertEqual(ExpectedStatus, ActualStatus, 'and the journal agrees');
+		END_IF
 
-	ActualCount := Subject.BodyCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'body called once');
-
-	ActualCount := Subject.TeardownCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'teardown called once');
-
-	Test.AssertTrue(Subject.BodyAfterSetup, 'body ran after setup');
-	Test.AssertTrue(Subject.TeardownAfterBody, 'teardown ran after the body');
-
-	// Terminal before teardown, so cleanup can branch on the outcome.
-	ExpectedStatus := E_TestStatus.Passed;
-	ActualStatus   := Subject.StatusInTeardown;
-	Test.AssertEqual(ExpectedStatus, ActualStatus, 'teardown saw a settled verdict');
-
-	Journal REF= Registry.Journal(0);
-	IF __ISVALIDREF(Journal) THEN
-		ActualStatus := Journal.Status;
-		Test.AssertEqual(ExpectedStatus, ActualStatus, 'and the journal agrees');
-	END_IF
-
-	Run := TRUE;
-
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

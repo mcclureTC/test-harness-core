@@ -2,19 +2,23 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_VerdictRecordsAFailure" Id="{777d78fc-39d5-4b55-9889-9a26cf30aabc}" SpecialFunc="None">
     <Declaration><![CDATA[// The failure path, exercised deliberately.
+
 //
+
 // Sixteen green tests prove nothing if a check cannot go red. This drives a
+
 // mismatched AssertEqual into a private journal and asserts the journal noticed.
 FUNCTION_BLOCK TEST_VerdictRecordsAFailure IMPLEMENTS I_Test
 VAR
 	// A private journal and handle, so a DELIBERATE failure can be recorded and
-	// inspected without the suite's own verdict ever seeing it. The test itself
-	// passes; what it proves is that failing works.
-	Subject : TestJournal;
-	Handle	: TestVerdict;
-	ExpectedValue : DINT := 1;
-	ActualValue	  : DINT := 2;
 
+	// inspected without the suite's own verdict ever seeing it. The test itself
+
+	// passes; what it proves is that failing works.
+	Subject		   : TestJournal;
+	Handle		   : TestVerdict;
+	ExpectedValue  : DINT := 1;
+	ActualValue	   : DINT := 2;
 	ExpectedKind   : E_FailureKind;
 	ActualKind	   : E_FailureKind;
 	ExpectedStatus : E_TestStatus;
@@ -38,25 +42,21 @@ Subject.Begin('deliberate', '');
 
 // 1 <> 2. If this records a pass, every result in this project is worthless.
 Handle.AssertEqual(ExpectedValue, ActualValue, 'one is not two');
-
 ExpectedCount := 1;
 ActualCount	  := Subject.AssertionCount;
 Test.AssertEqual(ExpectedCount, ActualCount, 'the check was counted');
-
 ExpectedKind := E_FailureKind.ValueMismatch;
 ActualKind	 := Subject.Kind;
 Test.AssertEqual(ExpectedKind, ActualKind, 'recorded as a value mismatch');
 
 // Passed is what the runner asks for when a body returns TRUE. A recorded failure
+
 // must override it.
 Subject.Finish(E_TestStatus.Passed);
-
 ExpectedStatus := E_TestStatus.Failed;
 ActualStatus   := Subject.Status;
 Test.AssertEqual(ExpectedStatus, ActualStatus, 'a recorded failure overrides Passed');
-
 Handle.Untarget();
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

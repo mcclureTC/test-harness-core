@@ -2,25 +2,34 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="ST_TestBudget" Id="{9de90f28-1b2f-4bda-8d89-ad4b7653a3fb}">
     <Declaration><![CDATA[// A deadline for one phase of one test, in both units.
+
 //
+
 // The two units are tracked independently. A test naming its own wall-clock
+
 // budget still inherits the suite's scan budget, and the reverse.
+
 //
+
 // ZERO DISABLES. A budget of zero means no deadline for that unit, which is why
+
 // "not specified" needs its own flag and cannot be inferred from the value. The
+
 // two meanings are different and both are needed: a long-running rig test may
+
 // legitimately want no scan budget at all.
 TYPE ST_TestBudget :
-STRUCT
-	// Scan budget. The reproducible unit - prefer it. Zero disables.
-	Cycles		: UDINT;
-	// FALSE means "not specified here": inherit the suite default at registration,
-	// or leave the existing default unchanged when setting defaults.
-	IsCyclesSet : BOOL;
-	// Wall-clock budget. Varies with jitter across targets. Zero disables.
-	Timeout		: TIME;
-	IsTimeoutSet	: BOOL;
-END_STRUCT
+	STRUCT
+		// Scan budget. The reproducible unit - prefer it. Zero disables.
+		Cycles : UDINT;
+		// FALSE means "not specified here": inherit the suite default at registration,
+
+		// or leave the existing default unchanged when setting defaults.
+		IsCyclesSet : BOOL;
+		// Wall-clock budget. Varies with jitter across targets. Zero disables.
+		Timeout		 : TIME;
+		IsTimeoutSet : BOOL;
+	END_STRUCT
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

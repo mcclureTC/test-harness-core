@@ -2,31 +2,37 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RunnerAbandonMakesOneFinalCall" Id="{0e0e2b77-2097-4b85-b2aa-61db4010b983}" SpecialFunc="None">
     <Declaration><![CDATA[// Dropping Enable abandons the test. The phase in flight gets ONE final call so
+
 // it can put its own state back, and the return is ignored - a test that hung will
+
 // not answer that call either, and waiting for it would reproduce the stall the
+
 // design removes.
+
 //
+
 // Teardown is NOT run. Abandonment is the suite being switched off, not a test
+
 // finishing, and calling cleanup on a half-torn-down rig is its own hazard.
 FUNCTION_BLOCK TEST_RunnerAbandonMakesOneFinalCall IMPLEMENTS I_Test
 VAR
 	// A private runner, driven one scan per call. The outer test spans scans by
-	// returning FALSE, which is exactly the mechanism being verified one level down.
-	Registry : TestRegistry<1>;
-	Runner	 : TestRunner;
-	Handle	 : TestVerdict;
-	Budgets	 : ST_TestBudgets;
-	Journal	 : REFERENCE TO TestJournal;
-	Slot	 : ST_TestSlot;
-	Outcome	 : E_PhaseOutcome;
-	Loaded	 : BOOL;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	Subject : HangingBodyTest;
 
-	ExpectedOne	 : UDINT;
-	ExpectedZero : UDINT;
-	ActualCount	 : UDINT;
+	// returning FALSE, which is exactly the mechanism being verified one level down.
+	Registry	   : TestRegistry<1>;
+	Runner		   : TestRunner;
+	Handle		   : TestVerdict;
+	Budgets		   : ST_TestBudgets;
+	Journal		   : REFERENCE TO TestJournal;
+	Slot		   : ST_TestSlot;
+	Outcome		   : E_PhaseOutcome;
+	Loaded		   : BOOL;
+	Phase		   : DINT;
+	Scans		   : DINT;
+	Subject		   : HangingBodyTest;
+	ExpectedOne	   : UDINT;
+	ExpectedZero   : UDINT;
+	ActualCount	   : UDINT;
 	ExpectedStatus : E_TestStatus;
 	ActualStatus   : E_TestStatus;
 END_VAR]]></Declaration>
@@ -49,54 +55,51 @@ IF Scans > 200 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Registry.TryClaim(Subject, 'abandoned', Budgets);
+		Runner.Attach(Roster := Registry, Verdict := Handle);
+		Slot   := Registry.Slot(0);
+		Loaded := Runner.Load(Slot);
+		Phase  := 1;
+		Run	   := FALSE;
 
-0:
-	Registry.TryClaim(Subject, 'abandoned', Budgets);
-	Runner.Attach(Roster := Registry, Verdict := Handle);
-	Slot   := Registry.Slot(0);
-	Loaded := Runner.Load(Slot);
-	Phase   := 1;
-	Run	   := FALSE;
+	1:
+		// Let it run a couple of scans first, so there is something to abandon.
+		Outcome := Runner.Advance(Enable := TRUE);
+		IF Subject.BodyCalls >= 2 THEN
+			Phase := 2;
+		END_IF
 
-1:
-	// Let it run a couple of scans first, so there is something to abandon.
-	Outcome := Runner.Advance(Enable := TRUE);
-	IF Subject.BodyCalls >= 2 THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+		Run := FALSE;
 
-2:
-	Outcome := Runner.Advance(Enable := FALSE);
-	Phase	:= 3;
-	Run		:= FALSE;
+	2:
+		Outcome := Runner.Advance(Enable := FALSE);
+		Phase	:= 3;
+		Run		:= FALSE;
 
-3:
-	// A second abandon must not produce a second final call.
-	Outcome := Runner.Advance(Enable := FALSE);
-	Phase	:= 4;
-	Run		:= FALSE;
+	3:
+		// A second abandon must not produce a second final call.
+		Outcome := Runner.Advance(Enable := FALSE);
+		Phase	:= 4;
+		Run		:= FALSE;
 
-4:
-	ExpectedOne := 1;
-	ActualCount := Subject.AbandonCalls;
-	Test.AssertEqual(ExpectedOne, ActualCount, 'exactly one call with Enable FALSE');
+	4:
+		ExpectedOne := 1;
+		ActualCount := Subject.AbandonCalls;
+		Test.AssertEqual(ExpectedOne, ActualCount, 'exactly one call with Enable FALSE');
+		ExpectedZero := 0;
+		ActualCount	 := Subject.TeardownCalls;
+		Test.AssertEqual(ExpectedZero, ActualCount, 'teardown was not run');
+		Journal REF= Registry.Journal(0);
+		IF __ISVALIDREF(Journal) THEN
+			// Errored, not Failed: the code under test was never shown to be wrong. Not
+			// Skipped either - an abandoned run must not read as a clean one.
+			ExpectedStatus := E_TestStatus.Errored;
+			ActualStatus   := Journal.Status;
+			Test.AssertEqual(ExpectedStatus, ActualStatus, 'abandoned tests are Errored');
+		END_IF
 
-	ExpectedZero := 0;
-	ActualCount	 := Subject.TeardownCalls;
-	Test.AssertEqual(ExpectedZero, ActualCount, 'teardown was not run');
-
-	Journal REF= Registry.Journal(0);
-	IF __ISVALIDREF(Journal) THEN
-		// Errored, not Failed: the code under test was never shown to be wrong. Not
-		// Skipped either - an abandoned run must not read as a clean one.
-		ExpectedStatus := E_TestStatus.Errored;
-		ActualStatus   := Journal.Status;
-		Test.AssertEqual(ExpectedStatus, ActualStatus, 'abandoned tests are Errored');
-	END_IF
-
-	Run := TRUE;
-
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

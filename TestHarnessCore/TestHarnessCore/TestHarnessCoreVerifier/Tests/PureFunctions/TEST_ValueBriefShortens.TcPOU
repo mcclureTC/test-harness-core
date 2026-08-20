@@ -2,22 +2,29 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_ValueBriefShortens" Id="{d492f4f4-5800-4506-8d40-51762ccaca35}" SpecialFunc="None">
     <Declaration><![CDATA[// NEW, not ported - TestValueBrief did not exist in the original.
+
 //
+
 // It is what keeps a composed diagnostic inside CONCAT's 255-character ceiling:
+
 // two full values plus the words between them do not fit, so the summary gets
+
 // shortened copies while the full values travel in their own fields.
+
 //
+
 // The budget is a constant inside the function rather than a parameter, so that
+
 // four call sites cannot carry four copies of the number. That makes the exact
+
 // value an implementation detail - these tests assert the BEHAVIOUR, not the 80.
 FUNCTION_BLOCK TEST_ValueBriefShortens IMPLEMENTS I_Test
 VAR
-	Short	  : T_MaxString := 'homed';
-	Long	  : T_MaxString;
-	Result	  : T_MaxString;
-	Empty	  : T_MaxString := '';
-	i		  : DINT;
-
+	Short		 : T_MaxString := 'homed';
+	Long		 : T_MaxString;
+	Result		 : T_MaxString;
+	Empty		 : T_MaxString := '';
+	i			 : DINT;
 	ExpectedText : T_MaxString;
 	ActualText	 : T_MaxString;
 END_VAR]]></Declaration>
@@ -42,7 +49,6 @@ END_FOR
 ExpectedText := Short;
 ActualText	 := TestValueBrief(Short);
 Test.AssertEqual(ExpectedText, ActualText, 'a short value is returned unchanged');
-
 ExpectedText := Empty;
 ActualText	 := TestValueBrief(Empty);
 Test.AssertEqual(ExpectedText, ActualText, 'and so is an empty one');
@@ -53,12 +59,12 @@ Test.AssertTrue(LEN(Result) < LEN(Long), 'a long value is shortened');
 Test.AssertTrue(FIND(Result, '...') > 0, 'and marked with an ellipsis');
 
 // The point of the budget: two of these plus the words between them must still
+
 // fit in a T_MaxString, which CONCAT cannot exceed.
 Test.AssertTrue(LEN(Result) <= 100, 'shortened well inside the 255 ceiling');
 
 // The start of the value survives, which is what makes it useful at all.
 Test.AssertTrue(FIND(Result, 'ABCDEFGHIJ') = 1, 'the beginning of the value is kept');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

@@ -2,8 +2,11 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_ArbiterNotExhaustedWhileLastTestRuns" Id="{cc946f1a-41ef-4f9e-b29c-8e537deb37b7}" SpecialFunc="None">
     <Declaration><![CDATA[// IsExhausted needs BOTH conditions: nothing left to hand out AND nothing
+
 // running. After the last test is selected there is nothing left to give, but that
+
 // test is still going - reporting the suite complete there would cut it off
+
 // mid-run and lose its verdict.
 FUNCTION_BLOCK TEST_ArbiterNotExhaustedWhileLastTestRuns IMPLEMENTS I_Test
 VAR
@@ -24,19 +27,14 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Registry.TryClaim(Fakes[0], 'Only one', Budgets);
-
 Arbiter.Attach(Registry);
 Arbiter.Begin();
 Arbiter.Advance();
-
 Test.AssertTrue(Arbiter.HasCurrent, 'the one test is running');
 Test.AssertFalse(Arbiter.IsExhausted, 'NOT exhausted while it runs');
-
 Arbiter.Advance();
-
 Test.AssertFalse(Arbiter.HasCurrent, 'nothing running now');
 Test.AssertTrue(Arbiter.IsExhausted, 'exhausted once it is done');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

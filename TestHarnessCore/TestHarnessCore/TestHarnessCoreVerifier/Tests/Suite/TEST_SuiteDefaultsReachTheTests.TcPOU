@@ -2,22 +2,29 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_SuiteDefaultsReachTheTests" Id="{67314c4e-462e-4631-a530-1bb85157e601}" SpecialFunc="None">
     <Declaration><![CDATA[// A suite-wide deadline reaches every test that did not claim one, and reaches it
+
 // when the RUN starts rather than at registration - a default may be set after
+
 // some tests are already registered.
+
 //
+
 // The subject hangs. With no default it would run forever and the watchdog would
+
 // fail this test; with the default applied it times out and is reported Failed.
 FUNCTION_BLOCK TEST_SuiteDefaultsReachTheTests IMPLEMENTS I_Test
 VAR
 	// A private suite, driven one scan per call. The outer test spans scans by
+
 	// returning FALSE - which is the mechanism the inner suite is being asked to
+
 	// drive, one level down.
-	Inner	: TestSuite<4>;
-	Budgets : ST_TestBudgets;
-	Phase	: DINT;
-	Scans	: DINT;
-	Hangs	 : HangingBodyTest;
-	Defaults : ST_TestBudgets;
+	Inner		  : TestSuite<4>;
+	Budgets		  : ST_TestBudgets;
+	Phase		  : DINT;
+	Scans		  : DINT;
+	Hangs		  : HangingBodyTest;
+	Defaults	  : ST_TestBudgets;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -40,38 +47,33 @@ IF Scans > 200 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Inner.SetLabel('inner');
 
-0:
-	Inner.SetLabel('inner');
-	// Registered BEFORE the default is set, which is the case that matters.
-	Inner.Register(Hangs, 'hangs', Budgets);
+		// Registered BEFORE the default is set, which is the case that matters.
+		Inner.Register(Hangs, 'hangs', Budgets);
+		Defaults.Body.Cycles	  := 4;
+		Defaults.Body.IsCyclesSet := TRUE;
+		Inner.SetDefaults(Defaults);
+		Phase := 1;
+		Run	  := FALSE;
 
-	Defaults.Body.Cycles	  := 4;
-	Defaults.Body.IsCyclesSet := TRUE;
-	Inner.SetDefaults(Defaults);
+	1:
+		IF Inner.Run(Enable := TRUE) THEN
+			Phase := 2;
+		END_IF
 
-	Phase := 1;
-	Run	  := FALSE;
+		Run := FALSE;
 
-1:
-	IF Inner.Run(Enable := TRUE) THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
-
-2:
-	ExpectedCount := 4;
-	ActualCount	  := Hangs.BodyCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the default budget bounded it');
-
-	ExpectedCount := 1;
-	ActualCount	  := Inner.FailedCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and it was reported as a failure');
-
-	Test.AssertTrue(Inner.IsComplete, 'the suite completed rather than stalling');
-
-	Run := TRUE;
-
+	2:
+		ExpectedCount := 4;
+		ActualCount	  := Hangs.BodyCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the default budget bounded it');
+		ExpectedCount := 1;
+		ActualCount	  := Inner.FailedCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and it was reported as a failure');
+		Test.AssertTrue(Inner.IsComplete, 'the suite completed rather than stalling');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

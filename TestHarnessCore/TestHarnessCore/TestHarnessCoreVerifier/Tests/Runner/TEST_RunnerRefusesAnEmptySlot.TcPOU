@@ -2,21 +2,23 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RunnerRefusesAnEmptySlot" Id="{a7530d0d-44f2-4e24-a4de-8266afd5c707}" SpecialFunc="None">
     <Declaration><![CDATA[// A slot carrying no test is refused, and nothing is loaded. A caller that has
+
 // miscounted gets FALSE and an Idle runner rather than a dereferenced null.
 FUNCTION_BLOCK TEST_RunnerRefusesAnEmptySlot IMPLEMENTS I_Test
 VAR
 	// A private runner, driven one scan per call. The outer test spans scans by
+
 	// returning FALSE, which is exactly the mechanism being verified one level down.
-	Registry : TestRegistry<1>;
-	Runner	 : TestRunner;
-	Handle	 : TestVerdict;
-	Budgets	 : ST_TestBudgets;
-	Journal	 : REFERENCE TO TestJournal;
-	Slot	 : ST_TestSlot;
-	Outcome	 : E_PhaseOutcome;
-	Loaded	 : BOOL;
-	Phase	 : DINT;
-	Scans	 : DINT;
+	Registry  : TestRegistry<1>;
+	Runner	  : TestRunner;
+	Handle	  : TestVerdict;
+	Budgets	  : ST_TestBudgets;
+	Journal	  : REFERENCE TO TestJournal;
+	Slot	  : ST_TestSlot;
+	Outcome	  : E_PhaseOutcome;
+	Loaded	  : BOOL;
+	Phase	  : DINT;
+	Scans	  : DINT;
 	EmptySlot : ST_TestSlot;
 	Refused	  : BOOL;
 END_VAR]]></Declaration>
@@ -39,18 +41,17 @@ IF Scans > 200 THEN
 END_IF
 
 Runner.Attach(Roster := Registry, Verdict := Handle);
-
 Refused := Runner.Load(EmptySlot);
 Test.AssertFalse(Refused, 'an empty slot is refused');
 Test.AssertTrue(Runner.Outcome = E_PhaseOutcome.Idle, 'and nothing was loaded');
 
 // Slot 0 of an empty registry is also empty - the registry hands back a defined
+
 // empty slot rather than whatever was nearby.
 Slot	:= Registry.Slot(0);
 Refused := Runner.Load(Slot);
 Test.AssertFalse(Refused, 'an unregistered index is refused too');
 Test.AssertTrue(Runner.Outcome = E_PhaseOutcome.Idle, 'still nothing loaded');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

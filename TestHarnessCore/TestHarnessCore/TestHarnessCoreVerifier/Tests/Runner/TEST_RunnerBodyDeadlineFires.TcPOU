@@ -2,24 +2,26 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RunnerBodyDeadlineFires" Id="{0869180d-ab47-46d7-a227-1d458b1b4b15}" SpecialFunc="None">
     <Declaration><![CDATA[// A body that never finishes is stopped by its deadline rather than stalling the
+
 // suite. Teardown is not implemented by this subject, so the runner must finish
+
 // without one.
 FUNCTION_BLOCK TEST_RunnerBodyDeadlineFires IMPLEMENTS I_Test
 VAR
 	// A private runner, driven one scan per call. The outer test spans scans by
-	// returning FALSE, which is exactly the mechanism being verified one level down.
-	Registry : TestRegistry<1>;
-	Runner	 : TestRunner;
-	Handle	 : TestVerdict;
-	Budgets	 : ST_TestBudgets;
-	Journal	 : REFERENCE TO TestJournal;
-	Slot	 : ST_TestSlot;
-	Outcome	 : E_PhaseOutcome;
-	Loaded	 : BOOL;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	Subject : HangingBodyTest;
 
+	// returning FALSE, which is exactly the mechanism being verified one level down.
+	Registry	   : TestRegistry<1>;
+	Runner		   : TestRunner;
+	Handle		   : TestVerdict;
+	Budgets		   : ST_TestBudgets;
+	Journal		   : REFERENCE TO TestJournal;
+	Slot		   : ST_TestSlot;
+	Outcome		   : E_PhaseOutcome;
+	Loaded		   : BOOL;
+	Phase		   : DINT;
+	Scans		   : DINT;
+	Subject		   : HangingBodyTest;
 	ExpectedCycles : UDINT;
 	ActualCycles   : UDINT;
 	ExpectedKind   : E_FailureKind;
@@ -46,45 +48,40 @@ IF Scans > 200 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Budgets.Body.Cycles		 := 3;
+		Budgets.Body.IsCyclesSet := TRUE;
+		Registry.TryClaim(Subject, 'hangs', Budgets);
+		Runner.Attach(Roster := Registry, Verdict := Handle);
+		Slot   := Registry.Slot(0);
+		Loaded := Runner.Load(Slot);
+		Phase  := 1;
+		Run	   := FALSE;
 
-0:
-	Budgets.Body.Cycles		 := 3;
-	Budgets.Body.IsCyclesSet := TRUE;
+	1:
+		Outcome := Runner.Advance(Enable := TRUE);
+		IF Outcome <> E_PhaseOutcome.Running THEN
+			Phase := 2;
+		END_IF
 
-	Registry.TryClaim(Subject, 'hangs', Budgets);
-	Runner.Attach(Roster := Registry, Verdict := Handle);
-	Slot   := Registry.Slot(0);
-	Loaded := Runner.Load(Slot);
-	Phase   := 1;
-	Run	   := FALSE;
+		Run := FALSE;
 
-1:
-	Outcome := Runner.Advance(Enable := TRUE);
-	IF Outcome <> E_PhaseOutcome.Running THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+	2:
+		Test.AssertTrue(Outcome = E_PhaseOutcome.Finished, 'the runner finished it');
+		ExpectedCycles := 3;
+		ActualCycles   := Subject.BodyCalls;
+		Test.AssertEqual(ExpectedCycles, ActualCycles, 'the body got its whole budget');
+		Journal REF= Registry.Journal(0);
+		IF __ISVALIDREF(Journal) THEN
+			ExpectedKind := E_FailureKind.Timeout;
+			ActualKind	 := Journal.Kind;
+			Test.AssertEqual(ExpectedKind, ActualKind, 'recorded as a timeout');
+			ExpectedStatus := E_TestStatus.Failed;
+			ActualStatus   := Journal.Status;
+			Test.AssertEqual(ExpectedStatus, ActualStatus, 'and Failed');
+		END_IF
 
-2:
-	Test.AssertTrue(Outcome = E_PhaseOutcome.Finished, 'the runner finished it');
-
-	ExpectedCycles := 3;
-	ActualCycles   := Subject.BodyCalls;
-	Test.AssertEqual(ExpectedCycles, ActualCycles, 'the body got its whole budget');
-
-	Journal REF= Registry.Journal(0);
-	IF __ISVALIDREF(Journal) THEN
-		ExpectedKind := E_FailureKind.Timeout;
-		ActualKind	 := Journal.Kind;
-		Test.AssertEqual(ExpectedKind, ActualKind, 'recorded as a timeout');
-
-		ExpectedStatus := E_TestStatus.Failed;
-		ActualStatus   := Journal.Status;
-		Test.AssertEqual(ExpectedStatus, ActualStatus, 'and Failed');
-	END_IF
-
-	Run := TRUE;
-
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

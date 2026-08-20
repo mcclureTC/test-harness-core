@@ -2,14 +2,19 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_LogReporterIsQuietAboutPasses" Id="{b0ecad70-b177-4918-a89a-cbf448e75b6d}" SpecialFunc="None">
     <Declaration><![CDATA[// Quiet by default. Eighty green lines hide the two that matter, and the counts
+
 // are already available through I_TestRunStatus for anyone who wants them.//
+
 // WHAT THIS CANNOT CHECK: whether the line actually reached the TwinCAT log, or
+
 // what it says. ADSLOGSTR gives no answer back. The counters prove which BRANCH
+
 // was taken; the wording has to be read once, by eye, in the Logged Events window.
+
 // Saying so is better than a test that implies more than it establishes.
 FUNCTION_BLOCK TEST_LogReporterIsQuietAboutPasses IMPLEMENTS I_Test
 VAR
-	Sink : TestLogReporter;
+	Sink		  : TestLogReporter;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -24,13 +29,25 @@ VAR_INPUT
 	Test   : I_TestAssertions;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'a pass', Location := '',
-				  Status := E_TestStatus.Passed, Kind := E_FailureKind.None,
-				  Summary := '', ElapsedTime := 0.0, ElapsedCycles := 1, Assertions := 1);
+        <ST><![CDATA[Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'a pass',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Passed,
+				  Kind			:= E_FailureKind.None,
+				  Summary		:= '',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 1,
+				  Assertions	:= 1);
 
-Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'a skip', Location := '',
-				  Status := E_TestStatus.Skipped, Kind := E_FailureKind.None,
-				  Summary := '', ElapsedTime := 0.0, ElapsedCycles := 0, Assertions := 0);
+Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'a skip',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Skipped,
+				  Kind			:= E_FailureKind.None,
+				  Summary		:= '',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 0,
+				  Assertions	:= 0);
 
 ExpectedCount := 0;
 ActualCount	  := Sink.LinesWritten;
@@ -40,7 +57,6 @@ Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was written');
 ExpectedCount := 2;
 ActualCount	  := Sink.TestsSeen;
 Test.AssertEqual(ExpectedCount, ActualCount, 'but both were seen');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

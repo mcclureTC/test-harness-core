@@ -2,52 +2,72 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestJUnitReporter" Id="{67d7cb68-f77e-4ef3-b270-2de476967aae}" SpecialFunc="None">
     <Declaration><![CDATA[// Writes the run as a JUnit XML document - the artifact CI actually consumes.
+
 //
+
 // Implements BOTH reporter faces. I_TestReporter for verdicts and totals,
+
 // I_TestDetailSink for individual checks, because this is the sink that detail
+
 // streaming was designed for: every failed check becomes its own element rather
+
 // than text appended to a growing string.
+
 //
+
 // That is what sidesteps the 255-character ceiling. CONCAT cannot build a longer
+
 // string than that, so a document assembled by concatenation would truncate.
+
 // Assembled as a DOM, no single value ever needs to exceed 255 - the document
+
 // grows by nodes, not by characters.
+
 //
+
 // A DOM rather than streamed text, for one reason above the others: ESCAPING. Test
+
 // labels are author-written and the compared values come from the code under
+
 // test - arbitrary bytes by design. A hand-rolled escape that is subtly wrong
+
 // produces a corrupt document rather than a visible error, and works for a year
+
 // first.
+
 //
+
 // THE WRITE IS ASYNCHRONOUS and driven from CyclicLogic. IsIdle is FALSE until the
+
 // file lands.
+
 //
+
 // ONE RUN, ONE FILE. Nothing is written per suite: a partially written artifact
+
 // read by CI is worse than a missing one, because it looks complete.
 FUNCTION_BLOCK TestJUnitReporter IMPLEMENTS I_TestReporter, I_TestDetailSink
 VAR
-	_Parser : FB_XmlDomParser;
-
+	_Parser	   : FB_XmlDomParser;
 	_RootNode  : SXmlNode;
 	_SuiteNode : SXmlNode;
 	_CaseNode  : SXmlNode;
 
 	// Node validity is tracked with flags rather than by inspecting SXmlNode. What
+
 	// an unset one contains is not something to rely on.
 	_HasDocument  : BOOL;
 	_HasSuiteNode : BOOL;
 	_HasCaseNode  : BOOL;
-
-	_Path	  : T_MaxString;
-	_IsSaving : BOOL;
-
+	_Path		  : T_MaxString;
+	_IsSaving	  : BOOL;
 	_PassedChecks : UDINT;
 	_FailedChecks : UDINT;
 
 	// Where a failed write is reported. Never this object's own fan-out - that
-	// would call back into here.
-	_Reporter : I_TestReporter;
 
+	// would call back into here.
+	_Reporter		 : I_TestReporter;
 	_FilesWritten	 : UDINT;
 	_WriteFailures	 : UDINT;
 	_FrameworkErrors : UDINT;
@@ -64,12 +84,19 @@ END_VAR]]></Declaration>
     <Folder Name="I_TestReporter" Id="{c489239b-9062-4415-aab2-6766a502963c}" />
     <Method Name="AttachErrorSink" Id="{4ada5902-3f35-4826-87be-529cf9bc644b}">
       <Declaration><![CDATA[// Where a failed write is reported. Optional but strongly advised.
+
 //
+
 // Without it, the only evidence of a failed write is WriteFailures on this object.
+
 // A sink that cannot write its file and cannot say so is silent about the one
+
 // thing that matters.
+
 //
+
 // Deliberately not the fan-out this object is attached to: reporting a write
+
 // failure back through the composite would call this object again.
 METHOD AttachErrorSink
 VAR_INPUT
@@ -81,6 +108,7 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="BeginDocument" Id="{0481c95f-c709-43b3-b386-4bc0e73ea0eb}">
       <Declaration><![CDATA[// Start a fresh document. Called on the first result of a run, and again by
+
 // ReRun - a re-run produces a fresh document rather than appending to the last.
 METHOD BeginDocument
 VAR
@@ -94,10 +122,12 @@ END_IF
 _Parser.NewDocument();
 
 // GetDocumentNode is what an element attaches to. GetRootNode returns the first
+
 // ELEMENT, which an empty document does not have.
 DocumentNode := _Parser.GetDocumentNode();
 
 // The JUnit root. Several suites can sit under it, which is what a sequencer
+
 // produces.
 _RootNode	  := _Parser.AppendNode(DocumentNode, 'testsuites');
 _HasDocument  := TRUE;
@@ -107,8 +137,11 @@ _HasCaseNode  := FALSE;]]></ST>
     </Method>
     <Method Name="BeginSuite" Id="{82c27bad-79c6-4653-bcf1-fc8e84fcd6e2}">
       <Declaration><![CDATA[// Open a testsuite element the first time a result arrives for it.
+
 //
+
 // Attributes are filled in at SuiteFinished, when the counts are known - a
+
 // testsuite element carries totals that do not exist while it is running.
 METHOD BeginSuite
 VAR_INPUT
@@ -116,26 +149,32 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.BeginDocument();
-
 IF _HasSuiteNode THEN
 	RETURN;
 END_IF
 
 _SuiteNode	  := _Parser.AppendNode(_RootNode, 'testsuite');
 _HasSuiteNode := TRUE;
-
 _Parser.AppendAttribute(_SuiteNode, 'name', SuiteLabel);]]></ST>
       </Implementation>
     </Method>
     <Method Name="CheckFailed" Id="{a089e327-2f0b-4707-b8b4-52f6eb3bc456}" FolderPath="I_TestDetailSink\">
       <Declaration><![CDATA[// EVERY failed check gets its own element - not just the first.
+
 //
+
 // This is what the streamed detail was for. The summary keeps only the first
+
 // failure because 80 characters has room for one; the document has room for all of
+
 // them, and each is a separate element rather than a growing string. That
+
 // sidesteps the 255-character ceiling entirely: no single value here can exceed
+
 // it, so nothing has to be truncated to fit.
+
 //
+
 // Expected and Actual go in their own attributes, in full, exactly as they arrived.
 METHOD CheckFailed
 VAR_INPUT
@@ -156,9 +195,7 @@ END_VAR]]></Declaration>
 END_IF
 
 _FailedChecks := _FailedChecks + 1;
-
-CheckNode := _Parser.AppendNode(_CaseNode, 'check');
-
+CheckNode	  := _Parser.AppendNode(_CaseNode, 'check');
 _Parser.AppendAttribute(CheckNode, 'step', StepLabel);
 _Parser.AppendAttribute(CheckNode, 'expected', Expected);
 _Parser.AppendAttribute(CheckNode, 'actual', Actual);
@@ -168,6 +205,7 @@ _Parser.AppendAttribute(CheckNode, 'message', Message);]]></ST>
     </Method>
     <Method Name="CheckPassed" Id="{c9f314cb-a2d4-46ad-ae38-7b61739f4fb8}" FolderPath="I_TestDetailSink\">
       <Declaration><![CDATA[// Counted, not written. A document listing every satisfied check would be
+
 // enormous and would say nothing a reader wants.
 METHOD CheckPassed
 VAR_INPUT
@@ -180,10 +218,15 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="CyclicLogic" Id="{adb25844-751c-4681-8f90-ee1cb28cc05b}" FolderPath="I_Cyclic\">
       <Declaration><![CDATA[// Advances the file write. This is the sink the cyclic method exists for: a DOM
+
 // save is asynchronous and cannot complete in the cycle that asked for it.
+
 //
+
 // SaveDocumentToFile clears the flag it was given when the write finishes, and its
+
 // return value is meaningful on that one call - so the result is captured on the
+
 // transition, not polled for afterwards.
 METHOD CyclicLogic
 VAR
@@ -196,48 +239,49 @@ END_VAR]]></Declaration>
 	RETURN;
 END_IF
 
-Written := _Parser.SaveDocumentToFile(sFile := _Path, bExec := _IsSaving,
-									  hrErrorCode => Error);
+Written := _Parser.SaveDocumentToFile(sFile := _Path, bExec := _IsSaving, hrErrorCode => Error);
 
 // The method resets _IsSaving when the asynchronous write ends.
 Finished := NOT _IsSaving;
-
 IF NOT Finished THEN
 	RETURN;
 END_IF
 
 // The document has been written, so the next run starts a fresh one. Cleared here
+
 // rather than when the write was requested, so nothing can replace the DOM while
+
 // it is still being read.
 _HasDocument := FALSE;
-
 IF Written THEN
 	_FilesWritten := _FilesWritten + 1;
 	RETURN;
 END_IF
 
 // A write that failed is REPORTED, not discarded. Throwing away the FALSE and the
+
 // HRESULT makes a bad path indistinguishable from a suite that never finished.
 _WriteFailures := _WriteFailures + 1;
 _LastError	   := Error;
-
 IF _Reporter <> 0 THEN
-	_Reporter.FrameworkError('TestJUnitReporter',
-		CONCAT('the result document could not be written to ', _Path));
+	_Reporter.FrameworkError('TestJUnitReporter', CONCAT('the result document could not be written to ', _Path));
 END_IF]]></ST>
       </Implementation>
     </Method>
     <Property Name="DocumentLength" Id="{83242637-d7e6-4347-8ba2-ee9ec4607ad2}">
       <Declaration><![CDATA[// Size of the document currently in DOM memory, in bytes.
+
 //
+
 // Exposed so a test can prove the document is not EMPTY. Nothing in the PLC reads
+
 // the written file back, and a successful write of an empty document is
+
 // indistinguishable from a successful write of a full one.
 PROPERTY DocumentLength : UDINT]]></Declaration>
       <Get Name="Get" Id="{26441a2b-2a7b-4390-9862-1333b20e57a8}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[DocumentLength := _Parser.GetDocumentLength();]]></ST>
         </Implementation>
@@ -248,8 +292,7 @@ END_VAR
 PROPERTY FilesWritten : UDINT]]></Declaration>
       <Get Name="Get" Id="{f8fea8cb-3f14-477c-8137-e60bd9c8e290}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FilesWritten := _FilesWritten;]]></ST>
         </Implementation>
@@ -257,9 +300,13 @@ END_VAR
     </Property>
     <Method Name="FrameworkError" Id="{6d3c600d-5bf4-45bd-810d-8c1750fdd3ab}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Recorded in the document, so a run that could not be trusted says so in the
+
 // artifact rather than only in a log nobody kept.
+
 //
+
 // Not a testcase: it is not a test, and counting it as one would corrupt the
+
 // totals CI reads.
 METHOD FrameworkError
 VAR_INPUT
@@ -272,11 +319,9 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.BeginDocument();
-
 ErrorNode := _Parser.AppendNode(_RootNode, 'framework-error');
 _Parser.AppendAttribute(ErrorNode, 'source', Source);
 _Parser.AppendAttribute(ErrorNode, 'message', Message);
-
 _FrameworkErrors := _FrameworkErrors + 1;]]></ST>
       </Implementation>
     </Method>
@@ -284,8 +329,7 @@ _FrameworkErrors := _FrameworkErrors + 1;]]></ST>
       <Declaration><![CDATA[PROPERTY FrameworkErrors : UDINT]]></Declaration>
       <Get Name="Get" Id="{889d5f55-1ddc-4707-894c-f9c65cfde0c3}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FrameworkErrors := _FrameworkErrors;]]></ST>
         </Implementation>
@@ -293,15 +337,18 @@ END_VAR
     </Property>
     <Property Name="IsIdle" Id="{b05a456a-a1f1-452b-9711-ef9fb1a6f3fc}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// FALSE while the document is being written.
+
 //
+
 // CI must wait for this as well as IsComplete. A run finishing and its file
+
 // reaching disk are different events, and copying between them yields a truncated
+
 // artifact - which reads as a broken pipeline rather than a finished run.
 PROPERTY IsIdle : BOOL]]></Declaration>
       <Get Name="Get" Id="{815ae01a-f03e-4268-bfe0-1671bbd01840}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsIdle := NOT _IsSaving;]]></ST>
         </Implementation>
@@ -309,7 +356,9 @@ END_VAR
     </Property>
     <Method Name="KindName" Id="{58a0baf5-ff3b-4ba1-aea8-616083e7e4ca}">
       <Declaration><![CDATA[// The failure kind as the string CI groups by. A CASE rather than a lookup table
+
 // because there are six of them and a table would be one more thing to keep in
+
 // step with the enum.
 METHOD KindName : T_MaxString
 VAR_INPUT
@@ -317,16 +366,21 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[CASE Kind OF
-E_FailureKind.ValueMismatch:
-	KindName := 'ValueMismatch';
-E_FailureKind.TypeMismatch:
-	KindName := 'TypeMismatch';
-E_FailureKind.SizeMismatch:
-	KindName := 'SizeMismatch';
-E_FailureKind.Timeout:
-	KindName := 'Timeout';
-E_FailureKind.Environment:
-	KindName := 'Environment';
+	E_FailureKind.ValueMismatch:
+		KindName := 'ValueMismatch';
+
+	E_FailureKind.TypeMismatch:
+		KindName := 'TypeMismatch';
+
+	E_FailureKind.SizeMismatch:
+		KindName := 'SizeMismatch';
+
+	E_FailureKind.Timeout:
+		KindName := 'Timeout';
+
+	E_FailureKind.Environment:
+		KindName := 'Environment';
+
 ELSE
 	KindName := 'None';
 END_CASE]]></ST>
@@ -337,8 +391,7 @@ END_CASE]]></ST>
 PROPERTY LastError : HRESULT]]></Declaration>
       <Get Name="Get" Id="{84b230ed-7d3c-4ce4-8f4f-8de5fe51e769}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LastError := _LastError;]]></ST>
         </Implementation>
@@ -346,8 +399,11 @@ END_VAR
     </Property>
     <Method Name="RunFinished" Id="{abfac4f1-0da3-4679-a267-2f55b78a7ed0}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Every suite is done. Requests the write.
+
 //
+
 // The document is NOT written per suite. One run, one file - a partially written
+
 // artifact read by CI is worse than a missing one, because it looks complete.
 METHOD RunFinished
 VAR_INPUT
@@ -357,12 +413,19 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF NOT _HasDocument THEN
 	// No document was ever opened, which means RunStarted never arrived - this sink
+
 	// was never part of a run. Writing now would invent an artifact for something
+
 	// that did not happen.
+
 	//
+
 	// An EMPTY run is different and does produce a document, carrying tests="0".
+
 	// That was the opposite of the behaviour before RunStarted existed, and the
+
 	// change is deliberate: a missing file is ambiguous - a configuration problem
+
 	// and a run with no tests look identical - while tests="0" says which. It is the
 	// same reasoning as R3, one level up.
 	RETURN;
@@ -376,25 +439,32 @@ END_IF
 
 IF _Path = '' THEN
 	IF _Reporter <> 0 THEN
-		_Reporter.FrameworkError('TestJUnitReporter',
-			'no result path was set - call SetPath at composition');
+		_Reporter.FrameworkError('TestJUnitReporter', 'no result path was set - call SetPath at composition');
 	END_IF
+
 	_WriteFailures := _WriteFailures + 1;
 	RETURN;
 END_IF
 
 // CyclicLogic drives it from here. IsIdle stays FALSE until it lands, and CI must
+
 // wait for that as well as IsComplete: a run finishing and its document reaching
+
 // disk are different events.
+
 //
+
 // _HasDocument stays TRUE until the write COMPLETES. Clearing it here would let a
+
 // late notification call BeginDocument and wipe the DOM out from under the write
+
 // in progress.
 _IsSaving := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="RunStarted" Id="{64e605b6-2a78-4463-a824-c30b614dc50d}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Opens the document, at the point the run says it has begun rather than when the
+
 // first result happens to arrive.
 METHOD RunStarted
 VAR_INPUT
@@ -407,19 +477,33 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="SetPath" Id="{fab71537-94da-4b88-bbea-217beadb4c71}">
       <Declaration><![CDATA[// Absolute path of the result document. REQUIRED - there is no default.
+
 //
+
 // The boot folder is where this belongs on a target. On build 4026 the Windows
+
 // location moved to ProgramData - the 4024 path under C:\TwinCAT is wrong and
+
 // writes nowhere useful:
+
 //
+
 //   C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestResults.xml   Windows, 4026
+
 //   /usr/local/etc/TwinCAT/3.1/Boot/TestResults.xml            TwinCAT/BSD
+
 //
+
 // Which is the reason there is no default: the right answer depends on the build
+
 // and the platform, and a wrong one writes somewhere nobody looks.
+
 //
+
 // Deliberately not defaulted. A default that is wrong for the platform writes
+
 // somewhere nobody looks, and a missing file is indistinguishable from a run that
+
 // never finished.
 METHOD SetPath
 VAR_INPUT
@@ -438,7 +522,9 @@ END_VAR
 
 VAR
 	// AppendAttribute takes its value as VAR_IN_OUT CONSTANT, which needs something
+
 	// with an address. A literal has one; the result of a call does not, so
+
 	// anything computed goes into a local first.
 	TimeText : T_MaxString;
 END_VAR]]></Declaration>
@@ -448,7 +534,6 @@ END_VAR]]></Declaration>
 END_IF
 
 THIS^.BeginSuite(Status.Label);
-
 _Parser.AppendAttributeAsUint(_SuiteNode, 'tests', Status.TestCount);
 _Parser.AppendAttributeAsUint(_SuiteNode, 'failures', Status.FailedCount);
 _Parser.AppendAttributeAsUint(_SuiteNode, 'errors', Status.ErrorCount);
@@ -457,15 +542,20 @@ TimeText := LREAL_TO_FMTSTR(Status.TotalDuration, 6, TRUE);
 _Parser.AppendAttribute(_SuiteNode, 'time', TimeText);
 
 // The next suite opens its own element. A sequencer driving several produces
+
 // several, all under one testsuites root.
 _HasSuiteNode := FALSE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="TestFinished" Id="{f72b67c9-2673-4510-ba51-ea2187bb5faa}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Closes the testcase element with its verdict.
+
 //
+
 // A testcase with no child element is a pass - that is JUnit's convention, not an
+
 // omission. Failure, error and skipped are each a distinct child, because CI
+
 // counts them separately and so should this.
 METHOD TestFinished
 VAR_INPUT
@@ -482,8 +572,11 @@ END_VAR
 
 VAR
 	VerdictNode : SXmlNode;
+
 	// AppendAttribute takes its value as VAR_IN_OUT CONSTANT, which needs something
+
 	// with an address. A literal has one; the result of a call does not, so
+
 	// anything computed goes into a local first.
 	TimeText : T_MaxString;
 	TypeText : T_MaxString;
@@ -492,8 +585,7 @@ END_VAR]]></Declaration>
         <ST><![CDATA[IF NOT _HasCaseNode THEN
 	// No TestStarted arrived - a skipped test never becomes active. Open the
 	// element now so the result is not lost.
-	THIS^.TestStarted(SuiteLabel := SuiteLabel, TestLabel := TestLabel,
-					  Location := Location);
+	THIS^.TestStarted(SuiteLabel := SuiteLabel, TestLabel := TestLabel, Location := Location);
 END_IF
 
 IF NOT _HasCaseNode THEN
@@ -506,39 +598,50 @@ _Parser.AppendAttributeAsUint(_CaseNode, 'cycles', ElapsedCycles);
 _Parser.AppendAttributeAsUint(_CaseNode, 'assertions', Assertions);
 
 // The split, not just the total. A test reporting 12 assertions of which 3 failed
+
 // is a different situation from one reporting 12 that all passed, and the summary
+
 // only ever names the first failure.
 _Parser.AppendAttributeAsUint(_CaseNode, 'checks-passed', _PassedChecks);
 _Parser.AppendAttributeAsUint(_CaseNode, 'checks-failed', _FailedChecks);
-
 CASE Status OF
+	E_TestStatus.Failed:
+		// AppendChild, not AppendNode: it sets the element's BODY as well as creating
 
-E_TestStatus.Failed:
-	// AppendChild, not AppendNode: it sets the element's BODY as well as creating
-	// it, and the body is what a CI UI shows when someone clicks a failed test. An
-	// attribute-only failure displays the message and nothing else.
-	//
-	// cdata TRUE so the summary needs no escaping of its own - it may contain
-	// compared values, which are arbitrary bytes by design.
-	VerdictNode := _Parser.AppendChild(_CaseNode, 'failure', Summary, TRUE);
+		// it, and the body is what a CI UI shows when someone clicks a failed test. An
 
-	// The KIND goes in type, which is what CI groups by. The original hardcoded
-	// 'AssertionError' for everything and made the field useless.
-	TypeText := THIS^.KindName(Kind);
-	_Parser.AppendAttribute(VerdictNode, 'type', TypeText);
-	_Parser.AppendAttribute(VerdictNode, 'message', Summary);
+		// attribute-only failure displays the message and nothing else.
 
-E_TestStatus.Errored:
-	// error, not failure. The code under test was never shown to be wrong, and CI
-	// keeps the two apart.
-	VerdictNode := _Parser.AppendChild(_CaseNode, 'error', Summary, TRUE);
-	TypeText := THIS^.KindName(Kind);
-	_Parser.AppendAttribute(VerdictNode, 'type', TypeText);
-	_Parser.AppendAttribute(VerdictNode, 'message', Summary);
+		//
 
-E_TestStatus.Skipped:
-	VerdictNode := _Parser.AppendNode(_CaseNode, 'skipped');
+		// cdata TRUE so the summary needs no escaping of its own - it may contain
+		// compared values, which are arbitrary bytes by design.
+		VerdictNode := _Parser.AppendChild(_CaseNode,
+										   'failure',
+										   Summary,
+										   TRUE);
 
+		// The KIND goes in type, which is what CI groups by. The original hardcoded
+
+		// 'AssertionError' for everything and made the field useless.
+		TypeText := THIS^.KindName(Kind);
+		_Parser.AppendAttribute(VerdictNode, 'type', TypeText);
+		_Parser.AppendAttribute(VerdictNode, 'message', Summary);
+
+	E_TestStatus.Errored:
+		// error, not failure. The code under test was never shown to be wrong, and CI
+		// keeps the two apart.
+		VerdictNode := _Parser.AppendChild(_CaseNode,
+										   'error',
+										   Summary,
+										   TRUE);
+
+		TypeText := THIS^.KindName(Kind);
+		_Parser.AppendAttribute(VerdictNode, 'type', TypeText);
+		_Parser.AppendAttribute(VerdictNode, 'message', Summary);
+
+	E_TestStatus.Skipped:
+		VerdictNode := _Parser.AppendNode(_CaseNode, 'skipped');
 END_CASE
 
 _HasCaseNode := FALSE;]]></ST>
@@ -546,10 +649,15 @@ _HasCaseNode := FALSE;]]></ST>
     </Method>
     <Method Name="TestStarted" Id="{fe57a787-9946-4656-8228-343d1c6d21f2}" FolderPath="I_TestDetailSink\">
       <Declaration><![CDATA[// A test became the active one. Opens its testcase element, so the checks that
+
 // follow have somewhere to go.
+
 //
+
 // This is why I_TestDetailSink has a TestStarted at all: checks arrive before the
+
 // test has a verdict, and a document builder needs to be told when to open an
+
 // element.
 METHOD TestStarted
 VAR_INPUT
@@ -559,27 +667,26 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.BeginSuite(SuiteLabel);
-
-_CaseNode	 := _Parser.AppendNode(_SuiteNode, 'testcase');
-_HasCaseNode := TRUE;
+_CaseNode	  := _Parser.AppendNode(_SuiteNode, 'testcase');
+_HasCaseNode  := TRUE;
 _FailedChecks := 0;
 _PassedChecks := 0;
-
 _Parser.AppendAttribute(_CaseNode, 'name', TestLabel);
 
 // classname is where to LOOK when a test fails. Empty when the test does not
+
 // implement I_TestLocation, which is the common case and not a problem.
 _Parser.AppendAttribute(_CaseNode, 'classname', Location);]]></ST>
       </Implementation>
     </Method>
     <Property Name="WriteFailures" Id="{32043aa4-0716-47b1-ac4a-d5fd13766184}">
       <Declaration><![CDATA[// Writes that failed, or were asked for with no path. Never silent - each also
+
 // raises a framework error through the attached sink.
 PROPERTY WriteFailures : UDINT]]></Declaration>
       <Get Name="Get" Id="{5094ddbb-e39f-452f-8ed4-c6329a53fba8}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[WriteFailures := _WriteFailures;]]></ST>
         </Implementation>

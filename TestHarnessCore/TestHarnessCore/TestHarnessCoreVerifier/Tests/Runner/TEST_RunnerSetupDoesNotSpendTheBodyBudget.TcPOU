@@ -2,30 +2,34 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RunnerSetupDoesNotSpendTheBodyBudget" Id="{03a568b3-f78a-4298-a177-a05052841d05}" SpecialFunc="None">
     <Declaration><![CDATA[// Setup can legitimately be slow. It must not spend the body's scan budget doing
+
 // it, or a fixture waiting on hardware would time out work that never started.
+
 //
+
 // A body budget of ONE, and a setup taking four scans. If the two shared a clock
+
 // this test would report a timeout instead of a pass.
 FUNCTION_BLOCK TEST_RunnerSetupDoesNotSpendTheBodyBudget IMPLEMENTS I_Test
 VAR
 	// A private runner, driven one scan per call. The outer test spans scans by
-	// returning FALSE, which is exactly the mechanism being verified one level down.
-	Registry : TestRegistry<1>;
-	Runner	 : TestRunner;
-	Handle	 : TestVerdict;
-	Budgets	 : ST_TestBudgets;
-	Journal	 : REFERENCE TO TestJournal;
-	Slot	 : ST_TestSlot;
-	Outcome	 : E_PhaseOutcome;
-	Loaded	 : BOOL;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	Subject : SlowSetupTest;
 
-	ExpectedZero : UDINT;
-	ExpectedFour : UDINT;
-	ExpectedOne	 : UDINT;
-	ActualCount	 : UDINT;
+	// returning FALSE, which is exactly the mechanism being verified one level down.
+	Registry	   : TestRegistry<1>;
+	Runner		   : TestRunner;
+	Handle		   : TestVerdict;
+	Budgets		   : ST_TestBudgets;
+	Journal		   : REFERENCE TO TestJournal;
+	Slot		   : ST_TestSlot;
+	Outcome		   : E_PhaseOutcome;
+	Loaded		   : BOOL;
+	Phase		   : DINT;
+	Scans		   : DINT;
+	Subject		   : SlowSetupTest;
+	ExpectedZero   : UDINT;
+	ExpectedFour   : UDINT;
+	ExpectedOne	   : UDINT;
+	ActualCount	   : UDINT;
 	ExpectedStatus : E_TestStatus;
 	ActualStatus   : E_TestStatus;
 END_VAR]]></Declaration>
@@ -48,52 +52,47 @@ IF Scans > 200 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		// One scan for the body. Four for setup, from the suite default, which is
+		// deliberately left disabled here so setup cannot expire.
+		Budgets.Body.Cycles		 := 1;
+		Budgets.Body.IsCyclesSet := TRUE;
+		Registry.TryClaim(Subject, 'slow setup', Budgets);
+		Runner.Attach(Roster := Registry, Verdict := Handle);
+		Slot   := Registry.Slot(0);
+		Loaded := Runner.Load(Slot);
+		Phase  := 1;
+		Run	   := FALSE;
 
-0:
-	// One scan for the body. Four for setup, from the suite default, which is
-	// deliberately left disabled here so setup cannot expire.
-	Budgets.Body.Cycles		 := 1;
-	Budgets.Body.IsCyclesSet := TRUE;
+	1:
+		Outcome := Runner.Advance(Enable := TRUE);
+		IF Outcome <> E_PhaseOutcome.Running THEN
+			Phase := 2;
+		END_IF
 
-	Registry.TryClaim(Subject, 'slow setup', Budgets);
-	Runner.Attach(Roster := Registry, Verdict := Handle);
-	Slot   := Registry.Slot(0);
-	Loaded := Runner.Load(Slot);
-	Phase   := 1;
-	Run	   := FALSE;
+		Run := FALSE;
 
-1:
-	Outcome := Runner.Advance(Enable := TRUE);
-	IF Outcome <> E_PhaseOutcome.Running THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+	2:
+		ExpectedFour := 4;
+		ActualCount	 := Subject.SetupCalls;
+		Test.AssertEqual(ExpectedFour, ActualCount, 'setup took four scans');
+		ExpectedOne := 1;
+		ActualCount := Subject.BodyCalls;
+		Test.AssertEqual(ExpectedOne, ActualCount, 'the body still got its scan');
 
-2:
-	ExpectedFour := 4;
-	ActualCount	 := Subject.SetupCalls;
-	Test.AssertEqual(ExpectedFour, ActualCount, 'setup took four scans');
+		// The proof: had setup spent the body budget, this would be four.
+		ExpectedZero := 0;
+		ActualCount	 := Subject.CyclesAtStart;
+		Test.AssertEqual(ExpectedZero, ActualCount, 'the body started at zero cycles');
+		Test.AssertTrue(Subject.FirstCycleAtStart, 'and its first call was the first cycle');
+		Journal REF= Registry.Journal(0);
+		IF __ISVALIDREF(Journal) THEN
+			ExpectedStatus := E_TestStatus.Passed;
+			ActualStatus   := Journal.Status;
+			Test.AssertEqual(ExpectedStatus, ActualStatus, 'passed, not timed out');
+		END_IF
 
-	ExpectedOne := 1;
-	ActualCount := Subject.BodyCalls;
-	Test.AssertEqual(ExpectedOne, ActualCount, 'the body still got its scan');
-
-	// The proof: had setup spent the body budget, this would be four.
-	ExpectedZero := 0;
-	ActualCount	 := Subject.CyclesAtStart;
-	Test.AssertEqual(ExpectedZero, ActualCount, 'the body started at zero cycles');
-
-	Test.AssertTrue(Subject.FirstCycleAtStart, 'and its first call was the first cycle');
-
-	Journal REF= Registry.Journal(0);
-	IF __ISVALIDREF(Journal) THEN
-		ExpectedStatus := E_TestStatus.Passed;
-		ActualStatus   := Journal.Status;
-		Test.AssertEqual(ExpectedStatus, ActualStatus, 'passed, not timed out');
-	END_IF
-
-	Run := TRUE;
-
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

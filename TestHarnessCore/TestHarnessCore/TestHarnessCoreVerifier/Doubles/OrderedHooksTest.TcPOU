@@ -2,18 +2,22 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="OrderedHooksTest" Id="{d8a6f79a-7d4f-42c2-ad07-10384effd599}" SpecialFunc="None">
     <Declaration><![CDATA[// Implements all three phases and records the order they were called in.
+
 //
+
 // Setup before body, body before teardown, each exactly once. Order is the whole
+
 // contract and nothing else in the library checks it.
 FUNCTION_BLOCK OrderedHooksTest IMPLEMENTS I_Test, I_TestSetup, I_TestTeardown
 VAR
 	_SetupCalls	   : UDINT;
 	_BodyCalls	   : UDINT;
 	_TeardownCalls : UDINT;
+
 	// Captured at each phase, so the ORDER is provable and not just the counts.
-	_BodyAfterSetup		: BOOL;
-	_TeardownAfterBody	: BOOL;
-	_StatusInTeardown	: E_TestStatus;
+	_BodyAfterSetup	   : BOOL;
+	_TeardownAfterBody : BOOL;
+	_StatusInTeardown  : E_TestStatus;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -25,8 +29,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY BodyAfterSetup : BOOL]]></Declaration>
       <Get Name="Get" Id="{5afc92a3-30ec-42ca-aaae-5c0706c423af}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyAfterSetup := _BodyAfterSetup;]]></ST>
         </Implementation>
@@ -36,8 +39,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY BodyCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{72b4772e-71ea-47ae-93f9-1c3da6e189e6}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
         </Implementation>
@@ -57,7 +59,6 @@ END_IF
 
 _BodyCalls		:= _BodyCalls + 1;
 _BodyAfterSetup := (_SetupCalls > 0);
-
 Test.AssertTrue(TRUE, 'body ran');
 Run := TRUE;]]></ST>
       </Implementation>
@@ -70,15 +71,14 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_SetupCalls := _SetupCalls + 1;
-Setup := TRUE;]]></ST>
+Setup		:= TRUE;]]></ST>
       </Implementation>
     </Method>
     <Property Name="SetupCalls" Id="{00831fdc-68b9-4f49-bada-7829b98ea3e0}">
       <Declaration><![CDATA[PROPERTY SetupCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{139181bf-7174-4797-b7cc-64ad6e833e93}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SetupCalls := _SetupCalls;]]></ST>
         </Implementation>
@@ -89,8 +89,7 @@ END_VAR
 PROPERTY StatusInTeardown : E_TestStatus]]></Declaration>
       <Get Name="Get" Id="{defd2dc2-f868-4250-bb53-b1e73812f200}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[StatusInTeardown := _StatusInTeardown;]]></ST>
         </Implementation>
@@ -105,17 +104,17 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_TeardownCalls	   := _TeardownCalls + 1;
 _TeardownAfterBody := (_BodyCalls > 0);
+
 // Readable here on purpose: cleanup may differ by outcome.
-_StatusInTeardown  := Test.Status;
-Teardown := TRUE;]]></ST>
+_StatusInTeardown := Test.Status;
+Teardown		  := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Property Name="TeardownAfterBody" Id="{abe6133c-193f-41da-afde-76a52ccb0ff9}">
       <Declaration><![CDATA[PROPERTY TeardownAfterBody : BOOL]]></Declaration>
       <Get Name="Get" Id="{20e49ad2-59c5-4ce3-aa31-c97194cb50c0}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TeardownAfterBody := _TeardownAfterBody;]]></ST>
         </Implementation>
@@ -125,8 +124,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY TeardownCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{1a2b19d8-de99-4afc-899a-c3f2aaef26d3}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TeardownCalls := _TeardownCalls;]]></ST>
         </Implementation>

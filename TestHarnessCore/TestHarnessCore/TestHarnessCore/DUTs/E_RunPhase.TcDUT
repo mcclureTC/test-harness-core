@@ -2,16 +2,16 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="E_RunPhase" Id="{bdd41e34-c65b-4eb8-8dd5-0e7689c66b1a}">
     <Declaration><![CDATA[// Which phase of one test the runner is in. Internal to TestRunner - nothing
+
 // outside it needs to know, and exposing it would invite someone to branch on it.
 {attribute 'qualified_only'}
 {attribute 'strict'}
-TYPE E_RunPhase :
-(
-	Idle	 := 0,
-	Setup	 := 1,
-	Body	 := 2,
-	Teardown := 3
-) DINT;
+TYPE E_RunPhase : (
+		Idle	 := 0,
+		Setup	 := 1,
+		Body	 := 2,
+		Teardown := 3
+	) DINT;
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

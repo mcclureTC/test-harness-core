@@ -2,7 +2,9 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="SetupFailsTest" Id="{cf32daee-23a9-48d0-9796-d38ed9bcf0cb}" SpecialFunc="None">
     <Declaration><![CDATA[// Setup records a failure and completes. The body must NEVER be called - a test
+
 // whose fixture never came up has not been exercised, and reporting it as a failed
+
 // check would be a lie - but teardown must still run.
 FUNCTION_BLOCK SetupFailsTest IMPLEMENTS I_Test, I_TestSetup, I_TestTeardown
 VAR
@@ -20,8 +22,7 @@ END_VAR]]></Declaration>
 PROPERTY BodyCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{86794ac4-b561-464f-8ce2-4bf88e31e991}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
         </Implementation>
@@ -38,6 +39,7 @@ END_VAR]]></Declaration>
 	_BodyCalls := _BodyCalls + 1;
 	Test.AssertTrue(TRUE, 'the body should never reach this');
 END_IF
+
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>
@@ -60,7 +62,7 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_TeardownCalls := _TeardownCalls + 1;
-Teardown := TRUE;]]></ST>
+Teardown	   := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Property Name="TeardownCalls" Id="{0bb1c684-42ad-4c0d-9ba3-19918e926791}">
@@ -68,8 +70,7 @@ Teardown := TRUE;]]></ST>
 PROPERTY TeardownCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{25ce9da8-e084-4564-8296-2a8400bf4098}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TeardownCalls := _TeardownCalls;]]></ST>
         </Implementation>

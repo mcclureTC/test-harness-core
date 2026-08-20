@@ -2,40 +2,68 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestReporterFanout" Id="{30abd70b-6653-40e9-af76-d22c0889291a}" SpecialFunc="None">
     <Declaration><![CDATA[// One sink standing for many. A suite holds a single I_TestReporter and never
+
 // learns how many are behind it.
+
 //
+
 // The composite is what makes several reporting problems disappear
+
 // rather than get solved. The individual re-run that "records nothing and saves
+
 // nothing" becomes a matter of NOT CALLING this object, rather than a flag
+
 // threaded through the runner. Severity policy and the duplicated event-logger
+
 // blocks become choices about which sinks a build attaches.
+
 //
+
 // It can also be SUSPENDED, which is what makes an individual re-run possible
+
 // without a condition threaded through the runner.
+
 //
+
 // It implements I_TestDetailSink as well, and fans checks out only to the sinks
+
 // that wanted them. Each reporter is queried once, when it is attached; a
+
 // per-check query would put an interface lookup in the hottest path in the
+
 // library.
+
 //
+
 // Not generic. Its capacity is a parameter rather than a generic argument because
+
 // a project attaches the same set of sinks to every suite it owns, so per-instance
+
 // variation would cost every declaration site an argument to buy nothing.
 FUNCTION_BLOCK TestReporterFanout IMPLEMENTS I_TestReporter, I_TestDetailSink
 VAR
 	_Reporters : ARRAY[0..TestHarnessParameter.ReporterCapacity - 1] OF I_TestReporter;
+
 	// Parallel to _Reporters: element i is the detail face of reporter i, or null
+
 	// where that reporter did not want checks. Resolved once, at Add.
 	_DetailSinks : ARRAY[0..TestHarnessParameter.ReporterCapacity - 1] OF I_TestDetailSink;
-	_Count : UDINT;
+	_Count		 : UDINT;
 
 	// While TRUE, notifications are dropped and nothing reaches a sink.
+
 	//
+
 	// This is how an individual re-run records nothing and saves nothing: the suite
+
 	// silences every sink at once, rather than a condition threaded through the
+
 	// runner and the journal and remembered in three places.
+
 	//
+
 	// CyclicLogic is NOT suppressed. A file write already in flight must still
+
 	// finish, or IsIdle never goes TRUE and CI waits forever.
 	_IsSuspended : BOOL;
 END_VAR]]></Declaration>
@@ -50,18 +78,31 @@ END_VAR]]></Declaration>
     <Folder Name="I_TestReporter" Id="{5044e5ed-ab27-4794-a370-5c71587806e4}" />
     <Method Name="Attach" Id="{b4759758-ca0f-4d90-a4e8-605ebe108d8f}">
       <Declaration><![CDATA[// Attach a sink. Order of attachment is order of notification.
+
 //
+
 // Not named Add: ADD is a standard function and TwinCAT is case-insensitive.
+
 //
+
 // Every reporter attached receives everything; there is no filtering here, because
+
 // a sink that wants less can decide that for itself.
+
 //
+
 // A reporter is queried ONCE for I_TestDetailSink and the answer is stored. A
+
 // per-check __QUERYINTERFACE would put an interface lookup inside the hottest path
+
 // in the library - a forty-check test would pay for forty of them.
+
 //
+
 // Returns FALSE when the list is full or the reporter is null, and raises a
+
 // framework error through the sinks ALREADY attached. That is not circular: the
+
 // ones already there are exactly the ones that can still report it.
 METHOD Attach : BOOL
 VAR_INPUT
@@ -73,23 +114,20 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Attach := FALSE;
-
 IF Reporter = 0 THEN
 	THIS^.FrameworkError('TestReporterFanout', 'a null reporter was offered');
 	RETURN;
 END_IF
 
 IF _Count >= TestHarnessParameter.ReporterCapacity THEN
-	THIS^.FrameworkError('TestReporterFanout',
-		'reporter list is full - raise TestHarnessParameter.ReporterCapacity');
+	THIS^.FrameworkError('TestReporterFanout', 'reporter list is full - raise TestHarnessParameter.ReporterCapacity');
 	RETURN;
 END_IF
 
-Index := TO_DINT(_Count);
-
+Index			  := TO_DINT(_Count);
 _Reporters[Index] := Reporter;
-
 // Optional, exactly as the test hooks are. A sink that only wants verdicts does
+
 // not implement it and is never called for checks.
 IF NOT __QUERYINTERFACE(Reporter, _DetailSinks[Index]) THEN
 	_DetailSinks[Index] := 0;
@@ -120,13 +158,12 @@ END_IF
 
 FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	IF _DetailSinks[i] <> 0 THEN
-		_DetailSinks[i].CheckFailed(
-			StepLabel  := StepLabel,
-			Kind	   := Kind,
-			Expected   := Expected,
-			Actual	   := Actual,
-			Diagnostic := Diagnostic,
-			Message	   := Message);
+		_DetailSinks[i].CheckFailed(StepLabel  := StepLabel,
+									Kind	   := Kind,
+									Expected   := Expected,
+									Actual	   := Actual,
+									Diagnostic := Diagnostic,
+									Message	   := Message);
 	END_IF
 END_FOR]]></ST>
       </Implementation>
@@ -155,13 +192,14 @@ END_FOR]]></ST>
     </Method>
     <Property Name="Count" Id="{5dad202d-a9f6-4b20-9853-cafdeeac4cb2}">
       <Declaration><![CDATA[// Sinks attached. Assert it in CI: a reporter that silently stops being attached
+
 // takes its output with it, and a result file that never appears reads as a broken
+
 // build rather than as a missing sink.
 PROPERTY Count : UDINT]]></Declaration>
       <Get Name="Get" Id="{f0df57ba-ead5-4c72-83c7-79a383abd884}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Count := _Count;]]></ST>
         </Implementation>
@@ -169,9 +207,13 @@ END_VAR
     </Property>
     <Method Name="CyclicLogic" Id="{73def0a4-f0e7-4219-ad74-2768a6af2b00}" FolderPath="I_Cyclic\">
       <Declaration><![CDATA[// Advance every sink, every scan, unconditionally.
+
 //
+
 // This is what lets a reporter be slow without blocking a test. Anything that
+
 // takes time - a file write, an ADS call - is STARTED in one of the notification
+
 // methods and ADVANCED here.
 METHOD CyclicLogic
 VAR
@@ -185,8 +227,11 @@ END_FOR]]></ST>
     </Method>
     <Method Name="FrameworkError" Id="{3d5a9b01-6f7e-447f-8dd1-2cd1080080ac}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Never silent, and never reported as a test failure.
+
 //
+
 // Reaching here with nothing attached IS silent, and there is nothing this object
+
 // can do about it. That is what ReporterCount exists for: assert it in CI.
 METHOD FrameworkError
 VAR_INPUT
@@ -209,22 +254,27 @@ END_FOR]]></ST>
     </Method>
     <Property Name="IsIdle" Id="{019cc85e-9e39-4f15-98db-4010e86769f3}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// FALSE while ANY attached sink still has work in flight.
+
 //
+
 // CI must wait for this as well as IsComplete. A run finishing and its result
+
 // document reaching disk are different events, and copying between them yields a
+
 // truncated artifact - which reads as a broken pipeline rather than a finished
+
 // run.
+
 //
+
 // TRUE with nothing attached: no sink, no pending work.
 PROPERTY IsIdle : BOOL]]></Declaration>
       <Get Name="Get" Id="{f2dcf839-ea43-4546-b68f-f5b1539979c7}">
         <Declaration><![CDATA[VAR
 	i : DINT;
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsIdle := TRUE;
-
 FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	IF NOT _Reporters[i].IsIdle THEN
 		IsIdle := FALSE;
@@ -236,6 +286,7 @@ END_FOR]]></ST>
     </Property>
     <Method Name="Resume" Id="{cb881c75-5c35-4306-9969-7f2b54c8d920}">
       <Declaration><![CDATA[// Notify sinks again. Nothing that happened while suspended is replayed - it was
+
 // deliberately not recorded.
 METHOD Resume]]></Declaration>
       <Implementation>
@@ -303,9 +354,13 @@ END_FOR]]></ST>
     </Method>
     <Method Name="Suspend" Id="{59f8506e-4c82-4dfd-a387-7ea12c318327}">
       <Declaration><![CDATA[// Stop notifying sinks. Used for an individual re-run, which must not pollute the
+
 // CI artifact with duplicate entries.
+
 //
+
 // Work already in flight is unaffected - CyclicLogic keeps running - so a document
+
 // being written when this is called still lands.
 METHOD Suspend]]></Declaration>
       <Implementation>
@@ -335,21 +390,21 @@ END_VAR]]></Declaration>
 END_IF
 
 FOR i := 0 TO TO_DINT(_Count) - 1 DO
-	_Reporters[i].TestFinished(
-		SuiteLabel	  := SuiteLabel,
-		TestLabel	  := TestLabel,
-		Location	  := Location,
-		Status		  := Status,
-		Kind		  := Kind,
-		Summary		  := Summary,
-		ElapsedTime	  := ElapsedTime,
-		ElapsedCycles := ElapsedCycles,
-		Assertions	  := Assertions);
+	_Reporters[i].TestFinished(SuiteLabel	 := SuiteLabel,
+							   TestLabel	 := TestLabel,
+							   Location		 := Location,
+							   Status		 := Status,
+							   Kind			 := Kind,
+							   Summary		 := Summary,
+							   ElapsedTime	 := ElapsedTime,
+							   ElapsedCycles := ElapsedCycles,
+							   Assertions	 := Assertions);
 END_FOR]]></ST>
       </Implementation>
     </Method>
     <Method Name="TestStarted" Id="{7122bfc6-401f-48e1-bc9c-c445aa5e0b97}" FolderPath="I_TestDetailSink\">
       <Declaration><![CDATA[// Only the sinks that asked for checks. A reporter that does not implement
+
 // I_TestDetailSink is skipped without a query and without an empty method body.
 METHOD TestStarted
 VAR_INPUT
@@ -368,10 +423,7 @@ END_IF
 
 FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	IF _DetailSinks[i] <> 0 THEN
-		_DetailSinks[i].TestStarted(
-			SuiteLabel := SuiteLabel,
-			TestLabel  := TestLabel,
-			Location   := Location);
+		_DetailSinks[i].TestStarted(SuiteLabel := SuiteLabel, TestLabel := TestLabel, Location := Location);
 	END_IF
 END_FOR]]></ST>
       </Implementation>

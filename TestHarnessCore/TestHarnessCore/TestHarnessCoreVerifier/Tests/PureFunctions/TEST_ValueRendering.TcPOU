@@ -2,23 +2,24 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_ValueRendering" Id="{a9fbf52d-03ae-4b20-9144-e54d1d12af36}" SpecialFunc="None">
     <Declaration><![CDATA[// PORTED. TestValueString and the two type predicates.
+
 //
+
 // Anything unrecognised renders as hex rather than as an empty string. Not
+
 // friendly, but true: a failed comparison of two enums reading 'expected , actual '
+
 // tells the reader nothing at the moment they most need something.
 FUNCTION_BLOCK TEST_ValueRendering IMPLEMENTS I_Test
 VAR
-	Rendered : T_MaxString;
-
-	SomeDint  : DINT := 42;
-	SomeReal  : LREAL := 1.25;
-	SomeText  : STRING(20) := 'homed';
-	SomeWide  : WSTRING(20) := "wide";
-	SomeBool  : BOOL := TRUE;
-	SomeColour : E_PureColour := E_PureColour.Green;
-
-	Number : ST_NumericValue;
-
+	Rendered	: T_MaxString;
+	SomeDint	: DINT		   := 42;
+	SomeReal	: LREAL		   := 1.25;
+	SomeText	: STRING(20)   := 'homed';
+	SomeWide	: WSTRING(20)  := "wide";
+	SomeBool	: BOOL		   := TRUE;
+	SomeColour	: E_PureColour := E_PureColour.Green;
+	Number		: ST_NumericValue;
 	ExpectTrue	: BOOL := TRUE;
 	ExpectFalse : BOOL := FALSE;
 	ActualFlag	: BOOL;
@@ -37,16 +38,12 @@ END_VAR]]></Declaration>
         <ST><![CDATA[// --- rendering -------------------------------------------------------------
 Rendered := TestValueString(SomeDint);
 Test.AssertTrue(FIND(Rendered, '42') > 0, 'an integer renders as its digits');
-
 Rendered := TestValueString(SomeReal);
 Test.AssertTrue(FIND(Rendered, '1.25') > 0, 'a float renders with its fractional part');
-
 Rendered := TestValueString(SomeText);
 Test.AssertTrue(FIND(Rendered, 'homed') > 0, 'a string renders its content');
-
 Rendered := TestValueString(SomeWide);
 Test.AssertTrue(FIND(Rendered, 'wide') > 0, 'a WSTRING renders all of its content');
-
 Rendered := TestValueString(SomeBool);
 Test.AssertTrue(FIND(Rendered, 'TRUE') > 0, 'a BOOL renders as TRUE or FALSE');
 
@@ -57,27 +54,25 @@ Test.AssertTrue(LEN(Rendered) > 0, 'an enum renders as something rather than not
 // --- the predicates --------------------------------------------------------
 ActualFlag := TestValueIsText(SomeText);
 Test.AssertEqual(ExpectTrue, ActualFlag, 'a STRING is text');
-
 ActualFlag := TestValueIsText(SomeWide);
 Test.AssertEqual(ExpectTrue, ActualFlag, 'so is a WSTRING');
-
 ActualFlag := TestValueIsText(SomeDint);
 Test.AssertEqual(ExpectFalse, ActualFlag, 'a DINT is not');
-
 ActualFlag := TestValueIsFloat(SomeReal);
 Test.AssertEqual(ExpectTrue, ActualFlag, 'an LREAL is a float');
-
 ActualFlag := TestValueIsFloat(SomeDint);
 Test.AssertEqual(ExpectFalse, ActualFlag, 'a DINT is not');
 
 // --- numeric conversion ----------------------------------------------------
 Number := TestValueAsLReal(SomeDint);
 Test.AssertTrue(Number.IsNumeric, 'a DINT converts');
-Test.AssertNear(42.0, Number.Value, 0.0001, 'and keeps its value');
+Test.AssertNear(42.0,
+				Number.Value,
+				0.0001,
+				'and keeps its value');
 
 Number := TestValueAsLReal(SomeText);
 Test.AssertFalse(Number.IsNumeric, 'a STRING does not convert');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

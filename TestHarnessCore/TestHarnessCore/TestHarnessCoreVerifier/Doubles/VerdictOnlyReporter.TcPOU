@@ -2,11 +2,17 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="VerdictOnlyReporter" Id="{00845107-92ff-41f1-b7f1-1324f1ea6c21}" SpecialFunc="None">
     <Declaration><![CDATA[// A reporter that wants verdicts and NOT individual checks - the event logger and
+
 // the alarm block are both this shape.
+
 //
+
 // It implements I_TestReporter and deliberately not I_TestDetailSink, which is the
+
 // whole point: it should never be called for a check, and it should not have to
+
 // write empty method bodies to say so. The fan-out asks once, when it is attached,
+
 // and remembers the answer.
 FUNCTION_BLOCK VerdictOnlyReporter IMPLEMENTS I_TestReporter
 VAR
@@ -14,7 +20,7 @@ VAR
 	_TestFinishedCalls	 : UDINT;
 	_SuiteFinishedCalls	 : UDINT;
 	_RunFinishedCalls	 : UDINT;
-	_RunStartedCalls : UDINT;
+	_RunStartedCalls	 : UDINT;
 	_FrameworkErrorCalls : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
@@ -26,8 +32,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY CyclicCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{5d282210-520b-4230-8e93-4f198d7667bb}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[CyclicCalls := _CyclicCalls;]]></ST>
         </Implementation>
@@ -53,8 +58,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY FrameworkErrorCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{1b001e95-9ecf-4b99-b34c-11ac0ed0a43f}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FrameworkErrorCalls := _FrameworkErrorCalls;]]></ST>
         </Implementation>
@@ -64,8 +68,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY IsIdle : BOOL]]></Declaration>
       <Get Name="Get" Id="{59558e65-60d3-4a3a-9e5e-e1aeeabc49cb}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsIdle := TRUE;]]></ST>
         </Implementation>
@@ -85,8 +88,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY RunFinishedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{cb1acc1e-38d5-42d0-b12c-43adf0b427d9}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[RunFinishedCalls := _RunFinishedCalls;]]></ST>
         </Implementation>
@@ -115,8 +117,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY SuiteFinishedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{500af86a-c1b0-487a-9046-4e68b8ef7cdd}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SuiteFinishedCalls := _SuiteFinishedCalls;]]></ST>
         </Implementation>
@@ -143,8 +144,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY TestFinishedCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{9d14e4f0-afe3-4300-b2c7-b8ee3ae78346}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TestFinishedCalls := _TestFinishedCalls;]]></ST>
         </Implementation>

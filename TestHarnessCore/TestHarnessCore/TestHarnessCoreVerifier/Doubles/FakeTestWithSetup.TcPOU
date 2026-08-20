@@ -2,10 +2,15 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FakeTestWithSetup" Id="{70261021-5cb0-4802-9968-6b93722ae2a9}" SpecialFunc="None">
     <Declaration><![CDATA[// Implements ONE optional hook and not the other two.
+
 //
+
 // The case that matters for hook resolution: the three are independent, so
+
 // resolving one must not resolve the others. A registry that queried once and
+
 // reused the answer would pass with FakeTest and with FakeTestWithAllHooks, and
+
 // fail only here.
 FUNCTION_BLOCK FakeTestWithSetup IMPLEMENTS I_Test, I_TestSetup
 VAR
@@ -24,7 +29,7 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_RunCount := _RunCount + 1;
-Run := TRUE;]]></ST>
+Run		  := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="Setup" Id="{d62980d7-1600-4651-bd92-852ac65daa8e}" FolderPath="I_TestSetup\">

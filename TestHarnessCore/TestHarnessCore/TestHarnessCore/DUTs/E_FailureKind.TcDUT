@@ -1,24 +1,28 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="E_FailureKind" Id="{ca40f1b1-a6f0-4541-be4b-4cbbee978075}">
     <Declaration><![CDATA[// Why a test did not pass. Carried in the result document's failure 'type'
+
 // attribute. A single hardcoded 'AssertionError' for everything makes that field
+
 // making a machine-readable field useless.
+
 //
+
 // Keeping the kind here frees the 80-character summary from repeating it, and
+
 // gives CI something to group by.
 {attribute 'qualified_only'}
 {attribute 'strict'}
-TYPE E_FailureKind :
-(
-	None		  := 0,
-	ValueMismatch := 1,
-	TypeMismatch  := 2,
-	SizeMismatch  := 3,
-	Timeout		  := 4,
-	Aborted		  := 5,
-	Environment	  := 6
-) DINT;
+TYPE E_FailureKind : (
+		None		  := 0,
+		ValueMismatch := 1,
+		TypeMismatch  := 2,
+		SizeMismatch  := 3,
+		Timeout		  := 4,
+		Aborted		  := 5,
+		Environment	  := 6
+	) DINT;
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

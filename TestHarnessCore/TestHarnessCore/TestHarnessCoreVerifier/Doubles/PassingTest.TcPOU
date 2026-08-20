@@ -2,9 +2,13 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="PassingTest" Id="{2525e98b-0b5d-457d-9df3-dee4e022981e}" SpecialFunc="None">
     <Declaration><![CDATA[// Passes in one scan. The baseline for suite-level counting.
+
 //
+
 // Records a check deliberately: a body that checks nothing is reported Errored,
+
 // not Passed, so a double that asserted nothing would quietly test the wrong
+
 // thing.
 FUNCTION_BLOCK PassingTest IMPLEMENTS I_Test
 VAR
@@ -16,12 +20,12 @@ END_VAR]]></Declaration>
     <Folder Name="I_Test" Id="{db3f0779-dab9-4ee1-b1a2-75d871e7af76}" />
     <Property Name="BodyCalls" Id="{c49ae0e5-6334-4810-88dd-9e1cb6811a5d}">
       <Declaration><![CDATA[// How many times a suite has run this. A re-run doubles it; an individual re-run
+
 // raises it without touching any count the suite reports.
 PROPERTY BodyCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{338b3530-0ba7-4790-bf90-ee8b762563bf}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
         </Implementation>

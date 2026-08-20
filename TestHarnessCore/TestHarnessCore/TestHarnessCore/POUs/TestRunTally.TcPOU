@@ -2,22 +2,36 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestRunTally" Id="{8649aed0-ca4f-45fb-9308-13791e326e6e}" SpecialFunc="None">
     <Declaration><![CDATA[// The counts, and what they add up to. The read model of a run.
+
 //
+
 // Separated from the suite because "what does this run amount to" is its own
+
 // question, with its own consumers - CI, an HMI, a sequencer aggregating several -
+
 // and none of them should be handed the ability to start or stop anything.
+
 //
+
 // Every figure is maintained INCREMENTALLY, as each test completes. Recomputing
+
 // them by walking every slot each scan costs O(tests x capacity) every cycle, and
+
 // still leaves nothing able to ask whether the run has finished.
+
 //
+
 // Not generic and holds nothing generic: it counts, and a count does not care how
+
 // many slots exist.
 FUNCTION_BLOCK TestRunTally IMPLEMENTS I_TestRunStatus
 VAR
 	_Status : ST_TestRunStatus;
+
 	// Tests folded in so far. Distinct from TestCount, which is how many were
+
 	// registered - they differ while a run is in progress, and after one that was
+
 	// abandoned.
 	_Recorded : UDINT;
 END_VAR]]></Declaration>
@@ -30,10 +44,15 @@ END_VAR]]></Declaration>
     <Folder Name="I_TestRunStatus" Id="{ccdd21b7-83ad-4b88-9743-80bd7567ae85}" />
     <Method Name="Absorb" Id="{3d436ab5-a472-4102-8bdc-ee3fd939629c}">
       <Declaration><![CDATA[// Fold a whole nested result into these totals - one suite into a run, or one run
+
 // into a larger one.
+
 //
+
 // Counts TESTS, not suites. A consumer polling the top of a nest wants to know
+
 // how many tests passed, not how many containers did. Nesting is only worth having
+
 // if the figures mean the same thing at every level.
 METHOD Absorb
 VAR_INPUT
@@ -52,14 +71,18 @@ _Status.SkippedCount  := _Status.SkippedCount + Status.SkippedCount;
 _Status.TotalDuration := _Status.TotalDuration + Status.TotalDuration;
 
 // Recorded so an aggregate of nothing but skips still reports Skipped rather
+
 // than Passed.
 _Recorded := _Recorded + 1;]]></ST>
       </Implementation>
     </Method>
     <Method Name="Begin" Id="{afd6b0bf-b5a7-48a3-bf34-1a0532d907bf}">
       <Declaration><![CDATA[// Start a run over Count tests. Clears every figure but the label.
+
 //
+
 // Also what a re-run calls. A re-run re-executes the registered set, so the counts
+
 // start again from nothing while the set itself is untouched.
 METHOD Begin
 VAR_INPUT
@@ -82,8 +105,7 @@ _Recorded			  := 0;]]></ST>
 PROPERTY ErrorCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{9c91d845-e4ac-4cae-8b73-c701305021a5}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[ErrorCount := _Status.ErrorCount;]]></ST>
         </Implementation>
@@ -94,8 +116,7 @@ END_VAR
 PROPERTY FailedCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{57061c5b-99de-40bb-a782-c0d0420c7571}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FailedCount := _Status.FailedCount;]]></ST>
         </Implementation>
@@ -103,21 +124,37 @@ END_VAR
     </Property>
     <Method Name="Finish" Id="{ffeca13e-0987-4f0c-850e-22ff7983dbe6}">
       <Declaration><![CDATA[// Terminal. Settles the aggregate outcome from what was recorded.
+
 //
+
 // Named Finish, not Complete: a status word as a method name reads as a question
+
 // rather than an instruction, and
+
 // Complete would sit beside the IsComplete property on this very object. That is
+
 // exactly the collision the rule names.
+
 //
+
 // Aggregation, applied in order:
+
 //   any Errored -> Errored   the run cannot be trusted
+
 //   any Failed  -> Failed
+
 //   all Skipped -> Skipped
+
 //   otherwise   -> Passed
+
 //
+
 // Errored outranks Failed because a framework or environment problem casts doubt
+
 // on every other result in the run. This is order-INSENSITIVE by design: a test
+
 // that errored and then failed weighs the same as one that failed and then
+
 // errored.
 METHOD Finish]]></Declaration>
       <Implementation>
@@ -147,8 +184,7 @@ _Status.IsComplete := TRUE;]]></ST>
 PROPERTY IsComplete : BOOL]]></Declaration>
       <Get Name="Get" Id="{52dde09f-bdc0-497a-9cc2-47e97ca4f071}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsComplete := _Status.IsComplete;]]></ST>
         </Implementation>
@@ -158,8 +194,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY Label : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{8a042e7c-048e-4dae-b220-bdd6e1a29238}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Label := _Status.Label;]]></ST>
         </Implementation>
@@ -167,12 +202,12 @@ END_VAR
     </Property>
     <Property Name="Outcome" Id="{b80fecff-358f-45d7-973f-bb860362781c}" FolderPath="I_TestRunStatus\">
       <Declaration><![CDATA[// Readable while the run is in progress: Running is distinct from every
+
 // terminal value.
 PROPERTY Outcome : E_RunOutcome]]></Declaration>
       <Get Name="Get" Id="{58861fd7-81d1-46f5-9c91-8395c0bc7eab}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Outcome := _Status.Outcome;]]></ST>
         </Implementation>
@@ -182,8 +217,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY PassedCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{92dd6e25-0ad9-4b5d-bd91-2b6026b4f750}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[PassedCount := _Status.PassedCount;]]></ST>
         </Implementation>
@@ -191,31 +225,44 @@ END_VAR
     </Property>
     <Method Name="Record" Id="{9cf12385-067c-4cd8-a0a7-2750b2aab419}">
       <Declaration><![CDATA[// Fold one finished test into the totals.
+
 //
+
 // Called once per test as it completes, NOT recomputed every scan. Deriving the
+
 // counts by walking every slot each cycle costs O(tests x capacity) and exposes
+
 // none of the result anyway.
+
 //
+
 // A status that is not terminal is ignored rather than counted as something. There
+
 // is no sensible bucket for Running, and inventing one would let a half-finished
+
 // test look like a result.
 METHOD Record
 VAR_INPUT
 	// Named Verdict, not Status: a parameter called Status would shadow the Status
+
 	// property on this object, and the shadowing is silent.
 	Verdict		: E_TestStatus;
 	ElapsedTime : LREAL;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[CASE Verdict OF
-E_TestStatus.Passed:
-	_Status.PassedCount := _Status.PassedCount + 1;
-E_TestStatus.Failed:
-	_Status.FailedCount := _Status.FailedCount + 1;
-E_TestStatus.Errored:
-	_Status.ErrorCount := _Status.ErrorCount + 1;
-E_TestStatus.Skipped:
-	_Status.SkippedCount := _Status.SkippedCount + 1;
+	E_TestStatus.Passed:
+		_Status.PassedCount := _Status.PassedCount + 1;
+
+	E_TestStatus.Failed:
+		_Status.FailedCount := _Status.FailedCount + 1;
+
+	E_TestStatus.Errored:
+		_Status.ErrorCount := _Status.ErrorCount + 1;
+
+	E_TestStatus.Skipped:
+		_Status.SkippedCount := _Status.SkippedCount + 1;
+
 ELSE
 	RETURN;
 END_CASE
@@ -226,10 +273,15 @@ _Status.TotalDuration := _Status.TotalDuration + ElapsedTime;]]></ST>
     </Method>
     <Method Name="RecordFrameworkError" Id="{297277bd-6bb1-4656-89b2-84b01218cd48}">
       <Declaration><![CDATA[// Something the framework itself could not do: a rejected registration, a
+
 // teardown that overran, a result document that could not be written.
+
 //
+
 // It raises ErrorCount without touching TestCount, so the per-test figures still
+
 // add up while the run is unmistakably untrustworthy. Reporting it as a test
+
 // failure would send the reader hunting a defect that is not there.
 METHOD RecordFrameworkError]]></Declaration>
       <Implementation>
@@ -251,8 +303,7 @@ END_VAR]]></Declaration>
 PROPERTY SkippedCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{2b45bcfb-07d2-4d83-9a08-8448caee69e9}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SkippedCount := _Status.SkippedCount;]]></ST>
         </Implementation>
@@ -260,14 +311,16 @@ END_VAR
     </Property>
     <Property Name="Status" Id="{600628a7-673c-4f06-9032-24596b8421b1}">
       <Declaration><![CDATA[// Every figure at once, as a plain struct, for publishing as an ADS symbol.
+
 //
+
 // Copy it to a variable before reading a member: TwinCAT will not take a member
+
 // off the result of a call.
 PROPERTY Status : ST_TestRunStatus]]></Declaration>
       <Get Name="Get" Id="{5a5a2d0d-c200-4700-933a-5c66eca77618}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Status := _Status;]]></ST>
         </Implementation>
@@ -278,8 +331,7 @@ END_VAR
 PROPERTY TestCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{49d8124b-1d88-40c6-b99c-745e82231d96}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TestCount := _Status.TestCount;]]></ST>
         </Implementation>
@@ -287,14 +339,16 @@ END_VAR
     </Property>
     <Property Name="TotalDuration" Id="{1cfddb30-0798-4e5a-ac62-ccb0ea8d33d2}" FolderPath="I_TestRunStatus\">
       <Declaration><![CDATA[// Seconds for the whole run: a suite sums its tests, a sequencer sums its suites.
+
 //
+
 // Named apart from I_TestTiming.ElapsedTime deliberately - one is how long a
+
 // single test has been going, the other an aggregate over many.
 PROPERTY TotalDuration : LREAL]]></Declaration>
       <Get Name="Get" Id="{65288387-60e2-442d-92a6-3d28b9383d84}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TotalDuration := _Status.TotalDuration;]]></ST>
         </Implementation>

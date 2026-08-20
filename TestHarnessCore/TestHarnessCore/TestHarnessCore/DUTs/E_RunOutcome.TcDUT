@@ -1,31 +1,43 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="E_RunOutcome" Id="{d7108017-a868-4003-830d-f76910b5f198}">
     <Declaration><![CDATA[// The aggregate state of a suite, or of a sequencer aggregating suites.
+
 //
+
 // The members mirror E_TestStatus but the type is separate on purpose: a run
+
 // outcome is not a test verdict, and a single type would invite passing one where
+
 // the other is meant.
+
 //
+
 // Aggregation rules, applied in order:
+
 //   any Errored          -> Errored     (the run could not be trusted)
+
 //   any Failed           -> Failed
+
 //   all Skipped          -> Skipped
+
 //   otherwise            -> Passed
+
 //
+
 // Errored outranks Failed because a framework or environment problem casts doubt
+
 // on every other result in the run.
 {attribute 'qualified_only'}
 {attribute 'strict'}
-TYPE E_RunOutcome :
-(
-	NotStarted := 0,
-	Running	   := 1,
-	Passed	   := 2,
-	Failed	   := 3,
-	Errored	   := 4,
-	Skipped	   := 5
-) DINT;
+TYPE E_RunOutcome : (
+		NotStarted := 0,
+		Running	   := 1,
+		Passed	   := 2,
+		Failed	   := 3,
+		Errored	   := 4,
+		Skipped	   := 5
+	) DINT;
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

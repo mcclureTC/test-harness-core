@@ -2,14 +2,15 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RegistryLookup" Id="{497d9a52-3696-4786-83d6-c6b57615927b}" SpecialFunc="None">
     <Declaration><![CDATA[// Lookup answers with an index or -1. ReRunSingle depends on both answers.
+
 //
+
 // An empty label must not match an unclaimed slot, whose label is also empty.
 FUNCTION_BLOCK TEST_RegistryLookup IMPLEMENTS I_Test
 VAR
-	Registry : TestRegistry<4>;
-	Fakes	 : ARRAY[0..2] OF FakeTest;
-	Budgets	 : ST_TestBudgets;
-
+	Registry	  : TestRegistry<4>;
+	Fakes		  : ARRAY[0..2] OF FakeTest;
+	Budgets		  : ST_TestBudgets;
 	ExpectedIndex : DINT;
 	ActualIndex	  : DINT;
 END_VAR]]></Declaration>
@@ -27,23 +28,18 @@ END_VAR]]></Declaration>
         <ST><![CDATA[Registry.TryClaim(Fakes[0], 'Alpha', Budgets);
 Registry.TryClaim(Fakes[1], 'Beta', Budgets);
 Registry.TryClaim(Fakes[2], 'Gamma', Budgets);
-
 ExpectedIndex := 0;
 ActualIndex	  := Registry.Lookup('Alpha');
 Test.AssertEqual(ExpectedIndex, ActualIndex, 'first label');
-
 ExpectedIndex := 2;
 ActualIndex	  := Registry.Lookup('Gamma');
 Test.AssertEqual(ExpectedIndex, ActualIndex, 'last label');
-
 ExpectedIndex := -1;
 ActualIndex	  := Registry.Lookup('Never registered');
 Test.AssertEqual(ExpectedIndex, ActualIndex, 'unknown label is -1');
-
 ExpectedIndex := -1;
 ActualIndex	  := Registry.Lookup('');
 Test.AssertEqual(ExpectedIndex, ActualIndex, 'empty label is -1');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

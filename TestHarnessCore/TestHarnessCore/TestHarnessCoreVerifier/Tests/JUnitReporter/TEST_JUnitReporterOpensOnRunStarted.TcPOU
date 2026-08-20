@@ -2,13 +2,21 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JUnitReporterOpensOnRunStarted" Id="{319a6c03-fa00-4a90-8116-e9e5476c2b27}" SpecialFunc="None">
     <Declaration><![CDATA[// The document is opened by RunStarted, not inferred from the first result.
+
 //
+
 // Proved by driving a run whose ONLY content is a framework error - no test and no
+
 // suite - so nothing but RunStarted could have opened the document.
+
 //
+
 // LENGTHS ARE COMPARED, NOT TESTED AGAINST ZERO. An untouched FB_XmlDomParser
+
 // already holds a minimal document, so "no document" is not "no length", and
+
 // pinning the exact figure would be testing Beckhoff's implementation rather than
+
 // this one.
 FUNCTION_BLOCK TEST_JUnitReporterOpensOnRunStarted IMPLEMENTS I_Test
 VAR
@@ -16,11 +24,13 @@ VAR
 	Spy	   : SpyReporter;
 
 	// Captured rather than assumed. The baseline is whatever an untouched parser
+
 	// happens to hold, and pinning that number would be testing Beckhoff's
+
 	// implementation rather than this one.
-	Baseline : UDINT;
-	Opened	 : UDINT;
-	Length	 : UDINT;
+	Baseline	  : UDINT;
+	Opened		  : UDINT;
+	Length		  : UDINT;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -39,19 +49,14 @@ END_VAR]]></Declaration>
 
 // Whatever an untouched parser holds.
 Baseline := Writer.DocumentLength;
-
 Writer.RunStarted(Label := 'a run', TargetInfo := 'a target');
 
 // Opened: it now carries structure, if not yet results.
 Opened := Writer.DocumentLength;
 Test.AssertTrue(Opened > Baseline, 'RunStarted opened the document');
-
 Writer.FrameworkError(Source := 'somewhere', Message := 'something went wrong');
-
 Length := Writer.DocumentLength;
-Test.AssertTrue(Length > Opened,
-				'and a framework error is recorded in it, with no test involved');
-
+Test.AssertTrue(Length > Opened, 'and a framework error is recorded in it, with no test involved');
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

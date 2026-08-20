@@ -2,6 +2,7 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="HangingSetupTest" Id="{bda99907-7379-4403-a83d-223b2b88eaf6}" SpecialFunc="None">
     <Declaration><![CDATA[// Setup that never completes. Bounded by the SETUP deadline, not the body's - the
+
 // body must never run, and teardown must still be called.
 FUNCTION_BLOCK HangingSetupTest IMPLEMENTS I_Test, I_TestSetup, I_TestTeardown
 VAR
@@ -20,8 +21,7 @@ END_VAR]]></Declaration>
 PROPERTY BodyCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{1cfe7b30-55a1-4258-b4bd-f1af0a361d0d}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
         </Implementation>
@@ -37,6 +37,7 @@ END_VAR]]></Declaration>
         <ST><![CDATA[IF Enable THEN
 	_BodyCalls := _BodyCalls + 1;
 END_IF
+
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>
@@ -50,6 +51,7 @@ END_VAR]]></Declaration>
         <ST><![CDATA[IF Enable THEN
 	_SetupCalls := _SetupCalls + 1;
 END_IF
+
 Setup := FALSE;]]></ST>
       </Implementation>
     </Method>
@@ -57,8 +59,7 @@ Setup := FALSE;]]></ST>
       <Declaration><![CDATA[PROPERTY SetupCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{be103b34-9432-4470-b299-c8227ee7e76d}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SetupCalls := _SetupCalls;]]></ST>
         </Implementation>
@@ -72,17 +73,17 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_TeardownCalls := _TeardownCalls + 1;
-Teardown := TRUE;]]></ST>
+Teardown	   := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Property Name="TeardownCalls" Id="{e4121094-dd99-48c3-a27a-3bbe7bf1eb6c}">
       <Declaration><![CDATA[// Must be 1 even here. On a rig, a fixture that half came up is exactly when
+
 // cleanup matters most.
 PROPERTY TeardownCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{8c7e17b6-9962-4343-a097-061483113660}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TeardownCalls := _TeardownCalls;]]></ST>
         </Implementation>

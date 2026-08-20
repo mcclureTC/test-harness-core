@@ -2,20 +2,26 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_SuiteWithNoLabelIsAFrameworkError" Id="{6a96af76-0206-45f3-bc2e-e85e381d8900}" SpecialFunc="None">
     <Declaration><![CDATA[// An unnamed suite produces an unnamed node in the result document, which no CI
+
 // system can group by. It is caught when the run starts, not silently tolerated.
+
 //
+
 // The tests still run - the label is a reporting problem, not a reason to refuse
+
 // to work - but the run is marked untrustworthy.
 FUNCTION_BLOCK TEST_SuiteWithNoLabelIsAFrameworkError IMPLEMENTS I_Test
 VAR
 	// A private suite, driven one scan per call. The outer test spans scans by
+
 	// returning FALSE - which is the mechanism the inner suite is being asked to
+
 	// drive, one level down.
-	Inner	: TestSuite<4>;
-	Budgets : ST_TestBudgets;
-	Phase	: DINT;
-	Scans	: DINT;
-	A : PassingTest;
+	Inner		  : TestSuite<4>;
+	Budgets		  : ST_TestBudgets;
+	Phase		  : DINT;
+	Scans		  : DINT;
+	A			  : PassingTest;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -38,32 +44,29 @@ IF Scans > 200 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		// Deliberately no SetLabel.
+		Inner.Register(A, 'a test', Budgets);
+		Phase := 1;
+		Run	  := FALSE;
 
-0:
-	// Deliberately no SetLabel.
-	Inner.Register(A, 'a test', Budgets);
-	Phase := 1;
-	Run	  := FALSE;
+	1:
+		IF Inner.Run(Enable := TRUE) THEN
+			Phase := 2;
+		END_IF
 
-1:
-	IF Inner.Run(Enable := TRUE) THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+		Run := FALSE;
 
-2:
-	Test.AssertTrue(Inner.ErrorCount > 0, 'the missing label was reported');
+	2:
+		Test.AssertTrue(Inner.ErrorCount > 0, 'the missing label was reported');
 
-	// The test itself still ran and still passed.
-	ExpectedCount := 1;
-	ActualCount	  := A.BodyCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the test still ran');
-
-	ActualCount := Inner.PassedCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and still passed');
-
-	Run := TRUE;
-
+		// The test itself still ran and still passed.
+		ExpectedCount := 1;
+		ActualCount	  := A.BodyCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the test still ran');
+		ActualCount := Inner.PassedCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and still passed');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

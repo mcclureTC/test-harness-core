@@ -2,16 +2,21 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="SlowSetupTest" Id="{250a1e6f-2d88-48ea-bf91-c80e4dbcd368}" SpecialFunc="None">
     <Declaration><![CDATA[// Setup that legitimately takes several scans - waiting for hardware to answer is
+
 // the normal case, which is why setup has its own deadline.
+
 //
+
 // The body then records what the runner told it about timing. Setup must NOT have
+
 // spent the body's scan budget, and the body's first call must still be its first
+
 // cycle.
 FUNCTION_BLOCK SlowSetupTest IMPLEMENTS I_Test, I_TestSetup
 VAR
-	_SetupScans	 : UDINT := 4;
-	_SetupCalls	 : UDINT;
-	_BodyCalls	 : UDINT;
+	_SetupScans		   : UDINT := 4;
+	_SetupCalls		   : UDINT;
+	_BodyCalls		   : UDINT;
 	_FirstCycleAtStart : BOOL;
 	_CyclesAtStart	   : UDINT;
 END_VAR]]></Declaration>
@@ -24,8 +29,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY BodyCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{e4081d1d-ea0f-4dca-a262-754eb4b5a99b}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
         </Implementation>
@@ -33,12 +37,12 @@ END_VAR
     </Property>
     <Property Name="CyclesAtStart" Id="{95fef86c-49ed-4d29-bcc3-5af79e28afd1}">
       <Declaration><![CDATA[// ElapsedCycles as the body saw it on its first call. Zero if setup did not spend
+
 // the body's budget.
 PROPERTY CyclesAtStart : UDINT]]></Declaration>
       <Get Name="Get" Id="{4c6f3965-25c1-4326-9e48-441d1f6d316c}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[CyclesAtStart := _CyclesAtStart;]]></ST>
         </Implementation>
@@ -46,12 +50,12 @@ END_VAR
     </Property>
     <Property Name="FirstCycleAtStart" Id="{0f7b5a07-5786-4398-a088-224b98b05221}">
       <Declaration><![CDATA[// TRUE if the body's first scan was reported as the first cycle, despite setup
+
 // having consumed four scans before it.
 PROPERTY FirstCycleAtStart : BOOL]]></Declaration>
       <Get Name="Get" Id="{050eddb1-d84a-4654-b21d-707322c96247}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FirstCycleAtStart := _FirstCycleAtStart;]]></ST>
         </Implementation>
@@ -70,7 +74,6 @@ END_VAR]]></Declaration>
 END_IF
 
 _BodyCalls := _BodyCalls + 1;
-
 IF _BodyCalls = 1 THEN
 	_FirstCycleAtStart := Test.IsFirstCycle;
 	_CyclesAtStart	   := Test.ElapsedCycles;
@@ -100,8 +103,7 @@ Setup		:= (_SetupCalls >= _SetupScans);]]></ST>
       <Declaration><![CDATA[PROPERTY SetupCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{65278592-d003-4c6a-8c61-d01ccf755208}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SetupCalls := _SetupCalls;]]></ST>
         </Implementation>

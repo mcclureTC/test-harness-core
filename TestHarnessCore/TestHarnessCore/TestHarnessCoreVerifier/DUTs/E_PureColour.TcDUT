@@ -2,16 +2,18 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="E_PureColour" Id="{c66753c4-5293-4bc7-96a0-284c96c40bff}">
     <Declaration><![CDATA[// A sample enum, for pinning that enums compare and render at all. The original
+
 // rendered an unrecognised type class as an empty string, so a failed enum
+
 // comparison read 'expected , actual ' - nothing, at the moment the reader most
+
 // needed something.
 {attribute 'qualified_only'}
-TYPE E_PureColour :
-(
-	Red	  := 0,
-	Green := 1,
-	Blue  := 2
-) DINT;
+TYPE E_PureColour : (
+		Red	  := 0,
+		Green := 1,
+		Blue  := 2
+	) DINT;
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

@@ -2,24 +2,40 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestTiming" Id="{4c0ba300-c002-4276-b370-a1cbf88726a1}">
     <Declaration><![CDATA[// What the runner knows about how long the current test has been going.
+
 //
+
 // Separate from the verdict surface because it has its own consumers: a teardown
+
 // deciding how long to wait, a metrics sink, and AssertCompletedWithin - which is
+
 // built on ElapsedCycles rather than on bookkeeping inside the test.
 INTERFACE I_TestTiming EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Property Name="ElapsedCycles" Id="{bc226552-2c19-4901-8c04-56eecc378b32}">
       <Declaration><![CDATA[// Scans this test has COMPLETED, counted by the runner.
+
 //
+
 // The reproducible measure. Prefer it to ElapsedTime for anything asserted on.
+
 //
+
 // THE SCAN IN PROGRESS IS NOT COUNTED. The runner ticks the clock after the body
+
 // has run, so a body reading this on its first call sees 0, on its second sees 1,
+
 // and on its Nth sees N-1. That keeps it consistent with IsFirstCycle, which is
+
 // TRUE on the same call this reads 0.
+
 //
+
 // The practical consequence: a body that finishes on its third call must be called
+
 // a third time to observe that it completed two. Establishing that a test finished
+
 // within a budget costs one scan more than the budget - which is cheap, and honest.
+
 // The alternative is a count that includes work not yet done.
 PROPERTY ElapsedCycles : UDINT]]></Declaration>
       <Get Name="Get" Id="{efdfccc1-5fb0-4bb7-8b31-559270d3eeb0}">
@@ -30,11 +46,17 @@ END_VAR
     </Property>
     <Property Name="ElapsedTime" Id="{a310d087-806e-40ae-90b2-2b65f6d71b3e}">
       <Declaration><![CDATA[// Seconds elapsed. Wall clock, so it varies with jitter across Windows, BSD,
+
 // Linux RT and containers - report it, but assert on ElapsedCycles.
+
 // Seconds elapsed for this test. Pairs with ElapsedCycles - the same span
+
 // measured two ways.
+
 //
+
 // Wall clock, so it varies with jitter across Windows, BSD, Linux RT and
+
 // containers. Report it; assert on ElapsedCycles.
 PROPERTY ElapsedTime : LREAL]]></Declaration>
       <Get Name="Get" Id="{ab7541c9-a3ac-4056-9fc2-1926a021c61e}">
@@ -45,6 +67,7 @@ END_VAR
     </Property>
     <Property Name="IsFirstCycle" Id="{b49679d4-0653-4ed3-bc5f-2da428ccb0d3}">
       <Declaration><![CDATA[// TRUE on the first scan of the test body. The setup hook for anything not worth
+
 // implementing I_TestSetup for.
 PROPERTY IsFirstCycle : BOOL]]></Declaration>
       <Get Name="Get" Id="{167b4417-4b44-4915-8fac-c966dc3357c9}">

@@ -2,42 +2,45 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestRoster" Id="{5bb848db-9079-40bc-bc73-5434972cb6cb}">
     <Declaration><![CDATA[// Reading the registered set. What the arbiter and the runner hold, and all they
+
 // hold: neither can register a test, close the window or reset a verdict.
+
 //
+
 // Count lives here rather than on I_TestRegistrar because two interfaces declaring
+
 // one member is a design error even when the types match - the mistake already
+
 // made once in this library with Duration, and corrected in UPDATE_1. The suite
+
 // needs the count too, and reaches it through this face like everyone else.
-INTERFACE I_TestRoster EXTENDS __SYSTEM.IQueryInterface
-]]></Declaration>
+INTERFACE I_TestRoster EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Property Name="Count" Id="{fd17fd98-739b-4d86-b073-6599d87adde2}">
       <Declaration><![CDATA[// Tests registered. Assert this in CI against an expected number: a test that
+
 // silently stops being registered reduces it, and no other signal exists.
 PROPERTY Count : UDINT]]></Declaration>
       <Get Name="Get" Id="{189d8f58-f699-4ee0-9132-5af0d954500f}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
-    <Method Name="Slot" Id="{d4d29c77-f83d-42e7-b1be-ad846f565287}">
-      <Declaration><![CDATA[// The registered test at this index, with its label and its resolved hooks.
-//
-// An index outside the registered range returns an empty slot - a null Test and an
-// Index of -1 - rather than faulting, so a caller that has miscounted gets
-// something it can test rather than an out-of-bounds read.
-METHOD Slot : ST_TestSlot
-VAR_INPUT
-	Index : DINT;
-END_VAR]]></Declaration>
-    </Method>
     <Method Name="Journal" Id="{c4fdba02-714f-461d-bc30-1303c83a2ca4}">
       <Declaration><![CDATA[// The record for the test at this index, as a reference the runner writes through
+
 // and TestVerdict is retargeted to.
+
 //
+
 // A REFERENCE TO, not a copy: a journal is written continuously while its test
+
 // runs, and a copy would record into something nobody reads. That an interface can
+
 // declare this and that it stays live was probed before being relied on.
+
 //
+
 // An index outside the registered range returns an invalid reference. Check it
+
 // with __ISVALIDREF before use.
 METHOD Journal : REFERENCE TO TestJournal
 VAR_INPUT
@@ -46,13 +49,32 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="Lookup" Id="{697eb8c5-91fe-4023-aba7-3f003fe3c398}">
       <Declaration><![CDATA[// Index of the test carrying this label, or -1 if there is none. What
+
 // ReRunSingle resolves a label with.
+
 //
+
 // Not named Find or IndexOf: FIND is a standard string function and INDEXOF is an
+
 // operator, and TwinCAT is case-insensitive.
 METHOD Lookup : DINT
 VAR_INPUT
 	Label : T_MaxString;
+END_VAR]]></Declaration>
+    </Method>
+    <Method Name="Slot" Id="{d4d29c77-f83d-42e7-b1be-ad846f565287}">
+      <Declaration><![CDATA[// The registered test at this index, with its label and its resolved hooks.
+
+//
+
+// An index outside the registered range returns an empty slot - a null Test and an
+
+// Index of -1 - rather than faulting, so a caller that has miscounted gets
+
+// something it can test rather than an out-of-bounds read.
+METHOD Slot : ST_TestSlot
+VAR_INPUT
+	Index : DINT;
 END_VAR]]></Declaration>
     </Method>
   </Itf>

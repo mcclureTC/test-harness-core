@@ -7,11 +7,9 @@
 {attribute 'no-analysis'}
 FUNCTION F_GetTitle : WSTRING
 VAR_INPUT
-	
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[F_GetTitle := "TestHarnessCore";
-]]></ST>
+      <ST><![CDATA[F_GetTitle := "TestHarnessCore";]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

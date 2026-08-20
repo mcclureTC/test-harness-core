@@ -2,35 +2,47 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_TimeoutPrecedence" Id="{d7cb74b4-3315-4d88-9507-63e2d7a07f6d}" SpecialFunc="None">
     <Declaration><![CDATA[// PORTED. Three rules, one inner test each, none of which ever finishes - so only
+
 // a deadline can end them:
+
 //
+
 //   DefaultCycles     claims nothing      -> the suite default applies
+
 //   OverrideCycles    claims cycles       -> the per-test value wins
+
 //   OverrideTimeOnly  claims wall clock   -> wall clock overridden, but the
+
 //                                            suite's CYCLE budget still applies
+
 //
+
 // The third is the subtle one and the reason this test exists. Overrides are
+
 // tracked separately per unit, so naming one does not silently disable the other.
+
 // A single "overridden" flag would break exactly this case and nothing else would
+
 // notice.
+
 //
+
 // The suite default is five cycles, so the whole test costs about thirty.
 FUNCTION_BLOCK CHAR_TimeoutPrecedence IMPLEMENTS I_Test
 VAR
-	Inner	 : TestSuite<4>;
-	Recorder : RecordingReporter;
-	Budgets	 : ST_TestBudgets;
-	Phase	 : DINT;
-	Scans	 : DINT;
+	Inner			 : TestSuite<4>;
+	Recorder		 : RecordingReporter;
+	Budgets			 : ST_TestBudgets;
+	Phase			 : DINT;
+	Scans			 : DINT;
 	DefaultCycles	 : HangingBodyTest;
 	OverrideCycles	 : HangingBodyTest;
 	OverrideTimeOnly : HangingBodyTest;
-
-	Defaults   : ST_TestBudgets;
-	OwnCycles  : ST_TestBudgets;
-	OwnTimeOnly : ST_TestBudgets;
-	ExpectedCount : UDINT;
-	ActualCount	  : UDINT;
+	Defaults		 : ST_TestBudgets;
+	OwnCycles		 : ST_TestBudgets;
+	OwnTimeOnly		 : ST_TestBudgets;
+	ExpectedCount	 : UDINT;
+	ActualCount		 : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -51,64 +63,55 @@ IF Scans > 500 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Inner.SetLabel('CHAR_Timeout_Subject');
+		Inner.AddReporter(Recorder);
+		Defaults.Body.Cycles	  := 5;
+		Defaults.Body.IsCyclesSet := TRUE;
+		Inner.SetDefaults(Defaults);
 
-0:
-	Inner.SetLabel('CHAR_Timeout_Subject');
-	Inner.AddReporter(Recorder);
+		// Claims nothing: inherits both units from the suite.
+		Inner.Register(DefaultCycles, 'DefaultCycles', Budgets);
 
-	Defaults.Body.Cycles	  := 5;
-	Defaults.Body.IsCyclesSet := TRUE;
-	Inner.SetDefaults(Defaults);
+		// Claims its own scan budget.
+		OwnCycles.Body.Cycles	   := 20;
+		OwnCycles.Body.IsCyclesSet := TRUE;
+		Inner.Register(OverrideCycles, 'OverrideCycles', OwnCycles);
 
-	// Claims nothing: inherits both units from the suite.
-	Inner.Register(DefaultCycles, 'DefaultCycles', Budgets);
+		// Claims the wall clock ONLY, and long enough that it cannot be what fires.
 
-	// Claims its own scan budget.
-	OwnCycles.Body.Cycles	   := 20;
-	OwnCycles.Body.IsCyclesSet := TRUE;
-	Inner.Register(OverrideCycles, 'OverrideCycles', OwnCycles);
+		// The suite's five-cycle budget must still end this test.
+		OwnTimeOnly.Body.Timeout	  := T#10S;
+		OwnTimeOnly.Body.IsTimeoutSet := TRUE;
+		Inner.Register(OverrideTimeOnly, 'OverrideTimeOnly', OwnTimeOnly);
+		Phase := 1;
+		Run	  := FALSE;
 
-	// Claims the wall clock ONLY, and long enough that it cannot be what fires.
-	// The suite's five-cycle budget must still end this test.
-	OwnTimeOnly.Body.Timeout	   := T#10S;
-	OwnTimeOnly.Body.IsTimeoutSet := TRUE;
-	Inner.Register(OverrideTimeOnly, 'OverrideTimeOnly', OwnTimeOnly);
+	1:
+		IF Inner.Run(Enable := TRUE) THEN
+			Phase := 2;
+		END_IF
 
-	Phase := 1;
-	Run	  := FALSE;
+		Run := FALSE;
 
-1:
-	IF Inner.Run(Enable := TRUE) THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+	2:
+		ExpectedCount := 3;
+		ActualCount	  := Recorder.StatFailures;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'all three hit a deadline');
+		Test.AssertTrue(Recorder.FailureContains('DefaultCycles', 'after 5 cycles'), 'suite default applies when nothing was claimed');
+		Test.AssertTrue(Recorder.FailureContains('OverrideCycles', 'after 20 cycles'), 'the per-test cycle budget wins');
 
-2:
-	ExpectedCount := 3;
-	ActualCount	  := Recorder.StatFailures;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'all three hit a deadline');
+		// The subtle one.
+		Test.AssertTrue(Recorder.FailureContains('OverrideTimeOnly', 'after 5 cycles'), 'claiming the wall clock leaves the cycle budget inherited');
 
-	Test.AssertTrue(Recorder.FailureContains('DefaultCycles', 'after 5 cycles'),
-					'suite default applies when nothing was claimed');
-
-	Test.AssertTrue(Recorder.FailureContains('OverrideCycles', 'after 20 cycles'),
-					'the per-test cycle budget wins');
-
-	// The subtle one.
-	Test.AssertTrue(Recorder.FailureContains('OverrideTimeOnly', 'after 5 cycles'),
-					'claiming the wall clock leaves the cycle budget inherited');
-
-	// And each really ran for its own budget, not somebody else's.
-	ExpectedCount := 5;
-	ActualCount	  := DefaultCycles.BodyCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the default test ran five scans');
-
-	ExpectedCount := 20;
-	ActualCount	  := OverrideCycles.BodyCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the overriding test ran twenty');
-
-	Run := TRUE;
-
+		// And each really ran for its own budget, not somebody else's.
+		ExpectedCount := 5;
+		ActualCount	  := DefaultCycles.BodyCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the default test ran five scans');
+		ExpectedCount := 20;
+		ActualCount	  := OverrideCycles.BodyCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the overriding test ran twenty');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

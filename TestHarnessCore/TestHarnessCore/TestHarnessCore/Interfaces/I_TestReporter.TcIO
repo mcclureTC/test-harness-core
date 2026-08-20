@@ -2,40 +2,64 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestReporter" Id="{fc0a77a8-4413-43a6-b624-92b95399f527}">
     <Declaration><![CDATA[// Where results go. A suite or sequencer holds several and calls all of them.
+
 //
+
 // Implementations: the result-document writer, the event logger, an alarm block
+
 // for a persistent HMI-visible failure state, an ADS logger, a metrics writer, and
+
 // an opt-in message box. A build attaches the sinks it wants.
+
 //
+
 // Reporting is configuration, not behaviour. Severity policy, whether an
+
 // individual re-run is recorded, and which destinations exist are all decided by
+
 // what a build attaches, not by anything inside a test.
+
 //
+
 // Extends I_Cyclic because a reporter must not block: anything slow, a file write
+
 // or an ADS call, is started in one of these methods and advanced in CyclicLogic.
+
 //
+
 // A reporter that wants every individual check, not just the verdict, additionally
+
 // implements I_TestDetailSink. It is found with __QUERYINTERFACE, the same way the
+
 // optional test hooks are, so a sink that does not want checks writes no empty
+
 // method bodies for them.
 INTERFACE I_TestReporter EXTENDS I_Cyclic]]></Declaration>
     <Method Name="FrameworkError" Id="{857e102a-df18-42f4-9e7c-647b3549d1ff}">
       <Declaration><![CDATA[// The framework itself could not do something: a rejected registration, a suite
+
 // that never progressed, a result document that could not be written.
+
 //
+
 // Never silent, and never reported as a test failure. Source may be empty - some
+
 // of these occur before any suite is running.
 METHOD FrameworkError
 VAR_INPUT
-	Source  : T_MaxString;
+	Source	: T_MaxString;
 	Message : T_MaxString;
 END_VAR]]></Declaration>
     </Method>
     <Property Name="IsIdle" Id="{63741e3e-9330-492f-8eba-248f7cbe6fc9}">
       <Declaration><![CDATA[// FALSE while asynchronous work is in flight.
+
 //
+
 // CI must wait for this as well as IsComplete. A run finishing and its result
+
 // document reaching disk are different events, and copying between them yields a
+
 // truncated artifact - which reads as a broken pipeline rather than a finished run.
 PROPERTY IsIdle : BOOL]]></Declaration>
       <Get Name="Get" Id="{1394ca3f-1130-4ec7-9d99-9f0b1618a6fa}">
@@ -46,9 +70,13 @@ END_VAR
     </Property>
     <Method Name="RunFinished" Id="{546b65fd-a99c-46a4-aa50-f562bdc0241f}">
       <Declaration><![CDATA[// Every suite the sequencer drives has reached a terminal state.
+
 //
+
 // TargetInfo identifies where the run happened - NetId, platform, TwinCAT
+
 // version. Without it a matrix run across several targets produces result
+
 // documents that cannot be told apart.
 METHOD RunFinished
 VAR_INPUT
@@ -58,13 +86,21 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="RunStarted" Id="{2bb2de02-34c7-45c6-a0ec-f41861cf3233}">
       <Declaration><![CDATA[// A run has begun. Raised once, before anything else in it.
+
 //
+
 // The counterpart of I_TestDetailSink.TestStarted, and it exists for the same
+
 // reason: a sink that BUILDS something is told when to open it rather than
+
 // inferring it from the first thing to arrive. The result-document writer creates
+
 // its document here.
+
 //
+
 // It also lets a log sink bracket its output. Failures stream DURING a run and the
+
 // summary comes at the end, so a marker only at the end would bracket nothing.
 METHOD RunStarted
 VAR_INPUT
@@ -81,25 +117,41 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="TestFinished" Id="{09f2cfa1-bc84-40b6-97d0-a842f7b3f4e7}">
       <Declaration><![CDATA[// One test reached a terminal state.
+
 //
+
 // Summary is composed to fit 80 characters in a fixed order: step label, then
+
 // generated diagnostic, then the author's message. The author's message is the
+
 // only element that may be dropped, and it is dropped whole rather than cut
+
 // mid-word.
+
 //
+
 // There is no detailed report here. Detail is streamed check by check through
+
 // I_TestDetailSink, which a reporter implements only if it wants it. A single
+
 // T_MaxString could not carry it: one comparison of two 255-character values
+
 // already exceeds 255, so a per-test buffer would truncate exactly the long values
+
 // worth reading.
+
 //
+
 // Kind belongs in the document's 'type' attribute, which frees Summary from
+
 // repeating it and gives CI something to group by - Timeout, ValueMismatch and
+
 // SizeMismatch are different questions and group separately.
 METHOD TestFinished
 VAR_INPUT
-	SuiteLabel	  : T_MaxString;
-	TestLabel	  : T_MaxString;
+	SuiteLabel : T_MaxString;
+	TestLabel  : T_MaxString;
+
 	// Instance path, or empty if the test does not implement I_TestLocation.
 	Location	  : T_MaxString;
 	Status		  : E_TestStatus;

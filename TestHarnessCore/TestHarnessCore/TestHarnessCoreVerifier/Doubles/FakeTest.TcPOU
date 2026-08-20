@@ -2,8 +2,11 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FakeTest" Id="{bb32eb41-858e-40a2-af8d-54159fb5d777}" SpecialFunc="None">
     <Declaration><![CDATA[// A test that implements I_Test and nothing else.
+
 //
+
 // The null case for hook resolution: Setup, Teardown and Location must all come
+
 // back null for this one.
 FUNCTION_BLOCK FakeTest IMPLEMENTS I_Test
 VAR
@@ -21,7 +24,7 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_RunCount := _RunCount + 1;
-Run := TRUE;]]></ST>
+Run		  := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Property Name="RunCount" Id="{f7710d7f-8bb6-4ebe-a71b-83c05735bc3a}">
@@ -29,8 +32,7 @@ Run := TRUE;]]></ST>
 PROPERTY RunCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{dc44f5e5-6ab3-4910-aee9-d58de6f4b6ee}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[RunCount := _RunCount;]]></ST>
         </Implementation>

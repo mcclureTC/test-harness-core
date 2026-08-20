@@ -2,187 +2,225 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="PRG_UnitTests" Id="{09743738-8bdb-4d07-a6fb-ca1cd3adc3bb}" SpecialFunc="None">
     <Declaration><![CDATA[// The composition root: what is registered, what reports it, and the run that
+
 // drives it.
+
 //
+
 // This is also a WORKED EXAMPLE. It composes the library the way a real project
+
 // should - a run, a suite, three sinks - so anything awkward here is awkward for
+
 // everyone.
+
 //
+
 // READ THESE, in the online view:
+
 //
+
 //   Complete   TRUE once every test has finished
+
 //   Outcome    Passed if the library is sound
+
 //   Total      96 - assert this. A test that stops being registered vanishes
+
 //              silently, and CI sees fewer passes rather than a failure
+
 //   Passed / Failed / Errors / Skipped
+
 //   Idle       TRUE once the result document has reached disk. CI MUST WAIT FOR
+
 //              BOTH Complete AND Idle - a run finishing and its file landing are
+
 //              different events, and copying between them yields a truncated
+
 //              artifact that reads as a broken pipeline
+
 //
+
 // WHERE A FAILURE SHOWS UP:
+
 //   - the Logged Events window, as a log line and as an event
+
 //   - C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreResults.xml
+
 //
+
 // Read the failure there rather than from journal internals in a watch window.
+
 // Making that unnecessary is what this library is for.
+
 //
+
 // THE FAILURE PATH IS EXERCISED, not assumed. The Verdict tests drive DELIBERATE
+
 // failures into a private journal; the Suite tests register doubles that fail and
+
 // error on purpose; the JUnit tests write to a folder that does not exist. They all
+
 // pass. What they prove is that going wrong works.
+
 //
+
 // THE CHARACTERIZATION TESTS ARE THE ACCEPTANCE CONTRACT - behaviour a project
+
 // depending on this library is entitled to rely on. They are also the only tests
+
 // that ask questions of the ARTIFACT: how many cases the document carries, what
+
 // type attribute a failure got, whether a timeout message names the wall clock.
+
 //
+
 // MULTI-SCAN TESTS hold a private runner, suite or run and step it one scan per
+
 // call, returning FALSE until it finishes - the same mechanism they are verifying,
+
 // one level down. Each carries a watchdog, so a defect that never completes fails
+
 // its own test rather than hanging everything and looking like a broken verifier.
 PROGRAM PRG_UnitTests
 VAR
 	// A RUN, not just a suite. RunFinished is a run-level event and only a TestRun
+
 	// raises it - which is what produces a document at all.
 	Runner : TestRun<2>;
 	Suite  : TestSuite<110>;
 
 	// All three sinks, which is the realistic composition: a log line to read at a
+
 	// glance, an event to filter and route, a document for CI.
 	LogSink	  : TestLogReporter;
 	EventSink : TestEventReporter;
 	JUnitSink : TestJUnitReporter;
 
 	// The 4026 boot folder. Named apart from the files the JUnit tests write, so a
+
 	// stale artifact from either cannot be mistaken for the other.
 	ResultPath : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreResults.xml';
-
-	Budgets : ST_TestBudgets;
-	Wired	: BOOL;
+	Budgets	   : ST_TestBudgets;
+	Wired	   : BOOL;
 
 	// -- Registry --
-	registryCapacityAndOverflow	: TEST_RegistryCapacityAndOverflow;
-	registryRejectsDuplicateLabel	: TEST_RegistryRejectsDuplicateLabel;
-	registryRejectsEmptyLabelAndNullTest	: TEST_RegistryRejectsEmptyLabelAndNullTest;
-	registryClosesRegistration	: TEST_RegistryClosesRegistration;
-	registryLookup	: TEST_RegistryLookup;
-	registryPreservesOrder	: TEST_RegistryPreservesOrder;
-	registrySlotCarriesItsIndex	: TEST_RegistrySlotCarriesItsIndex;
-	registryResolvesOptionalHooks	: TEST_RegistryResolvesOptionalHooks;
-	registryJournalsArePerSlot	: TEST_RegistryJournalsArePerSlot;
-	registryJournalRejectsBadIndex	: TEST_RegistryJournalRejectsBadIndex;
+	registryCapacityAndOverflow			 : TEST_RegistryCapacityAndOverflow;
+	registryRejectsDuplicateLabel		 : TEST_RegistryRejectsDuplicateLabel;
+	registryRejectsEmptyLabelAndNullTest : TEST_RegistryRejectsEmptyLabelAndNullTest;
+	registryClosesRegistration			 : TEST_RegistryClosesRegistration;
+	registryLookup						 : TEST_RegistryLookup;
+	registryPreservesOrder				 : TEST_RegistryPreservesOrder;
+	registrySlotCarriesItsIndex			 : TEST_RegistrySlotCarriesItsIndex;
+	registryResolvesOptionalHooks		 : TEST_RegistryResolvesOptionalHooks;
+	registryJournalsArePerSlot			 : TEST_RegistryJournalsArePerSlot;
+	registryJournalRejectsBadIndex		 : TEST_RegistryJournalRejectsBadIndex;
 
 	// -- Arbiter --
-	arbiterVisitsEveryTestOnce	: TEST_ArbiterVisitsEveryTestOnce;
-	arbiterCurrentIsNullWhenNothingActive	: TEST_ArbiterCurrentIsNullWhenNothingActive;
-	arbiterEmptyPassIsComplete	: TEST_ArbiterEmptyPassIsComplete;
-	arbiterAbandonEndsThePass	: TEST_ArbiterAbandonEndsThePass;
-	arbiterNotExhaustedWhileLastTestRuns	: TEST_ArbiterNotExhaustedWhileLastTestRuns;
-	arbiterRestartsFromTheBeginning	: TEST_ArbiterRestartsFromTheBeginning;
+	arbiterVisitsEveryTestOnce			  : TEST_ArbiterVisitsEveryTestOnce;
+	arbiterCurrentIsNullWhenNothingActive : TEST_ArbiterCurrentIsNullWhenNothingActive;
+	arbiterEmptyPassIsComplete			  : TEST_ArbiterEmptyPassIsComplete;
+	arbiterAbandonEndsThePass			  : TEST_ArbiterAbandonEndsThePass;
+	arbiterNotExhaustedWhileLastTestRuns  : TEST_ArbiterNotExhaustedWhileLastTestRuns;
+	arbiterRestartsFromTheBeginning		  : TEST_ArbiterRestartsFromTheBeginning;
 
 	// -- Verdict --
-	verdictRecordsAFailure	: TEST_VerdictRecordsAFailure;
+	verdictRecordsAFailure				: TEST_VerdictRecordsAFailure;
 	verdictPassDoesNotOvertakeAFailure	: TEST_VerdictPassDoesNotOvertakeAFailure;
-	verdictZeroChecksIsErrored	: TEST_VerdictZeroChecksIsErrored;
-	verdictReportErrorIsNotAFailure	: TEST_VerdictReportErrorIsNotAFailure;
-	verdictFailIsAPlainFailure	: TEST_VerdictFailIsAPlainFailure;
-	verdictSummaryLeadsWithTheStepLabel	: TEST_VerdictSummaryLeadsWithTheStepLabel;
+	verdictZeroChecksIsErrored			: TEST_VerdictZeroChecksIsErrored;
+	verdictReportErrorIsNotAFailure		: TEST_VerdictReportErrorIsNotAFailure;
+	verdictFailIsAPlainFailure			: TEST_VerdictFailIsAPlainFailure;
+	verdictSummaryLeadsWithTheStepLabel : TEST_VerdictSummaryLeadsWithTheStepLabel;
 	verdictFirstFailureWinsTheSummary	: TEST_VerdictFirstFailureWinsTheSummary;
-	verdictUntargetedHandleIsInert	: TEST_VerdictUntargetedHandleIsInert;
+	verdictUntargetedHandleIsInert		: TEST_VerdictUntargetedHandleIsInert;
 
 	// -- Journal --
-	journalTimesOutOnCycles	: TEST_JournalTimesOutOnCycles;
-	journalZeroBudgetDisablesTheDeadline	: TEST_JournalZeroBudgetDisablesTheDeadline;
-	journalDefaultsFillOnlyWhatWasNotClaimed	: TEST_JournalDefaultsFillOnlyWhatWasNotClaimed;
-	journalResetKeepsWhatWasRegistered	: TEST_JournalResetKeepsWhatWasRegistered;
-	journalSkippedIsTerminalAndNotRed	: TEST_JournalSkippedIsTerminalAndNotRed;
+	journalTimesOutOnCycles					 : TEST_JournalTimesOutOnCycles;
+	journalZeroBudgetDisablesTheDeadline	 : TEST_JournalZeroBudgetDisablesTheDeadline;
+	journalDefaultsFillOnlyWhatWasNotClaimed : TEST_JournalDefaultsFillOnlyWhatWasNotClaimed;
+	journalResetKeepsWhatWasRegistered		 : TEST_JournalResetKeepsWhatWasRegistered;
+	journalSkippedIsTerminalAndNotRed		 : TEST_JournalSkippedIsTerminalAndNotRed;
 
 	// -- Runner --
-	runnerDrivesThePhasesInOrder	: TEST_RunnerDrivesThePhasesInOrder;
-	runnerRunsAMultiScanBody	: TEST_RunnerRunsAMultiScanBody;
-	runnerSetupFailureSkipsTheBody	: TEST_RunnerSetupFailureSkipsTheBody;
-	runnerSetupDoesNotSpendTheBodyBudget	: TEST_RunnerSetupDoesNotSpendTheBodyBudget;
-	runnerBodyDeadlineFires	: TEST_RunnerBodyDeadlineFires;
-	runnerSetupDeadlineFires	: TEST_RunnerSetupDeadlineFires;
-	runnerTeardownOverrunKeepsTheVerdict	: TEST_RunnerTeardownOverrunKeepsTheVerdict;
-	runnerAbandonMakesOneFinalCall	: TEST_RunnerAbandonMakesOneFinalCall;
-	runnerRefusesAnEmptySlot	: TEST_RunnerRefusesAnEmptySlot;
+	runnerDrivesThePhasesInOrder		 : TEST_RunnerDrivesThePhasesInOrder;
+	runnerRunsAMultiScanBody			 : TEST_RunnerRunsAMultiScanBody;
+	runnerSetupFailureSkipsTheBody		 : TEST_RunnerSetupFailureSkipsTheBody;
+	runnerSetupDoesNotSpendTheBodyBudget : TEST_RunnerSetupDoesNotSpendTheBodyBudget;
+	runnerBodyDeadlineFires				 : TEST_RunnerBodyDeadlineFires;
+	runnerSetupDeadlineFires			 : TEST_RunnerSetupDeadlineFires;
+	runnerTeardownOverrunKeepsTheVerdict : TEST_RunnerTeardownOverrunKeepsTheVerdict;
+	runnerAbandonMakesOneFinalCall		 : TEST_RunnerAbandonMakesOneFinalCall;
+	runnerRefusesAnEmptySlot			 : TEST_RunnerRefusesAnEmptySlot;
 
 	// -- Suite --
-	suiteRunsEveryRegisteredTest	: TEST_SuiteRunsEveryRegisteredTest;
-	suiteSeparatesFailuresFromErrors	: TEST_SuiteSeparatesFailuresFromErrors;
-	suiteClosesRegistrationOnFirstEnable	: TEST_SuiteClosesRegistrationOnFirstEnable;
-	suiteRejectedRegistrationIsNeverSilent	: TEST_SuiteRejectedRegistrationIsNeverSilent;
-	suiteSkipMarksEverythingSkipped	: TEST_SuiteSkipMarksEverythingSkipped;
-	suiteReRunRepeatsTheRegisteredSet	: TEST_SuiteReRunRepeatsTheRegisteredSet;
-	suiteReRunSingleRecordsNothing	: TEST_SuiteReRunSingleRecordsNothing;
-	suiteWithNothingRegisteredIsComplete	: TEST_SuiteWithNothingRegisteredIsComplete;
-	suiteWithNoLabelIsAFrameworkError	: TEST_SuiteWithNoLabelIsAFrameworkError;
-	suiteDefaultsReachTheTests	: TEST_SuiteDefaultsReachTheTests;
-
-	runAnnouncesItselfBeforeAnythingElse	: TEST_RunAnnouncesItselfBeforeAnythingElse;
+	suiteRunsEveryRegisteredTest		   : TEST_SuiteRunsEveryRegisteredTest;
+	suiteSeparatesFailuresFromErrors	   : TEST_SuiteSeparatesFailuresFromErrors;
+	suiteClosesRegistrationOnFirstEnable   : TEST_SuiteClosesRegistrationOnFirstEnable;
+	suiteRejectedRegistrationIsNeverSilent : TEST_SuiteRejectedRegistrationIsNeverSilent;
+	suiteSkipMarksEverythingSkipped		   : TEST_SuiteSkipMarksEverythingSkipped;
+	suiteReRunRepeatsTheRegisteredSet	   : TEST_SuiteReRunRepeatsTheRegisteredSet;
+	suiteReRunSingleRecordsNothing		   : TEST_SuiteReRunSingleRecordsNothing;
+	suiteWithNothingRegisteredIsComplete   : TEST_SuiteWithNothingRegisteredIsComplete;
+	suiteWithNoLabelIsAFrameworkError	   : TEST_SuiteWithNoLabelIsAFrameworkError;
+	suiteDefaultsReachTheTests			   : TEST_SuiteDefaultsReachTheTests;
+	runAnnouncesItselfBeforeAnythingElse   : TEST_RunAnnouncesItselfBeforeAnythingElse;
 
 	// -- Fanout --
-	fanoutNotifiesEverySinkInOrder	: TEST_FanoutNotifiesEverySinkInOrder;
-	fanoutOnlyChecksGoToDetailSinks	: TEST_FanoutOnlyChecksGoToDetailSinks;
-	fanoutIsIdleIsTheAndOfEverySink	: TEST_FanoutIsIdleIsTheAndOfEverySink;
-	fanoutSuspendSilencesEverything	: TEST_FanoutSuspendSilencesEverything;
-	fanoutRefusesBeyondCapacityAndTellsTheRest	: TEST_FanoutRefusesBeyondCapacityAndTellsTheRest;
-	fanoutCarriesTheSuiteResultThrough	: TEST_FanoutCarriesTheSuiteResultThrough;
-
-	fanoutForwardsRunStarted	: TEST_FanoutForwardsRunStarted;
+	fanoutNotifiesEverySinkInOrder			   : TEST_FanoutNotifiesEverySinkInOrder;
+	fanoutOnlyChecksGoToDetailSinks			   : TEST_FanoutOnlyChecksGoToDetailSinks;
+	fanoutIsIdleIsTheAndOfEverySink			   : TEST_FanoutIsIdleIsTheAndOfEverySink;
+	fanoutSuspendSilencesEverything			   : TEST_FanoutSuspendSilencesEverything;
+	fanoutRefusesBeyondCapacityAndTellsTheRest : TEST_FanoutRefusesBeyondCapacityAndTellsTheRest;
+	fanoutCarriesTheSuiteResultThrough		   : TEST_FanoutCarriesTheSuiteResultThrough;
+	fanoutForwardsRunStarted				   : TEST_FanoutForwardsRunStarted;
 
 	// -- LogReporter --
-	logReporterIsQuietAboutPasses	: TEST_LogReporterIsQuietAboutPasses;
-	logReporterWritesFailuresAndErrors	: TEST_LogReporterWritesFailuresAndErrors;
-	logReporterNarratesWhenAsked	: TEST_LogReporterNarratesWhenAsked;
-	logReporterAlwaysWritesFrameworkErrors	: TEST_LogReporterAlwaysWritesFrameworkErrors;
-	logReporterSummarisesASuite	: TEST_LogReporterSummarisesASuite;
-
-	jUnitReporterOpensOnRunStarted	: TEST_JUnitReporterOpensOnRunStarted;
+	logReporterIsQuietAboutPasses		   : TEST_LogReporterIsQuietAboutPasses;
+	logReporterWritesFailuresAndErrors	   : TEST_LogReporterWritesFailuresAndErrors;
+	logReporterNarratesWhenAsked		   : TEST_LogReporterNarratesWhenAsked;
+	logReporterAlwaysWritesFrameworkErrors : TEST_LogReporterAlwaysWritesFrameworkErrors;
+	logReporterSummarisesASuite			   : TEST_LogReporterSummarisesASuite;
+	jUnitReporterOpensOnRunStarted		   : TEST_JUnitReporterOpensOnRunStarted;
 
 	// -- EventReporter --
-	eventReporterSendsAndDoesNotFail	: TEST_EventReporterSendsAndDoesNotFail;
-	eventReporterIsQuietAboutPasses	: TEST_EventReporterIsQuietAboutPasses;
-	eventReporterRaisesEachOutcomeOnce	: TEST_EventReporterRaisesEachOutcomeOnce;
-	eventReporterWorksThroughTheFanout	: TEST_EventReporterWorksThroughTheFanout;
+	eventReporterSendsAndDoesNotFail   : TEST_EventReporterSendsAndDoesNotFail;
+	eventReporterIsQuietAboutPasses	   : TEST_EventReporterIsQuietAboutPasses;
+	eventReporterRaisesEachOutcomeOnce : TEST_EventReporterRaisesEachOutcomeOnce;
+	eventReporterWorksThroughTheFanout : TEST_EventReporterWorksThroughTheFanout;
 
 	// -- JUnitReporter --
-	jUnitReporterWritesTheDocument	: TEST_JUnitReporterWritesTheDocument;
-	jUnitReporterIsBusyWhileWriting	: TEST_JUnitReporterIsBusyWhileWriting;
-	jUnitReporterReportsAFailedWrite	: TEST_JUnitReporterReportsAFailedWrite;
-	jUnitReporterRefusesWithNoPath	: TEST_JUnitReporterRefusesWithNoPath;
-	jUnitReporterWritesNothingWhenNothingRan	: TEST_JUnitReporterWritesNothingWhenNothingRan;
+	jUnitReporterWritesTheDocument			 : TEST_JUnitReporterWritesTheDocument;
+	jUnitReporterIsBusyWhileWriting			 : TEST_JUnitReporterIsBusyWhileWriting;
+	jUnitReporterReportsAFailedWrite		 : TEST_JUnitReporterReportsAFailedWrite;
+	jUnitReporterRefusesWithNoPath			 : TEST_JUnitReporterRefusesWithNoPath;
+	jUnitReporterWritesNothingWhenNothingRan : TEST_JUnitReporterWritesNothingWhenNothingRan;
 
 	// -- Pure functions: the comparison and rendering rules --
-	compareNumericRules	: TEST_CompareNumericRules;
-	compareTextRules	: TEST_CompareTextRules;
-	compareOtherRules	: TEST_CompareOtherRules;
-	summaryLineComposition	: TEST_SummaryLineComposition;
-	valueRendering	: TEST_ValueRendering;
-	valueBriefShortens	: TEST_ValueBriefShortens;
+	compareNumericRules	   : TEST_CompareNumericRules;
+	compareTextRules	   : TEST_CompareTextRules;
+	compareOtherRules	   : TEST_CompareOtherRules;
+	summaryLineComposition : TEST_SummaryLineComposition;
+	valueRendering		   : TEST_ValueRendering;
+	valueBriefShortens	   : TEST_ValueBriefShortens;
 
 	// -- Assertions: the public surface every user touches --
-	assertNotEqualRejectsSameness	: TEST_AssertNotEqualRejectsSameness;
-	assertGreaterAndLessCompareTheRightWayRound	: TEST_AssertGreaterAndLessCompareTheRightWayRound;
-	assertNearUsesAbsoluteTolerance	: TEST_AssertNearUsesAbsoluteTolerance;
-	assertWithinUsesRelativeTolerance	: TEST_AssertWithinUsesRelativeTolerance;
-	assertInRangeIsInclusive	: TEST_AssertInRangeIsInclusive;
-	assertBufferComparisons	: TEST_AssertBufferComparisons;
+	assertNotEqualRejectsSameness				: TEST_AssertNotEqualRejectsSameness;
+	assertGreaterAndLessCompareTheRightWayRound : TEST_AssertGreaterAndLessCompareTheRightWayRound;
+	assertNearUsesAbsoluteTolerance				: TEST_AssertNearUsesAbsoluteTolerance;
+	assertWithinUsesRelativeTolerance			: TEST_AssertWithinUsesRelativeTolerance;
+	assertInRangeIsInclusive					: TEST_AssertInRangeIsInclusive;
+	assertBufferComparisons						: TEST_AssertBufferComparisons;
 	assertCompletedWithinCountsCompletedScans	: TEST_AssertCompletedWithinCountsCompletedScans;
+	stopwatchMeasuresAndFreezes					: TEST_StopwatchMeasuresAndFreezes;
+	registeredAndReporterCountsAreReadable		: TEST_RegisteredAndReporterCountsAreReadable;
 
-	stopwatchMeasuresAndFreezes	: TEST_StopwatchMeasuresAndFreezes;
-	registeredAndReporterCountsAreReadable	: TEST_RegisteredAndReporterCountsAreReadable;
 	// -- Suite watchdog --
 	watchdogAbandonsAStalledSuite	: TEST_WatchdogAbandonsAStalledSuite;
-	watchdogMeasuresProgressNotTime	: TEST_WatchdogMeasuresProgressNotTime;
-	watchdogZeroDisablesIt	: TEST_WatchdogZeroDisablesIt;
+	watchdogMeasuresProgressNotTime : TEST_WatchdogMeasuresProgressNotTime;
+	watchdogZeroDisablesIt			: TEST_WatchdogZeroDisablesIt;
 
 	// -- Characterization: the acceptance contract --
-	cHAR_Capacity	: CHAR_Capacity;
-	cHAR_OverflowStatistics	: CHAR_OverflowStatistics;
-	cHAR_ReRunTests	: CHAR_ReRunTests;
+	cHAR_Capacity			: CHAR_Capacity;
+	cHAR_OverflowStatistics : CHAR_OverflowStatistics;
+	cHAR_ReRunTests			: CHAR_ReRunTests;
 	cHAR_ReRunIndividual	: CHAR_ReRunIndividual;
 	cHAR_WallClockTimeout	: CHAR_WallClockTimeout;
 	cHAR_TimeoutPrecedence	: CHAR_TimeoutPrecedence;
@@ -206,7 +244,6 @@ END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[IF NOT Wired THEN
 	Wired := TRUE;
-
 	Suite.SetLabel('TestHarnessCore');
 
 	// Registry
@@ -268,7 +305,6 @@ END_VAR]]></Declaration>
 	Suite.Register(suiteWithNothingRegisteredIsComplete, 'Suite: an empty suite is complete, not red', Budgets);
 	Suite.Register(suiteWithNoLabelIsAFrameworkError, 'Suite: an unnamed suite is a framework error', Budgets);
 	Suite.Register(suiteDefaultsReachTheTests, 'Suite: suite defaults reach every unclaimed test', Budgets);
-
 	Suite.Register(runAnnouncesItselfBeforeAnythingElse, 'Suite: a run announces itself before any result in it', Budgets);
 
 	// Fanout
@@ -278,7 +314,6 @@ END_VAR]]></Declaration>
 	Suite.Register(fanoutSuspendSilencesEverything, 'Fanout: Suspend silences notifications but not CyclicLogic', Budgets);
 	Suite.Register(fanoutRefusesBeyondCapacityAndTellsTheRest, 'Fanout: attachment beyond capacity is refused and reported', Budgets);
 	Suite.Register(fanoutCarriesTheSuiteResultThrough, 'Fanout: SuiteFinished carries the live read model', Budgets);
-
 	Suite.Register(fanoutForwardsRunStarted, 'Fanout: RunStarted reaches every sink and Suspend silences it', Budgets);
 
 	// LogReporter
@@ -287,7 +322,6 @@ END_VAR]]></Declaration>
 	Suite.Register(logReporterNarratesWhenAsked, 'LogReporter: verbosity turns narration on and off', Budgets);
 	Suite.Register(logReporterAlwaysWritesFrameworkErrors, 'LogReporter: framework errors are never suppressed', Budgets);
 	Suite.Register(logReporterSummarisesASuite, 'LogReporter: one line per suite, carrying the counts', Budgets);
-
 	Suite.Register(jUnitReporterOpensOnRunStarted, 'JUnitReporter: the document opens on RunStarted', Budgets);
 
 	// EventReporter
@@ -304,7 +338,9 @@ END_VAR]]></Declaration>
 	Suite.Register(jUnitReporterWritesNothingWhenNothingRan, 'JUnitReporter: an empty run produces no document', Budgets);
 
 	// Pure functions - what equality and rendering MEAN. The object tests exercise
+
 	// them incidentally, whenever some test happens to call AssertEqual, which is
+
 	// not the same as pinning the rules themselves.
 	Suite.Register(compareNumericRules, 'Pure: numeric rules: value across widths, exact floats, the hint', Budgets);
 	Suite.Register(compareTextRules, 'Pure: string rules: content not capacity, and WSTRING as WSTRING (R1)', Budgets);
@@ -314,7 +350,9 @@ END_VAR]]></Declaration>
 	Suite.Register(valueBriefShortens, 'Pure: long values are shortened and marked', Budgets);
 
 	// Assertions - the part of the library every user touches. Each of these checks
+
 	// the direction that would be silently wrong, not just the happy path: a
+
 	// reversed comparison passes every test written against it.
 	Suite.Register(assertNotEqualRejectsSameness, 'Assertion: AssertNotEqual passes on difference, fails on sameness', Budgets);
 	Suite.Register(assertGreaterAndLessCompareTheRightWayRound, 'Assertion: ordering runs the way the name says, both directions', Budgets);
@@ -323,17 +361,20 @@ END_VAR]]></Declaration>
 	Suite.Register(assertInRangeIsInclusive, 'Assertion: inclusive on both bounds', Budgets);
 	Suite.Register(assertBufferComparisons, 'Assertion: byte offset, size mismatch, and a null buffer', Budgets);
 	Suite.Register(assertCompletedWithinCountsCompletedScans, 'Assertion: the scan in progress is not counted', Budgets);
-
 	Suite.Register(stopwatchMeasuresAndFreezes, 'Pure: the stopwatch advances, freezes and resets', Budgets);
 	Suite.Register(registeredAndReporterCountsAreReadable, 'Suite: the counts CI is told to assert are readable', Budgets);
+
 	// Suite watchdog - the run is the only object positioned to see a suite that
+
 	// has stopped, because the suite IS the thing that stopped.
 	Suite.Register(watchdogAbandonsAStalledSuite, 'Watchdog: a stalled suite is named, abandoned and counted', Budgets);
 	Suite.Register(watchdogMeasuresProgressNotTime, 'Watchdog: a progressing suite is never abandoned, however slow', Budgets);
 	Suite.Register(watchdogZeroDisablesIt, 'Watchdog: a zero budget never fires', Budgets);
 
 	// Characterization - the acceptance contract. Behaviour a project depending on
+
 	// this library is entitled to rely on, and the only tests that ask questions of
+
 	// the result document rather than of a counter.
 	Suite.Register(cHAR_Capacity, 'Contract: capacity holds what it says; overflow is reported', Budgets);
 	Suite.Register(cHAR_OverflowStatistics, 'Contract: errors are counted apart from failures', Budgets);
@@ -345,35 +386,36 @@ END_VAR]]></Declaration>
 
 	// -- reporting -------------------------------------------------------------
 	JUnitSink.SetPath(ResultPath);
+
 	// Where a failed write is reported. Deliberately the log sink and not the
+
 	// fan-out, which would call back into the writer that just failed.
 	JUnitSink.AttachErrorSink(LogSink);
-
 	Runner.SetLabel('TestHarnessCoreVerifier');
 	Runner.SetTargetInfo('TestHarnessCoreVerifier');
 
 	// Attached to the RUN, which pushes each one into every suite. One attachment
+
 	// point, whatever order suites and sinks are added in.
 	Runner.AddReporter(LogSink);
 	Runner.AddReporter(EventSink);
 	Runner.AddReporter(JUnitSink);
-
 	Runner.AddSuite(Suite);
 END_IF
 
 Runner.Run(Enable := TRUE);
 
 // Read from the RUN, not the suite: it is the top of the nest, and the figures
-// mean the same thing at every level.
-Complete := Runner.IsComplete;
-Outcome	 := Runner.Outcome;
-Total	 := Runner.TestCount;
-Passed	 := Runner.PassedCount;
-Failed	 := Runner.FailedCount;
-Errors	 := Runner.ErrorCount;
-Skipped	 := Runner.SkippedCount;
-Duration := Runner.TotalDuration;
 
+// mean the same thing at every level.
+Complete	  := Runner.IsComplete;
+Outcome		  := Runner.Outcome;
+Total		  := Runner.TestCount;
+Passed		  := Runner.PassedCount;
+Failed		  := Runner.FailedCount;
+Errors		  := Runner.ErrorCount;
+Skipped		  := Runner.SkippedCount;
+Duration	  := Runner.TotalDuration;
 Idle		  := JUnitSink.IsIdle;
 FilesWritten  := JUnitSink.FilesWritten;
 WriteFailures := JUnitSink.WriteFailures;]]></ST>

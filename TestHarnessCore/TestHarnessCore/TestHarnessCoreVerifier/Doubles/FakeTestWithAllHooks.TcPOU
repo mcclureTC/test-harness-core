@@ -17,8 +17,7 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY Path : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{fbbbda37-212c-43e6-9e19-17b8afd0a931}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Path := 'Verifier.Doubles.AllHooks';]]></ST>
         </Implementation>
@@ -32,7 +31,7 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_RunCount := _RunCount + 1;
-Run := TRUE;]]></ST>
+Run		  := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Method Name="Setup" Id="{685b444d-fea2-48f8-b0b8-01ea183513b8}" FolderPath="I_TestSetup\">

@@ -2,29 +2,53 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestRun" Id="{65ebe366-23e8-4229-919e-a66ab187ad0d}" SpecialFunc="None">
     <Declaration><![CDATA[// A RUN: the boundary around one or more suites, and the only thing that says a
+
 // run has ended.
+
 //
+
 // It exists because a suite is not a run. RunFinished is a run-level event, and a
+
 // suite raising it would have to know whether anything sits above it. Here the
+
 // answer is structural: a single suite is composed with one TestRun, a sequencer
+
 // IS one, and exactly one object is ever in a position to announce the end.
+
 //
+
 // EVERY PROJECT NEEDS ONE, including a project with a single suite. The result
+
 // document is written on RunFinished, so without a run there is no artifact.
+
 //
+
 // Implements I_TestRunStatus, so runs nest: a consumer polls one symbol regardless
+
 // of how many suites exist, and an outer run absorbs an inner one exactly as this
+
 // absorbs a suite. Counts are TESTS at every level.
+
 //
+
 // A RE-RUN is a run-level operation too, for the same reason: it must produce a
+
 // fresh document, and only this object can announce one.
+
 //
+
 // IT ALSO CARRIES THE SUITE WATCHDOG. A suite that stops progressing cannot see
+
 // that about itself - it is the thing that has stopped - so the object owning the
+
 // sequence is the only one positioned to notice.
+
 //
+
 // Suites run ONE AT A TIME, in the order they were added. That is where coarse
+
 // exclusion comes from - two suites touching the same axis cannot overlap, because
+
 // only one is ever enabled.
 FUNCTION_BLOCK TestRun
 VAR_GENERIC CONSTANT
@@ -34,28 +58,28 @@ VAR
 	_Suites : ARRAY[0..Capacity - 1] OF I_TestSuite;
 	_Count	: UDINT;
 	_Index	: DINT;
-
 	_Tally	: TestRunTally;
 	_Fanout : TestReporterFanout;
 
 	// Held so a suite added AFTER a reporter still receives it.
 	_Reporters	   : ARRAY[0..TestHarnessParameter.ReporterCapacity - 1] OF I_TestReporter;
 	_ReporterCount : UDINT;
-
-	_Label		: T_MaxString;
-	_TargetInfo : T_MaxString;
-	_IsOpen		: BOOL := TRUE;
-
+	_Label		   : T_MaxString;
+	_TargetInfo	   : T_MaxString;
+	_IsOpen		   : BOOL := TRUE;
 	_PendingErrors : UDINT;
 
 	// -- the suite watchdog ----------------------------------------------------
+
 	// Scans the ACTIVE suite has gone without completing a test, and the budget it
+
 	// is measured against.
 	_WatchdogCycles : UDINT := TestHarnessParameter.SuiteWatchdogCycles;
 	_StallCycles	: UDINT;
+
 	// Verdicts the active suite had reached when it was last seen to progress.
-	_LastProgress	: UDINT;
-	_StalledSuites	: UDINT;
+	_LastProgress  : UDINT;
+	_StalledSuites : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(*
@@ -69,9 +93,13 @@ END_VAR]]></Declaration>
     <Folder Name="I_TestRunStatus" Id="{eb7cbfe9-f248-4f2e-84eb-8b9c505eab40}" />
     <Method Name="AddReporter" Id="{0682604a-2221-4df2-a6fb-09a2cca81afc}" FolderPath="I_TestConfiguration\">
       <Declaration><![CDATA[// Attach a sink to the run AND to every suite in it.
+
 //
+
 // One attachment point. A composition root that had to attach the same reporter to
+
 // the run and to each suite separately would eventually miss one, and a suite whose
+
 // results reach no sink is invisible rather than wrong.
 METHOD AddReporter : BOOL
 VAR_INPUT
@@ -83,7 +111,6 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[AddReporter := FALSE;
-
 IF Reporter = 0 THEN
 	RETURN;
 END_IF
@@ -94,10 +121,8 @@ IF _ReporterCount >= TestHarnessParameter.ReporterCapacity THEN
 END_IF
 
 _Reporters[TO_DINT(_ReporterCount)] := Reporter;
-_ReporterCount := _ReporterCount + 1;
-
+_ReporterCount						:= _ReporterCount + 1;
 _Fanout.Attach(Reporter);
-
 // Suites added before this reporter was.
 FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	THIS^.PushReporter(_Suites[i], Reporter);
@@ -108,8 +133,11 @@ AddReporter := TRUE;]]></ST>
     </Method>
     <Method Name="AddSuite" Id="{551f2e8b-957f-4d37-b20f-84796c0c408b}" FolderPath="I_TestRunRegistration\">
       <Declaration><![CDATA[// Add a suite to the run. Order of addition is order of execution.
+
 //
+
 // That ordering is what gives coarse exclusion for free: two integration suites
+
 // touching the same axis cannot overlap, because only one is ever enabled.
 METHOD AddSuite : BOOL
 VAR_INPUT
@@ -122,7 +150,6 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[AddSuite := FALSE;
-
 IF Suite = 0 THEN
 	THIS^.RaiseFrameworkError('a null suite was offered');
 	RETURN;
@@ -138,11 +165,11 @@ IF _Count >= Capacity THEN
 	RETURN;
 END_IF
 
-Index		 := TO_DINT(_Count);
+Index		   := TO_DINT(_Count);
 _Suites[Index] := Suite;
-_Count		 := _Count + 1;
-
+_Count		   := _Count + 1;
 // Reporters already attached reach this suite too, so the composition root
+
 // attaches once - to the run - whatever order it does things in.
 FOR i := 0 TO TO_DINT(_ReporterCount) - 1 DO
 	THIS^.PushReporter(Suite, _Reporters[i]);
@@ -153,13 +180,21 @@ AddSuite := TRUE;]]></ST>
     </Method>
     <Method Name="CheckWatchdog" Id="{c39f0699-b0b7-4e1f-8337-116dab054817}">
       <Declaration><![CDATA[// Has the active suite stopped making progress?
+
 //
+
 // PROGRESS, not duration. The measure is how many tests the suite has brought to
+
 // a verdict - passed, failed, errored or skipped. A slow suite still moves that
+
 // number; a stalled one does not, and counting scans since it STARTED would fire
+
 // on the slow rather than the stuck.
+
 //
+
 // A suite cannot see this about itself: it is the thing that has stopped. The run
+
 // owns the sequence, so it is the only object positioned to notice.
 METHOD CheckWatchdog
 VAR_INPUT
@@ -176,15 +211,12 @@ END_VAR]]></Declaration>
 END_IF
 
 Suite := _Suites[Index];
-
 IF Suite = 0 THEN
 	RETURN;
 END_IF
 
 // Every verdict the suite has reached so far.
-Progress := Suite.PassedCount + Suite.FailedCount
-		  + Suite.ErrorCount + Suite.SkippedCount;
-
+Progress := Suite.PassedCount + Suite.FailedCount + Suite.ErrorCount + Suite.SkippedCount;
 IF Progress <> _LastProgress THEN
 	_LastProgress := Progress;
 	_StallCycles  := 0;
@@ -192,25 +224,23 @@ IF Progress <> _LastProgress THEN
 END_IF
 
 _StallCycles := _StallCycles + 1;
-
 IF _StallCycles < _WatchdogCycles THEN
 	RETURN;
 END_IF
 
 // Stalled. Named, counted, and left behind.
 _StalledSuites := _StalledSuites + 1;
-THIS^.RaiseFrameworkError(CONCAT(CONCAT(
-	'suite stalled and was abandoned: ', Suite.Label),
-	CONCAT(', no verdict for ', UDINT_TO_STRING(_WatchdogCycles))));
+THIS^.RaiseFrameworkError(CONCAT(CONCAT('suite stalled and was abandoned: ', Suite.Label), CONCAT(', no verdict for ', UDINT_TO_STRING(_WatchdogCycles))));
 
 // One call with Enable FALSE, so the suite can put its own state back. Its return
+
 // is ignored: a suite that has stopped will not answer this either, and waiting
+
 // for it would reproduce the stall the watchdog exists to break.
 Suite.Run(Enable := FALSE);
 
 // Whatever it did manage still counts.
 _Tally.Absorb(Suite);
-
 THIS^.NextSuite();]]></ST>
       </Implementation>
     </Method>
@@ -218,8 +248,7 @@ THIS^.NextSuite();]]></ST>
       <Declaration><![CDATA[PROPERTY ErrorCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{35d4b358-7bfc-4d93-aa40-878b4c494207}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[ErrorCount := _Tally.ErrorCount;]]></ST>
         </Implementation>
@@ -229,8 +258,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY FailedCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{717c4f2c-add7-404a-b92e-62815edf6870}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FailedCount := _Tally.FailedCount;]]></ST>
         </Implementation>
@@ -238,12 +266,19 @@ END_VAR
     </Property>
     <Method Name="Finish" Id="{9cfdf8a1-efe2-42a9-9857-d9bc97ed8226}">
       <Declaration><![CDATA[// Terminal. Settles the aggregate and raises RunFinished - ONCE, whatever the
+
 // topology.
+
 //
+
 // THIS IS WHY THIS OBJECT EXISTS. A suite cannot raise it: a suite is not a run,
+
 // and asking one to announce the end of something above itself is what forced a
+
 // "am I being sequenced" flag in an earlier design. Here a single suite is
+
 // composed with one TestRun and a sequencer IS one, so exactly one object is ever
+
 // in a position to say the run is over.
 METHOD Finish]]></Declaration>
       <Implementation>
@@ -259,8 +294,7 @@ _Fanout.RunFinished(Status := THIS^, TargetInfo := _TargetInfo);]]></ST>
       <Declaration><![CDATA[PROPERTY IsComplete : BOOL]]></Declaration>
       <Get Name="Get" Id="{fd427d1f-6715-4ac5-8b07-f005d9ebebb5}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsComplete := _Tally.IsComplete;]]></ST>
         </Implementation>
@@ -270,8 +304,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY Label : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{5d597392-f496-4919-b4e1-8258a850af3c}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Label := _Label;]]></ST>
         </Implementation>
@@ -279,6 +312,7 @@ END_VAR
     </Property>
     <Method Name="NextSuite" Id="{95d3f6f1-8145-4fd2-9de5-ffe8b2e7e68a}">
       <Declaration><![CDATA[// Move to the next suite and reset the watchdog with it. One place, so the reset
+
 // cannot be forgotten on one of the paths that advances.
 METHOD NextSuite]]></Declaration>
       <Implementation>
@@ -291,8 +325,7 @@ _LastProgress := 0;]]></ST>
       <Declaration><![CDATA[PROPERTY Outcome : E_RunOutcome]]></Declaration>
       <Get Name="Get" Id="{37c15751-03c5-4306-8eec-f82839638e32}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Outcome := _Tally.Outcome;]]></ST>
         </Implementation>
@@ -302,8 +335,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY PassedCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{1b0f2c6e-b90b-4033-b291-f100a6ee5f0d}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[PassedCount := _Tally.PassedCount;]]></ST>
         </Implementation>
@@ -311,9 +343,13 @@ END_VAR
     </Property>
     <Method Name="PushReporter" Id="{7f89964c-571e-49a8-a203-e5abeaad3187}">
       <Declaration><![CDATA[// Hand a reporter to a suite through its configuration face.
+
 //
+
 // A suite is held as I_TestSuite - the driving surface - which deliberately does
+
 // not carry AddReporter. The configuration face is reached with __QUERYINTERFACE,
+
 // the same way every optional face in this library is.
 METHOD PushReporter
 VAR_INPUT
@@ -356,8 +392,7 @@ _Fanout.FrameworkError(Source := _Label, Message := Message);]]></ST>
       <Declaration><![CDATA[PROPERTY ReporterCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{c0bef58d-e3c1-4d33-a3b9-f4a69a720d27}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[ReporterCount := _Fanout.Count;]]></ST>
         </Implementation>
@@ -365,21 +400,33 @@ END_VAR
     </Property>
     <Method Name="ReRun" Id="{a01ee304-4229-4307-9a7e-8452ccc0c354}">
       <Declaration><![CDATA[// Re-execute every suite in the run, and produce a FRESH document.
+
 //
+
 // It lives here rather than on a suite because the document boundary does. A suite
+
 // re-running on its own re-executes its tests and raises SuiteFinished again, but
+
 // announces no run - so no new artifact is written and the re-run is invisible to
+
 // CI.
+
 //
+
 // The registered set is not redefined, at either level. A re-run re-executes what
+
 // was composed; it does not recompose it.
+
 //
+
 // There is no ReRunSingle here. Re-running ONE thing is a debugging aid scoped to
+
 // a test, and the suite already offers it - a run-level equivalent would be a
+
 // second way to spell the same intention.
 METHOD ReRun
 VAR
-	i		: DINT;
+	i		  : DINT;
 	ReRunFace : I_TestReRun;
 END_VAR]]></Declaration>
       <Implementation>
@@ -402,6 +449,7 @@ FOR i := 0 TO TO_DINT(_Count) - 1 DO
 END_FOR
 
 // Counts start again from nothing, and Finish will raise RunFinished a second
+
 // time - which is what produces the fresh document.
 _Tally.Begin(0);
 _Index		  := 0;
@@ -411,7 +459,9 @@ _LastProgress := 0;]]></ST>
     </Method>
     <Method Name="Run" Id="{50d69b9b-e2c5-4ab8-a121-14a2d7281f35}" FolderPath="I_TestExecution\">
       <Declaration><![CDATA[// Drive the run. One suite at a time, in the order they were added.
+
 //
+
 // Returns TRUE once every suite has reached a terminal state.
 METHOD Run : BOOL
 VAR_INPUT
@@ -423,9 +473,7 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_Fanout.CyclicLogic();
-
 Run := _Tally.IsComplete;
-
 IF NOT Enable THEN
 	RETURN;
 END_IF
@@ -433,12 +481,12 @@ END_IF
 IF _IsOpen THEN
 	_IsOpen := FALSE;
 	_Tally.Begin(0);
-
 	IF _Label = '' THEN
 		THIS^.RaiseFrameworkError('the run was started with no label');
 	END_IF
 
 	// Once, before anything else in the run. A sink that builds something opens it
+
 	// here rather than guessing from the first result to arrive.
 	_Fanout.RunStarted(Label := _Label, TargetInfo := _TargetInfo);
 END_IF
@@ -454,8 +502,8 @@ IF _Index >= TO_DINT(_Count) THEN
 END_IF
 
 Index := _Index;
-
 // Serial by construction. Only one suite is ever enabled, which is what makes two
+
 // suites touching the same axis unable to overlap.
 IF _Suites[Index].Run(Enable := TRUE) THEN
 	// Counts TESTS, not suites, so the figures mean the same thing at every level
@@ -481,9 +529,13 @@ _Tally.SetLabel(Label);]]></ST>
     </Method>
     <Method Name="SetTargetInfo" Id="{12464ece-883d-4f80-bfbb-dc47a1a41170}">
       <Declaration><![CDATA[// Where this run happened - NetId, platform, TwinCAT version, whatever
+
 // identifies the machine.
+
 //
+
 // Without it a matrix run across several targets produces result documents that
+
 // cannot be told apart.
 METHOD SetTargetInfo
 VAR_INPUT
@@ -495,14 +547,23 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="SetWatchdog" Id="{69aa321c-608f-4414-8de1-33957e1b56cd}">
       <Declaration><![CDATA[// How many scans a suite may go WITHOUT COMPLETING A TEST before the run
+
 // abandons it. Zero disables the watchdog.
+
 //
+
 // A backstop, not a deadline. Per-test budgets already bound every test that did
+
 // not disable them; this catches what they cannot - a suite that stops progressing
+
 // for any other reason, including a test that turned its own deadlines off.
+
 //
+
 // Raise it for a suite with a single legitimately long test: the count is scans
+
 // between VERDICTS, so one test taking longer than the budget looks identical to
+
 // a suite that has stopped.
 METHOD SetWatchdog
 VAR_INPUT
@@ -514,6 +575,7 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="Skip" Id="{6dd1433a-3977-491c-a70e-5b53462a5dae}" FolderPath="I_TestExecution\">
       <Declaration><![CDATA[// Nothing to run. The run reports complete rather than waiting, so anything
+
 // aggregating it is not held open.
 METHOD Skip]]></Declaration>
       <Implementation>
@@ -523,7 +585,7 @@ END_IF
 
 _IsOpen := FALSE;
 _Tally.Begin(0);
-_Index	:= TO_DINT(_Count);
+_Index := TO_DINT(_Count);
 THIS^.Finish();]]></ST>
       </Implementation>
     </Method>
@@ -531,8 +593,7 @@ THIS^.Finish();]]></ST>
       <Declaration><![CDATA[PROPERTY SkippedCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{e9ab9b69-1cab-4dc8-8faa-4fe108fb1d5c}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SkippedCount := _Tally.SkippedCount;]]></ST>
         </Implementation>
@@ -540,12 +601,12 @@ END_VAR
     </Property>
     <Property Name="StalledSuites" Id="{b9b555ec-8627-4cc9-b93b-10331c61e587}">
       <Declaration><![CDATA[// Suites the watchdog abandoned. Assert it is zero in CI: a stalled suite is never
+
 // a normal outcome, and the run it belongs to cannot be trusted.
 PROPERTY StalledSuites : UDINT]]></Declaration>
       <Get Name="Get" Id="{65c91cfb-aace-4306-a5f2-73c85f1529d4}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[StalledSuites := _StalledSuites;]]></ST>
         </Implementation>
@@ -553,12 +614,12 @@ END_VAR
     </Property>
     <Property Name="SuiteCount" Id="{94d14fd0-1ee9-4f42-8bd9-70e6bf81711a}" FolderPath="I_TestRunRegistration\">
       <Declaration><![CDATA[// Suites added. Assert it in CI: a suite that silently stops being added takes
+
 // its tests with it, and the totals simply come out smaller.
 PROPERTY SuiteCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{77242349-3c38-486d-85cb-4e3a0cf9c122}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SuiteCount := _Count;]]></ST>
         </Implementation>
@@ -568,8 +629,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY TestCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{e0ba7673-4012-4597-8c51-8fd3de65b41b}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TestCount := _Tally.TestCount;]]></ST>
         </Implementation>
@@ -579,8 +639,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY TotalDuration : LREAL]]></Declaration>
       <Get Name="Get" Id="{c5a69537-0316-444e-8d10-73cc8bf998f8}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TotalDuration := _Tally.TotalDuration;]]></ST>
         </Implementation>

@@ -2,39 +2,57 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestLogReporter" Id="{b7a4257f-4473-437e-8260-cd63342e609a}" SpecialFunc="None">
     <Declaration><![CDATA[// Writes results to the TwinCAT system log through ADSLOGSTR.
+
 //
+
 // The simplest sink that is genuinely useful, and deliberately the first one
+
 // built: it needs no project setup, no event class, and no asynchronous work, so
+
 // attaching it cannot change whether a run completes. Anything that goes wrong
+
 // here is visibly this object's fault and not the harness's.
+
 //
+
 // It implements I_TestReporter and NOT I_TestDetailSink. A log wants verdicts; a
+
 // line per individual check would bury them. The fan-out asks once and never calls
+
 // this for a check.
+
 //
+
 // QUIET BY DEFAULT. Failures and errors are logged, passes are not - eighty green
+
 // lines hide the two that matter, and the counts are already available through
+
 // I_TestRunStatus for anyone who wants them. SetVerbosity(TRUE) if you want the
+
 // narration.
+
 //
+
 // Severity is not decoration. A FAILURE is an error: the code under test was shown
+
 // to be wrong. An ERROR is a warning: the test could not run, so nothing was shown
+
 // about the code at all, and a build should react differently to each.
 FUNCTION_BLOCK TestLogReporter IMPLEMENTS I_TestReporter
 VAR
-	_Prefix		   : T_MaxString;
-	_IncludePasses : BOOL;
-
+	_Prefix				   : T_MaxString;
+	_IncludePasses		   : BOOL;
 	_LinesWritten		   : UDINT;
 	_FailuresLogged		   : UDINT;
 	_ErrorsLogged		   : UDINT;
 	_FrameworkErrorsLogged : UDINT;
-	// The banner rule. Held once so both ends of a run are drawn identically - two
-	// rules that differed by a character would be worse than none.
-	_Rule : T_MaxString := '========================================================';
 
-	_TestsSeen			   : UDINT;
-	_SuitesSeen			   : UDINT;
+	// The banner rule. Held once so both ends of a run are drawn identically - two
+
+	// rules that differed by a character would be worse than none.
+	_Rule		: T_MaxString := '========================================================';
+	_TestsSeen	: UDINT;
+	_SuitesSeen : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(*
@@ -46,6 +64,7 @@ END_VAR]]></Declaration>
     <Folder Name="I_TestReporter" Id="{2f8dc224-839c-4edb-a4f8-52ecf4228bd4}" />
     <Method Name="CyclicLogic" Id="{ca652c50-082b-47e9-9a34-4b7c829654c7}" FolderPath="I_Cyclic\">
       <Declaration><![CDATA[// Nothing to advance. ADSLOGSTR completes within the call, which is what makes
+
 // this the cheapest sink to attach and the safest one to attach first.
 METHOD CyclicLogic]]></Declaration>
       <Implementation>
@@ -57,6 +76,7 @@ METHOD CyclicLogic]]></Declaration>
     </Method>
     <Method Name="Emit" Id="{ea668da0-5055-482d-a7e0-79175900cc15}">
       <Declaration><![CDATA[// The one place anything is written. Private, so severity and destination are
+
 // chosen here and cannot drift between call sites.
 METHOD Emit
 VAR_INPUT
@@ -65,14 +85,14 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[// A severity bit alone does not say where the message goes. LOG is what puts it
+
 // in the system event log; without it the behaviour is unstated.
+
 //
+
 // %s is filled by strArg. Passing the line as the FORMAT string instead would let
 // a test label containing a percent sign corrupt the output - or worse.
-ADSLOGSTR(msgCtrlMask := Severity OR ADSLOG_MSGTYPE_LOG OR ADSLOG_MSGTYPE_STRING,
-		  msgFmtStr	  := CONCAT(_Prefix, '%s'),
-		  strArg	  := Line);
-
+ADSLOGSTR(msgCtrlMask := Severity OR ADSLOG_MSGTYPE_LOG OR ADSLOG_MSGTYPE_STRING, msgFmtStr := CONCAT(_Prefix, '%s'), strArg := Line);
 _LinesWritten := _LinesWritten + 1;]]></ST>
       </Implementation>
     </Method>
@@ -80,8 +100,7 @@ _LinesWritten := _LinesWritten + 1;]]></ST>
       <Declaration><![CDATA[PROPERTY ErrorsLogged : UDINT]]></Declaration>
       <Get Name="Get" Id="{801bb0eb-dd92-4f47-bc8a-1e018326112f}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[ErrorsLogged := _ErrorsLogged;]]></ST>
         </Implementation>
@@ -91,8 +110,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY FailuresLogged : UDINT]]></Declaration>
       <Get Name="Get" Id="{2dfa643a-f64d-47fc-806d-2500f8699edb}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FailuresLogged := _FailuresLogged;]]></ST>
         </Implementation>
@@ -108,18 +126,18 @@ END_VAR]]></Declaration>
         <ST><![CDATA[_FrameworkErrorsLogged := _FrameworkErrorsLogged + 1;
 
 // Always an error, and never silent. This is the framework saying it could not do
+
 // something - a rejected registration, a teardown that overran, a document that
+
 // could not be written - and none of those is a test result.
-THIS^.Emit(ADSLOG_MSGTYPE_ERROR,
-	CONCAT(CONCAT('FRAMEWORK ', Source), CONCAT(': ', Message)));]]></ST>
+THIS^.Emit(ADSLOG_MSGTYPE_ERROR, CONCAT(CONCAT('FRAMEWORK ', Source), CONCAT(': ', Message)));]]></ST>
       </Implementation>
     </Method>
     <Property Name="FrameworkErrorsLogged" Id="{7a949255-cf12-410b-a2e9-b166a7d58e57}">
       <Declaration><![CDATA[PROPERTY FrameworkErrorsLogged : UDINT]]></Declaration>
       <Get Name="Get" Id="{874fb02e-0023-4265-b3c0-984b045a9170}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[FrameworkErrorsLogged := _FrameworkErrorsLogged;]]></ST>
         </Implementation>
@@ -127,12 +145,12 @@ END_VAR
     </Property>
     <Property Name="IsIdle" Id="{c6becb6b-281b-4035-999b-1df852d1bc11}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Always TRUE. ADSLOGSTR completes within the call, so this sink never holds a
+
 // run open - which is precisely why it is the one to attach first.
 PROPERTY IsIdle : BOOL]]></Declaration>
       <Get Name="Get" Id="{2ca30858-4cd7-490e-89bc-3074b1f02808}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsIdle := TRUE;]]></ST>
         </Implementation>
@@ -143,8 +161,7 @@ END_VAR
 PROPERTY LinesWritten : UDINT]]></Declaration>
       <Get Name="Get" Id="{7f6a7ed7-7789-4beb-9a50-0b8e17a1b675}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[LinesWritten := _LinesWritten;]]></ST>
         </Implementation>
@@ -166,12 +183,12 @@ END_VAR]]></Declaration>
 END_IF
 
 // TargetInfo identifies where the run happened. Without it a matrix run across
+
 // several targets produces log output that cannot be told apart.
 Line := CONCAT(CONCAT(THIS^.Tally(Status), '  on '), TargetInfo);
-
 THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);
-
 // Severity follows the outcome. A log filtered to errors still shows the closing
+
 // line of a run that went red, and shows nothing of one that did not.
 IF Status.Outcome = E_RunOutcome.Passed THEN
 	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('===  RUN PASSED  ', Line));
@@ -184,11 +201,17 @@ THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);]]></ST>
     </Method>
     <Method Name="RunStarted" Id="{7e120ce4-1d0a-4789-b07c-42569a340e59}" FolderPath="I_TestReporter\">
       <Declaration><![CDATA[// Opens the run with a banner, so everything between it and the closing rule
+
 // belongs to this run and nothing else.
+
 //
+
 // The TwinCAT log is shared - a machine writes to it too - and test output is
+
 // interleaved with whatever else is happening. Without a marker at BOTH ends, a
+
 // reader scrolling back cannot tell where the run began; the failures stream
+
 // during it and the summary only arrives at the end.
 METHOD RunStarted
 VAR_INPUT
@@ -201,9 +224,7 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);
-
 Line := CONCAT('===  TEST RUN  ', Label);
-
 IF TargetInfo <> '' THEN
 	Line := CONCAT(Line, CONCAT('  on ', TargetInfo));
 END_IF
@@ -214,6 +235,7 @@ THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);]]></ST>
     </Method>
     <Method Name="SetPrefix" Id="{f9f3eda4-4dbe-4486-afa1-31324a80de1d}">
       <Declaration><![CDATA[// Prepended to every line. Useful when several runs share one log - a rig
+
 // running unit and integration suites, or a matrix across targets.
 METHOD SetPrefix
 VAR_INPUT
@@ -225,9 +247,13 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="SetVerbosity" Id="{89c5e1a8-d6f9-468b-a587-ea6da248eee0}">
       <Declaration><![CDATA[// Which results reach the log. Default: failures and errors only.
+
 //
+
 // A suite of eighty passing tests writing eighty log lines buries the two that
+
 // matter. Passes are counted, not narrated - the counts are already available
+
 // through I_TestRunStatus for anyone who wants them.
 METHOD SetVerbosity
 VAR_INPUT
@@ -253,10 +279,9 @@ END_VAR]]></Declaration>
 END_IF
 
 _SuitesSeen := _SuitesSeen + 1;
-
-Line := CONCAT(CONCAT(Status.Label, ': '), THIS^.Tally(Status));
-
+Line		:= CONCAT(CONCAT(Status.Label, ': '), THIS^.Tally(Status));
 // Severity follows the outcome, so a log filtered to errors still shows which
+
 // suite was responsible rather than only the individual failures.
 IF Status.Outcome = E_RunOutcome.Passed THEN
 	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('SUITE PASSED  ', Line));
@@ -273,8 +298,7 @@ END_IF]]></ST>
       <Declaration><![CDATA[PROPERTY SuitesSeen : UDINT]]></Declaration>
       <Get Name="Get" Id="{b0c8343d-7920-4225-8240-d002c73746ce}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[SuitesSeen := _SuitesSeen;]]></ST>
         </Implementation>
@@ -282,6 +306,7 @@ END_VAR
     </Property>
     <Method Name="Tally" Id="{d78f9575-c8b7-4536-b8b3-b6d93aacb66e}">
       <Declaration><![CDATA[// The counts as one readable phrase. Shared by the suite and run lines so the two
+
 // cannot drift apart.
 METHOD Tally : T_MaxString
 VAR_INPUT
@@ -321,32 +346,30 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_TestsSeen := _TestsSeen + 1;
-
 CASE Status OF
+	E_TestStatus.Failed:
+		_FailuresLogged := _FailuresLogged + 1;
 
-E_TestStatus.Failed:
-	_FailuresLogged := _FailuresLogged + 1;
-	// The summary is already composed to fit one line, kind first in its own field.
-	// Repeating the kind here would spend characters the summary needs.
-	Line := CONCAT(CONCAT(CONCAT(CONCAT(
-			'FAILED ', SuiteLabel), ' / '), TestLabel), CONCAT(': ', Summary));
-	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, Line);
+		// The summary is already composed to fit one line, kind first in its own field.
 
-E_TestStatus.Errored:
-	_ErrorsLogged := _ErrorsLogged + 1;
-	// Warning, not error: the code under test was never shown to be wrong. A build
-	// should react differently, and so should whoever is reading the log.
-	Line := CONCAT(CONCAT(CONCAT(CONCAT(
-			'ERRORED ', SuiteLabel), ' / '), TestLabel), CONCAT(': ', Summary));
-	THIS^.Emit(ADSLOG_MSGTYPE_WARN, Line);
+		// Repeating the kind here would spend characters the summary needs.
+		Line := CONCAT(CONCAT(CONCAT(CONCAT('FAILED ', SuiteLabel), ' / '), TestLabel), CONCAT(': ', Summary));
+		THIS^.Emit(ADSLOG_MSGTYPE_ERROR, Line);
+
+	E_TestStatus.Errored:
+		_ErrorsLogged := _ErrorsLogged + 1;
+
+		// Warning, not error: the code under test was never shown to be wrong. A build
+
+		// should react differently, and so should whoever is reading the log.
+		Line := CONCAT(CONCAT(CONCAT(CONCAT('ERRORED ', SuiteLabel), ' / '), TestLabel), CONCAT(': ', Summary));
+		THIS^.Emit(ADSLOG_MSGTYPE_WARN, Line);
 
 ELSE
 	IF _IncludePasses THEN
-		Line := CONCAT(CONCAT(CONCAT(
-				'passed ', SuiteLabel), ' / '), TestLabel);
+		Line := CONCAT(CONCAT(CONCAT('passed ', SuiteLabel), ' / '), TestLabel);
 		THIS^.Emit(ADSLOG_MSGTYPE_HINT, Line);
 	END_IF
-
 END_CASE]]></ST>
       </Implementation>
     </Method>
@@ -355,8 +378,7 @@ END_CASE]]></ST>
 PROPERTY TestsSeen : UDINT]]></Declaration>
       <Get Name="Get" Id="{43b5808b-1388-4425-bb13-c5035e9f1303}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TestsSeen := _TestsSeen;]]></ST>
         </Implementation>

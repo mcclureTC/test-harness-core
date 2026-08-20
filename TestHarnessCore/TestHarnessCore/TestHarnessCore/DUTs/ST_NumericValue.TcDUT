@@ -1,21 +1,27 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="ST_NumericValue" Id="{a74fae77-b882-4d5b-b8fb-fe286674f78e}">
     <Declaration><![CDATA[// A number recovered from an ANY, and whether one was there to recover.
+
 //
+
 // IsNumeric is FALSE for strings, structs, arrays and anything else with no
+
 // ordering. Value is 0.0 in that case and must not be read.
+
 //
+
 // This is a return type rather than an output parameter because an output binds
+
 // with => and never positionally, so a caller writing TestValueAsLReal(V, Ok)
+
 // would bind Ok to an input and never see the flag.
 {attribute 'pack_mode' := '1'}
 TYPE ST_NumericValue :
-STRUCT
-	IsNumeric : BOOL;
-	Value	  : LREAL;
-END_STRUCT
-END_TYPE
-]]></Declaration>
+	STRUCT
+		IsNumeric : BOOL;
+		Value	  : LREAL;
+	END_STRUCT
+END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

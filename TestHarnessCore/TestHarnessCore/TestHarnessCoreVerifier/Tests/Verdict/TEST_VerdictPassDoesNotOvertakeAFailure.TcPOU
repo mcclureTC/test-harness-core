@@ -2,19 +2,22 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_VerdictPassDoesNotOvertakeAFailure" Id="{c095c34a-45bf-4a15-ba30-e6cd3e183723}" SpecialFunc="None">
     <Declaration><![CDATA[// The verdict cannot return to Passed once a check has failed. Later checks are
+
 // still evaluated and counted - a run should report everything it found, not stop
+
 // at the first problem - but none of them can undo the first failure.
 FUNCTION_BLOCK TEST_VerdictPassDoesNotOvertakeAFailure IMPLEMENTS I_Test
 VAR
 	// A private journal and handle, so a DELIBERATE failure can be recorded and
-	// inspected without the suite's own verdict ever seeing it. The test itself
-	// passes; what it proves is that failing works.
-	Subject : TestJournal;
-	Handle	: TestVerdict;
-	Same : DINT := 7;
-	Lower : DINT := 1;
-	Higher: DINT := 2;
 
+	// inspected without the suite's own verdict ever seeing it. The test itself
+
+	// passes; what it proves is that failing works.
+	Subject		   : TestJournal;
+	Handle		   : TestVerdict;
+	Same		   : DINT := 7;
+	Lower		   : DINT := 1;
+	Higher		   : DINT := 2;
 	ExpectedStatus : E_TestStatus;
 	ActualStatus   : E_TestStatus;
 	ExpectedCount  : UDINT;
@@ -33,23 +36,17 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Handle.Target(Subject);
 Subject.Begin('deliberate', '');
-
 Handle.AssertEqual(Lower, Higher, 'fails first');
 Handle.AssertEqual(Same, Same, 'passes second');
 Handle.AssertTrue(TRUE, 'passes third');
-
 ExpectedCount := 3;
 ActualCount	  := Subject.AssertionCount;
 Test.AssertEqual(ExpectedCount, ActualCount, 'every check was evaluated');
-
 Subject.Finish(E_TestStatus.Passed);
-
 ExpectedStatus := E_TestStatus.Failed;
 ActualStatus   := Subject.Status;
 Test.AssertEqual(ExpectedStatus, ActualStatus, 'still Failed after two passes');
-
 Handle.Untarget();
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

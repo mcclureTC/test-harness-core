@@ -2,39 +2,64 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestRegistry" Id="{b3416392-9d7c-4358-9455-afb1778de422}" SpecialFunc="None">
     <Declaration><![CDATA[// The registered set: which tests, in what order, under what labels, with their
+
 // journals.
+
 //
+
 // It exists so the capacity bound lives in ONE place. Expressing the
+
 // same bound as a loop limit in four, and a version existed where ReRunTests
+
 // looped to a parameter while the array was sized by the generic - so a smaller
+
 // instance wrote past the end of its own array. Overflow here is "no free slot
+
 // found", never an index compared against a maximum.
+
 //
+
 // ARRAY[0..Capacity - 1] holds exactly Capacity tests. Declaring
+
 // ARRAY[0.._MaxTestCount], giving N+1, which the README had to explain and which
+
 // leaked into a diagnostic that was simply false.
+
 //
+
 // Capacity must be at least 1. ARRAY[0..-1] is a compile error and that is the
+
 // right outcome - clamping a zero to one slot would be the same class of silent
+
 // surprise this library exists to remove.
+
 //
+
 // THE ONLY GENERIC OBJECT that consumers touch, and the reason every one of them
+
 // touches it through an interface: a generic instance cannot be passed by its
+
 // concrete type, even to something declaring that same type from the same scope.
+
 // Three faces, three audiences - the suite writes, the arbiter and runner read,
+
 // the suite alone resets.
 FUNCTION_BLOCK TestRegistry
 VAR_GENERIC CONSTANT
 	Capacity : UDINT := TestHarnessParameter.Capacity;
 END_VAR IMPLEMENTS I_TestRegistrar, I_TestRoster, I_TestJournalSet
 VAR
-	_Slots	  : ARRAY[0..Capacity - 1] OF ST_TestSlot;
+	_Slots : ARRAY[0..Capacity - 1] OF ST_TestSlot;
+
 	// One per slot, sized by the same bound. Separate from ST_TestSlot because a
+
 	// journal is a function block with methods, and the slot is a value.
 	_Journals : ARRAY[0..Capacity - 1] OF TestJournal;
 	_Count	  : UDINT;
 	_IsOpen	  : BOOL := TRUE;
+
 	// Never written. Returned for an out-of-range index so the caller gets a
+
 	// well-defined empty slot rather than whatever was nearby.
 	_EmptySlot : ST_TestSlot;
 END_VAR]]></Declaration>
@@ -72,8 +97,7 @@ END_FOR]]></ST>
       <Declaration><![CDATA[PROPERTY Count : UDINT]]></Declaration>
       <Get Name="Get" Id="{9a6366ea-e2ae-4d87-9c75-365237bfb0e8}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Count := _Count;]]></ST>
         </Implementation>
@@ -83,8 +107,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY IsOpen : BOOL]]></Declaration>
       <Get Name="Get" Id="{ac2aeb00-ed5f-4526-bd0c-f021baa61f44}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[IsOpen := _IsOpen;]]></ST>
         </Implementation>
@@ -97,10 +120,10 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Invalidated first. A method returning REFERENCE TO that simply returns leaves
+
 // the reference undefined, and undefined reads as valid often enough to pass by
 // luck rather than by design.
 Journal REF= 0;
-
 IF (Index < 0) OR (Index >= TO_DINT(_Count)) THEN
 	RETURN;
 END_IF
@@ -119,13 +142,14 @@ VAR
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Lookup := -1;
-
 IF Label = '' THEN
 	RETURN;
 END_IF
 
 // Linear, and deliberately so: it runs at registration and on an individual
+
 // re-run, never per scan, and a sorted structure would cost ordering - which IS
+
 // the execution order.
 FOR i := 0 TO TO_DINT(_Count) - 1 DO
 	IF _Slots[i].Label = Label THEN
@@ -154,7 +178,6 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[// An out-of-range index yields the empty slot: a null Test and an Index of -1.
 Slot := _EmptySlot;
-
 IF (Index < 0) OR (Index >= TO_DINT(_Count)) THEN
 	RETURN;
 END_IF
@@ -199,26 +222,26 @@ IF _Count >= Capacity THEN
 	RETURN;
 END_IF
 
-Index := TO_DINT(_Count);
-
+Index				:= TO_DINT(_Count);
 _Slots[Index].Test	:= Test;
 _Slots[Index].Index := Index;
 _Slots[Index].Label := Label;
-
 // Resolved once. A hook the test does not implement stays null, and null is the
+
 // whole mechanism - there is nothing for a test author to opt out of.
 IF NOT __QUERYINTERFACE(Test, _Slots[Index].Setup) THEN
 	_Slots[Index].Setup := 0;
 END_IF
+
 IF NOT __QUERYINTERFACE(Test, _Slots[Index].Teardown) THEN
 	_Slots[Index].Teardown := 0;
 END_IF
+
 IF NOT __QUERYINTERFACE(Test, _Slots[Index].Location) THEN
 	_Slots[Index].Location := 0;
 END_IF
 
 _Journals[Index].SetBudgets(Budgets);
-
 _Count	 := _Count + 1;
 TryClaim := E_RegistrationFault.None;]]></ST>
       </Implementation>

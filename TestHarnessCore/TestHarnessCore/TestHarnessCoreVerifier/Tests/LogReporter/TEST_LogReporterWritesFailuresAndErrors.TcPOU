@@ -2,16 +2,23 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_LogReporterWritesFailuresAndErrors" Id="{85624b1c-dd67-4dc5-a523-835404c8af7d}" SpecialFunc="None">
     <Declaration><![CDATA[// A failure is an error: the code under test was shown to be wrong. An error is a
+
 // warning: the test could not run, so nothing was shown about the code at all.
+
 //
+
 // Counted apart because a build should react differently to each.//
+
 // WHAT THIS CANNOT CHECK: whether the line actually reached the TwinCAT log, or
+
 // what it says. ADSLOGSTR gives no answer back. The counters prove which BRANCH
+
 // was taken; the wording has to be read once, by eye, in the Logged Events window.
+
 // Saying so is better than a test that implies more than it establishes.
 FUNCTION_BLOCK TEST_LogReporterWritesFailuresAndErrors IMPLEMENTS I_Test
 VAR
-	Sink : TestLogReporter;
+	Sink		  : TestLogReporter;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -26,27 +33,34 @@ VAR_INPUT
 	Test   : I_TestAssertions;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'a failure', Location := '',
-				  Status := E_TestStatus.Failed, Kind := E_FailureKind.ValueMismatch,
-				  Summary := 'expected 1, actual 2', ElapsedTime := 0.0,
-				  ElapsedCycles := 1, Assertions := 1);
+        <ST><![CDATA[Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'a failure',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Failed,
+				  Kind			:= E_FailureKind.ValueMismatch,
+				  Summary		:= 'expected 1, actual 2',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 1,
+				  Assertions	:= 1);
 
-Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'an error', Location := '',
-				  Status := E_TestStatus.Errored, Kind := E_FailureKind.Environment,
-				  Summary := 'the axis would not power', ElapsedTime := 0.0,
-				  ElapsedCycles := 1, Assertions := 1);
+Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'an error',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Errored,
+				  Kind			:= E_FailureKind.Environment,
+				  Summary		:= 'the axis would not power',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 1,
+				  Assertions	:= 1);
 
 ExpectedCount := 1;
 ActualCount	  := Sink.FailuresLogged;
 Test.AssertEqual(ExpectedCount, ActualCount, 'the failure was logged');
-
 ActualCount := Sink.ErrorsLogged;
 Test.AssertEqual(ExpectedCount, ActualCount, 'the error was logged separately');
-
 ExpectedCount := 2;
 ActualCount	  := Sink.LinesWritten;
 Test.AssertEqual(ExpectedCount, ActualCount, 'two lines, not one and not three');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

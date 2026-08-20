@@ -1,18 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestReRun" Id="{1385606b-00d9-4d3e-ad83-cdee06683859}">
     <Declaration><![CDATA[// Re-execution, for someone at a keyboard. Separate because it is a debugging
+
 // surface, not something CI or the sequencer should hold.
 INTERFACE I_TestReRun EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Method Name="ReRun" Id="{bc1dce0c-9b26-4ad7-94fc-aa6fd89fe267}">
       <Declaration><![CDATA[// Re-execute every registered test. Clears verdicts and counts and produces a
+
 // fresh result document.
 METHOD ReRun]]></Declaration>
     </Method>
     <Method Name="ReRunSingle" Id="{ae578273-24f0-4128-9233-5f3a17706219}">
       <Declaration><![CDATA[// Re-execute one test by label. Records no result and writes no document, so a
+
 // session at the keyboard cannot pollute the CI artifact with duplicate entries.
+
 //
+
 // Returns FALSE if the label is not registered.
 METHOD ReRunSingle : BOOL
 VAR_INPUT

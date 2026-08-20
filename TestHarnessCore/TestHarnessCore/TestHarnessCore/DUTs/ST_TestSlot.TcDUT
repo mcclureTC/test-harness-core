@@ -2,29 +2,40 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="ST_TestSlot" Id="{475fe69c-0041-4c3f-a9c9-4d5dc87a4ca6}">
     <Declaration><![CDATA[// One registered test, as the registry holds it.
+
 //
+
 // The three optional hooks are resolved ONCE, by __QUERYINTERFACE at registration,
+
 // and stored. Querying them per scan would put an interface lookup in cyclic code
+
 // for a result that cannot change - the instance a slot points at is fixed for the
+
 // life of the run.
+
 //
+
 // A hook the test does not implement is a null reference, which is the whole test:
+
 // no base class, no empty method bodies, no flags to keep in step with reality.
 TYPE ST_TestSlot :
-STRUCT
-	// Null in a slot that was never claimed. This is the "is there a test here"
-	// question - never an index compared against a count.
-	Test	 : I_Test;
-	// Where this slot sits in registration order, so a holder of the slot can reach
-	// the matching journal without carrying a second value alongside it. -1 in an
-	// unclaimed slot.
-	Index	 : DINT := -1;
-	Label	 : T_MaxString;
-	// Null unless the test implements the corresponding optional interface.
-	Setup	 : I_TestSetup;
-	Teardown : I_TestTeardown;
-	Location : I_TestLocation;
-END_STRUCT
+	STRUCT
+		// Null in a slot that was never claimed. This is the "is there a test here"
+
+		// question - never an index compared against a count.
+		Test : I_Test;
+		// Where this slot sits in registration order, so a holder of the slot can reach
+
+		// the matching journal without carrying a second value alongside it. -1 in an
+
+		// unclaimed slot.
+		Index : DINT := -1;
+		Label : T_MaxString;
+		// Null unless the test implements the corresponding optional interface.
+		Setup	 : I_TestSetup;
+		Teardown : I_TestTeardown;
+		Location : I_TestLocation;
+	END_STRUCT
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

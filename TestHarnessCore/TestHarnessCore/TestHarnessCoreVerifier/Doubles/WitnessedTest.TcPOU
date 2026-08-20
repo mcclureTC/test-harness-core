@@ -2,18 +2,24 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="WitnessedTest" Id="{b429e216-5449-4d50-8dc3-b392b2841915}" SpecialFunc="None">
     <Declaration><![CDATA[// A multi-scan test that reports its entry and exit to a shared witness.
+
 //
+
 // Takes several scans deliberately: a single-scan test could never overlap
+
 // anything, so a suite of them would prove serial execution by accident rather
+
 // than by design.
 FUNCTION_BLOCK WitnessedTest IMPLEMENTS I_Test
 VAR
 	// A REFERENCE TO, not an instance: every test in the suite must report to the
+
 	// SAME witness, or each would see itself alone and MaxConcurrent would be 1 by
+
 	// construction rather than by the suite behaving.
-	_Witness  : REFERENCE TO ConcurrencyWitness;
-	_Scans	  : UDINT := 4;
-	_Calls	  : UDINT;
+	_Witness	: REFERENCE TO ConcurrencyWitness;
+	_Scans		: UDINT := 4;
+	_Calls		: UDINT;
 	_HasEntered : BOOL;
 END_VAR]]></Declaration>
     <Implementation>
@@ -59,7 +65,6 @@ IF NOT _HasEntered THEN
 END_IF
 
 _Calls := _Calls + 1;
-
 IF _Calls < _Scans THEN
 	Run := FALSE;
 	RETURN;

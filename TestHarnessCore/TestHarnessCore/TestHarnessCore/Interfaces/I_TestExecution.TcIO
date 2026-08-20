@@ -1,14 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestExecution" Id="{8e1b710a-d5d6-453d-9392-54c800b8d4e6}">
     <Declaration><![CDATA[// What the sequencer needs to drive a suite, and nothing more.
 INTERFACE I_TestExecution EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Method Name="Run" Id="{81059a84-5b8c-4c22-a7d3-9ca833fa4bf8}">
       <Declaration><![CDATA[// Called once per scan by the sequencer. Returns TRUE when every registered test
+
 // has reached a terminal state.
+
 //
+
 // The first call with Enable TRUE closes registration and starts the run.
+
 // Dropping Enable abandons it: the active test, and any setup or teardown in
+
 // flight, are cancelled.
 METHOD Run : BOOL
 VAR_INPUT
@@ -17,9 +22,13 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="Skip" Id="{f1966b91-61d8-46fa-8694-8f71113180d5}">
       <Declaration><![CDATA[// Mark every registered test Skipped without running any, and complete. Must be
+
 // called before the suite is first enabled.
+
 //
+
 // The suite still reports IsComplete. A skipped suite that reported otherwise
+
 // would hang any sequencer aggregating it. Skipped tests do not turn a build red.
 METHOD Skip]]></Declaration>
     </Method>

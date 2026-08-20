@@ -2,9 +2,13 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_FanoutIsIdleIsTheAndOfEverySink" Id="{29a3b6a6-f148-48e2-a1ec-52807935a9ac}" SpecialFunc="None">
     <Declaration><![CDATA[// CI must wait for IsIdle as well as IsComplete. A run finishing and its result
+
 // document reaching disk are different events, and copying between them yields a
+
 // truncated artifact - which reads as a broken pipeline rather than a finished run.
+
 //
+
 // One busy sink is enough to hold the whole fan-out busy.
 FUNCTION_BLOCK TEST_FanoutIsIdleIsTheAndOfEverySink IMPLEMENTS I_Test
 VAR
@@ -26,21 +30,17 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[// Nothing attached: no sink, no pending work.
 Test.AssertTrue(Empty.IsIdle, 'an empty fan-out is idle');
-
 Fanout.Attach(Quick);
 Fanout.Attach(Slow);
 Test.AssertTrue(Fanout.IsIdle, 'idle while both sinks are');
-
 Slow.SetBusy(TRUE);
 Test.AssertFalse(Fanout.IsIdle, 'one busy sink holds the whole fan-out busy');
 
 // CyclicLogic is what lets a slow sink finish, so it must keep running.
 Fanout.CyclicLogic();
 Test.AssertTrue(Slow.CyclicCalls > 0, 'and the busy sink still gets advanced');
-
 Slow.SetBusy(FALSE);
 Test.AssertTrue(Fanout.IsIdle, 'idle again once it finishes');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

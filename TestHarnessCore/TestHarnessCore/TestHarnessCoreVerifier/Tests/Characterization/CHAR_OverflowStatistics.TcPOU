@@ -2,26 +2,34 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_OverflowStatistics" Id="{2d5c2b67-25ba-498d-a810-451ab94c8e15}" SpecialFunc="None">
     <Declaration><![CDATA[// Part of the acceptance contract: the Errors figure is distinct from Failures.
+
 //
+
 // An overflow is a framework error, not a failed assertion. Conflating them sends
+
 // whoever reads the report hunting a defect that is not there. Three tests
+
 // registered and passing, one refused, and the statistics say exactly that - and
+
 // the result document is still written.
 FUNCTION_BLOCK CHAR_OverflowStatistics IMPLEMENTS I_Test
 VAR
 	Inner	 : TestSuite<3>;
 	Recorder : RecordingReporter;
+
 	// A run, not just a suite. RunFinished is a run-level event and only a TestRun
+
 	// raises it - which is what produces a result document at all. Without one, a
+
 	// single-suite project writes nothing, and this test is what found that.
-	Runner	 : TestRun<2>;
-	Budgets	 : ST_TestBudgets;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	A : PassingTest;
-	B : PassingTest;
-	C : PassingTest;
-	D : PassingTest;
+	Runner		  : TestRun<2>;
+	Budgets		  : ST_TestBudgets;
+	Phase		  : DINT;
+	Scans		  : DINT;
+	A			  : PassingTest;
+	B			  : PassingTest;
+	C			  : PassingTest;
+	D			  : PassingTest;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -44,48 +52,41 @@ IF Scans > 500 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Inner.SetLabel('CHAR_Overflow_Subject');
+		Runner.SetLabel('CHAR_Overflow_Subject_Run');
 
-0:
-	Inner.SetLabel('CHAR_Overflow_Subject');
+		// Attached to the RUN, which pushes it into every suite. One attachment point.
+		Runner.AddReporter(Recorder);
+		Runner.AddSuite(Inner);
+		Inner.Register(A, 'A', Budgets);
+		Inner.Register(B, 'B', Budgets);
+		Inner.Register(C, 'C', Budgets);
+		Inner.Register(D, 'D', Budgets);
+		Phase := 1;
+		Run	  := FALSE;
 
-	Runner.SetLabel('CHAR_Overflow_Subject_Run');
-	// Attached to the RUN, which pushes it into every suite. One attachment point.
-	Runner.AddReporter(Recorder);
-	Runner.AddSuite(Inner);
+	1:
+		IF Runner.Run(Enable := TRUE) THEN
+			Phase := 2;
+		END_IF
 
-	Inner.Register(A, 'A', Budgets);
-	Inner.Register(B, 'B', Budgets);
-	Inner.Register(C, 'C', Budgets);
-	Inner.Register(D, 'D', Budgets);
+		Run := FALSE;
 
-	Phase := 1;
-	Run	  := FALSE;
-
-1:
-	IF Runner.Run(Enable := TRUE) THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
-
-2:
-	ExpectedCount := 3;
-	ActualCount	  := Recorder.StatTests;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'three tests registered');
-
-	ExpectedCount := 1;
-	ActualCount	  := Recorder.StatErrors;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'overflow counted as an error');
-
-	ExpectedCount := 0;
-	ActualCount	  := Recorder.StatFailures;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and not as a failure');
-
-	ExpectedCount := 1;
-	ActualCount	  := Recorder.SaveCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the result document was still written');
-
-	Run := TRUE;
-
+	2:
+		ExpectedCount := 3;
+		ActualCount	  := Recorder.StatTests;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'three tests registered');
+		ExpectedCount := 1;
+		ActualCount	  := Recorder.StatErrors;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'overflow counted as an error');
+		ExpectedCount := 0;
+		ActualCount	  := Recorder.StatFailures;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and not as a failure');
+		ExpectedCount := 1;
+		ActualCount	  := Recorder.SaveCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the result document was still written');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

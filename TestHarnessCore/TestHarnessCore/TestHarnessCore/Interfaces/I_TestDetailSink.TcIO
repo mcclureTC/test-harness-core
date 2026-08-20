@@ -2,41 +2,72 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestDetailSink" Id="{3b6e8e86-c604-4628-9e63-567d19e4acbb}">
     <Declaration><![CDATA[// Optional face of a reporter: every check as it is recorded, rather than a
+
 // summary once the test is over.
+
 //
+
 // Discovered with __QUERYINTERFACE on I_TestReporter. A sink that only wants
+
 // verdicts - the event logger, an alarm block - does not implement this and is
+
 // never called for checks.
+
 //
+
 // It exists because the detailed report has no fixed upper size and so cannot be
+
 // a value the framework accumulates. A single comparison of two 255-character
+
 // values already overflows a T_MaxString, and a test may record dozens of checks.
+
 // Buffering that per test would cost the buffer times the suite capacity and
+
 // would still truncate. Streaming costs one buffer per sink that wants one, and
+
 // truncates nothing.
+
 //
+
 // Ordering is guaranteed: TestStarted, then every check in the order the test
+
 // recorded them, then I_TestReporter.TestFinished for the same test. Checks
+
 // recorded during setup and teardown are included, and arrive between the same
+
 // two calls.
+
 //
+
 // These are called from inside the test's own scan. Do the same as any other
+
 // reporter method does with slow work: start it here, advance it in CyclicLogic.
-INTERFACE I_TestDetailSink EXTENDS __SYSTEM.IQueryInterface
-]]></Declaration>
+INTERFACE I_TestDetailSink EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Method Name="CheckFailed" Id="{647f2627-9cde-4687-b34c-df55ff9a87d0}">
       <Declaration><![CDATA[// One check that did not hold.
+
 //
+
 // Every failure arrives here, including the ones the summary discards: the
+
 // journal keeps only the first for its 80-character line, and this is where the
+
 // rest survive.
+
 //
+
 // Kind and Diagnostic are generated; Message is the author's words, in full and
+
 // never shortened. StepLabel is the label current when the check ran, or empty.
+
 //
+
 // Expected and Actual carry the compared values in full, each in its own field,
+
 // and are empty for a failure that has no two values to show. Diagnostic holds
+
 // the same values shortened to fit one line - so a sink that wants the full text
+
 // composes it from Expected and Actual rather than from Diagnostic.
 METHOD CheckFailed
 VAR_INPUT
@@ -50,8 +81,11 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="CheckPassed" Id="{119e5c53-6045-41c7-9b8b-1d1c9260ad0b}">
       <Declaration><![CDATA[// One satisfied check.
+
 //
+
 // Detail is whatever context the caller passed to RecordPass and is usually
+
 // empty. Step is the label current when the check ran, or empty.
 METHOD CheckPassed
 VAR_INPUT
@@ -61,9 +95,13 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="TestStarted" Id="{45c92e54-de4b-4910-ab39-2ae160f237e9}">
       <Declaration><![CDATA[// A test has become the active one. Checks for it follow.
+
 //
+
 // Needed because checks now arrive before the test has a verdict, so a sink
+
 // building a document has nowhere to put them unless it is told when to open the
+
 // element. Location is empty if the test does not implement I_TestLocation.
 METHOD TestStarted
 VAR_INPUT

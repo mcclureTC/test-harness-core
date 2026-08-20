@@ -2,15 +2,20 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_EventReporterRaisesEachOutcomeOnce" Id="{9a3b3372-4b0e-445b-b143-6f9679d0c757}" SpecialFunc="None">
     <Declaration><![CDATA[// One event per notification, whatever the outcome - failures, errors, suite
+
 // results and framework errors all raise exactly one.
+
 //
+
 // The IDs and severities differ per outcome so a filtered view can show suite
+
 // results without every individual failure; what this checks is that each path
+
 // reaches the logger and none raises twice.
 FUNCTION_BLOCK TEST_EventReporterRaisesEachOutcomeOnce IMPLEMENTS I_Test
 VAR
-	Sink  : TestEventReporter;
-	Tally : TestRunTally;
+	Sink		  : TestEventReporter;
+	Tally		  : TestRunTally;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -25,16 +30,27 @@ VAR_INPUT
 	Test   : I_TestAssertions;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Sink.TestFinished(SuiteLabel := 's', TestLabel := 'failed', Location := '',
-				  Status := E_TestStatus.Failed, Kind := E_FailureKind.ValueMismatch,
-				  Summary := 'x', ElapsedTime := 0.0, ElapsedCycles := 1, Assertions := 1);
+        <ST><![CDATA[Sink.TestFinished(SuiteLabel	:= 's',
+				  TestLabel		:= 'failed',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Failed,
+				  Kind			:= E_FailureKind.ValueMismatch,
+				  Summary		:= 'x',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 1,
+				  Assertions	:= 1);
 
-Sink.TestFinished(SuiteLabel := 's', TestLabel := 'errored', Location := '',
-				  Status := E_TestStatus.Errored, Kind := E_FailureKind.Environment,
-				  Summary := 'y', ElapsedTime := 0.0, ElapsedCycles := 1, Assertions := 1);
+Sink.TestFinished(SuiteLabel	:= 's',
+				  TestLabel		:= 'errored',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Errored,
+				  Kind			:= E_FailureKind.Environment,
+				  Summary		:= 'y',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 1,
+				  Assertions	:= 1);
 
 Sink.FrameworkError(Source := 's', Message := 'something the framework could not do');
-
 Tally.SetLabel('s');
 Tally.Begin(2);
 Tally.Record(Verdict := E_TestStatus.Passed, ElapsedTime := 0.1);
@@ -42,11 +58,9 @@ Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.1);
 Tally.Finish();
 Sink.SuiteFinished(Tally);
 Sink.RunFinished(Status := Tally, TargetInfo := 'the verifier');
-
 ExpectedCount := 5;
 ActualCount	  := Sink.EventsSent;
 Test.AssertEqual(ExpectedCount, ActualCount, 'five notifications, five events');
-
 ExpectedCount := 0;
 ActualCount	  := Sink.FailedSends;
 Test.AssertEqual(ExpectedCount, ActualCount, 'none refused');
@@ -57,7 +71,6 @@ Sink.RunFinished(Status := 0, TargetInfo := '');
 ExpectedCount := 5;
 ActualCount	  := Sink.EventsSent;
 Test.AssertEqual(ExpectedCount, ActualCount, 'a null status raises nothing');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

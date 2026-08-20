@@ -2,13 +2,17 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_EventReporterIsQuietAboutPasses" Id="{3f0211d5-c37a-420d-99cf-caa3c6823bd9}" SpecialFunc="None">
     <Declaration><![CDATA[// Quiet by default. Eighty Info events bury the two Errors, and the counts are
+
 // already available through I_TestRunStatus for anyone who wants them.
+
 //
+
 // The Verbose severity exists for narration and is filtered out of most views
+
 // anyway - but not raising the event at all is cheaper still.
 FUNCTION_BLOCK TEST_EventReporterIsQuietAboutPasses IMPLEMENTS I_Test
 VAR
-	Sink : TestEventReporter;
+	Sink		  : TestEventReporter;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 END_VAR]]></Declaration>
@@ -23,27 +27,36 @@ VAR_INPUT
 	Test   : I_TestAssertions;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'a pass', Location := '',
-				  Status := E_TestStatus.Passed, Kind := E_FailureKind.None,
-				  Summary := '', ElapsedTime := 0.0, ElapsedCycles := 1, Assertions := 1);
+        <ST><![CDATA[Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'a pass',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Passed,
+				  Kind			:= E_FailureKind.None,
+				  Summary		:= '',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 1,
+				  Assertions	:= 1);
 
 ExpectedCount := 0;
 ActualCount	  := Sink.EventsSent;
 Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was raised');
-
 Sink.SetVerbosity(TRUE);
-Sink.TestFinished(SuiteLabel := 'suite', TestLabel := 'a pass', Location := '',
-				  Status := E_TestStatus.Passed, Kind := E_FailureKind.None,
-				  Summary := '', ElapsedTime := 0.0, ElapsedCycles := 1, Assertions := 1);
+Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'a pass',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Passed,
+				  Kind			:= E_FailureKind.None,
+				  Summary		:= '',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 1,
+				  Assertions	:= 1);
 
 ExpectedCount := 1;
 ActualCount	  := Sink.EventsSent;
 Test.AssertEqual(ExpectedCount, ActualCount, 'and narration turns it on');
-
 ExpectedCount := 0;
 ActualCount	  := Sink.FailedSends;
 Test.AssertEqual(ExpectedCount, ActualCount, 'the Verbose event was accepted too');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

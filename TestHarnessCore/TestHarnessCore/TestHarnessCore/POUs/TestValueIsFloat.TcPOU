@@ -1,17 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.0">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestValueIsFloat" Id="{ae180fa9-425e-4285-8ee8-1f4d51ee9165}" SpecialFunc="None">
     <Declaration><![CDATA[// TRUE for REAL and LREAL.
+
 //
+
 // Used only to decide whether a failed exact comparison deserves the hint about
+
 // AssertNear and AssertWithin. Never used to apply a tolerance.
 FUNCTION TestValueIsFloat : BOOL
 VAR_INPUT
 	Value : ANY;
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[TestValueIsFloat := (Value.TypeClass = __SYSTEM.TYPE_CLASS.TYPE_REAL)
-				 OR (Value.TypeClass = __SYSTEM.TYPE_CLASS.TYPE_LREAL);]]></ST>
+      <ST><![CDATA[TestValueIsFloat := (Value.TypeClass = __SYSTEM.TYPE_CLASS.TYPE_REAL) OR (Value.TypeClass = __SYSTEM.TYPE_CLASS.TYPE_LREAL);]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

@@ -2,15 +2,19 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_VerdictFailIsAPlainFailure" Id="{9b398a39-71b5-4057-9a95-df7334a37f86}" SpecialFunc="None">
     <Declaration><![CDATA[// Fail is the outright failure with no comparison behind it - for a branch that
+
 // should have been unreachable. It is a Failed verdict, not an Errored one:
+
 // reaching that branch IS the code being wrong.
 FUNCTION_BLOCK TEST_VerdictFailIsAPlainFailure IMPLEMENTS I_Test
 VAR
 	// A private journal and handle, so a DELIBERATE failure can be recorded and
+
 	// inspected without the suite's own verdict ever seeing it. The test itself
+
 	// passes; what it proves is that failing works.
-	Subject : TestJournal;
-	Handle	: TestVerdict;
+	Subject		   : TestJournal;
+	Handle		   : TestVerdict;
 	ExpectedStatus : E_TestStatus;
 	ActualStatus   : E_TestStatus;
 END_VAR]]></Declaration>
@@ -27,17 +31,12 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Handle.Target(Subject);
 Subject.Begin('unreachable branch', '');
-
 Handle.Fail('the default case was reached');
-
 Subject.Finish(E_TestStatus.Passed);
-
 ExpectedStatus := E_TestStatus.Failed;
 ActualStatus   := Subject.Status;
 Test.AssertEqual(ExpectedStatus, ActualStatus, 'Fail produces Failed');
-
 Handle.Untarget();
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

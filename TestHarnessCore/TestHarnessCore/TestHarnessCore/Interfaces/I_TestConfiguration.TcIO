@@ -2,59 +2,67 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestConfiguration" Id="{490c3418-362e-4208-891e-6eea9449f120}">
     <Declaration><![CDATA[// Startup configuration common to a suite and a sequencer: what it is called, and
+
 // where its results go. Held by the composition root and nothing else.
+
 //
+
 // Shared by both because both implement I_TestRunStatus - so both carry a label -
+
 // and both fan results out to sinks. The two suite-only faces stay separate:
+
 // I_TestRegistration adds tests, I_TestDefaults sets deadline defaults, and a
+
 // sequencer has neither.
+
 //
+
 // Everything here is set before the object is first enabled. Nothing on this
+
 // interface is safe to call from cyclic code.
-INTERFACE I_TestConfiguration EXTENDS __SYSTEM.IQueryInterface
-]]></Declaration>
+INTERFACE I_TestConfiguration EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Method Name="AddReporter" Id="{cabb3157-cdce-4246-a802-32adf8355f1c}">
       <Declaration><![CDATA[// Attach a sink. Every reporter attached receives every result; there is no
+
 // filtering here, because a sink that wants less can decide that for itself.
+
 //
+
 // Order of attachment is order of notification, which matters for one thing only:
+
 // a sink that writes a file and a sink that raises an alarm should not be relied
+
 // on to complete in any particular order relative to each other. If sequencing
+
 // between two sinks matters, that is one sink wrapping two.
+
 //
+
 // Returns FALSE when the reporter list is full or the object is already running,
+
 // and raises a framework error through the reporters ALREADY attached. That is
+
 // not circular: the ones already there are exactly the ones that can still report
+
 // it. A rejection with no reporters attached at all is silent, and is the reason
+
 // ReporterCount exists.
 METHOD AddReporter : BOOL
 VAR_INPUT
 	Reporter : I_TestReporter;
 END_VAR]]></Declaration>
     </Method>
-    <Method Name="SetLabel" Id="{145317c1-2abc-4d31-9e74-9d7d834c9240}">
-      <Declaration><![CDATA[// What this suite or sequencer is called in the results.
-//
-// Supplied rather than derived, unlike a test name. A suite is declared once in a
-// composition root that is read as configuration, so the label sits where a reader
-// is already looking; and the argument for deriving test names - that renaming an
-// instance must not silently rename the reported thing - cuts the other way here,
-// because CI trend history is grouped by suite and a suite label should survive
-// the instance being moved.
-//
-// An empty label at the point the run starts is a framework error, not an unnamed
-// suite in the result document.
-METHOD SetLabel
-VAR_INPUT
-	Label : T_MaxString;
-END_VAR]]></Declaration>
-    </Method>
     <Property Name="ReporterCount" Id="{f61e4d3c-906a-4b83-9f41-2b6057480c20}">
       <Declaration><![CDATA[// Assert this in CI against an expected number.
+
 //
+
 // A reporter that silently stops being attached takes its output with it - the
+
 // result file simply never appears - and the pipeline reads that as a broken
+
 // build rather than as a missing sink. Same regression hazard as
+
 // I_TestRegistration.RegisteredCount, same mitigation.
 PROPERTY ReporterCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{eb81681a-c618-4595-9d18-b69c6aed0d82}">
@@ -63,5 +71,32 @@ END_VAR
 ]]></Declaration>
       </Get>
     </Property>
+    <Method Name="SetLabel" Id="{145317c1-2abc-4d31-9e74-9d7d834c9240}">
+      <Declaration><![CDATA[// What this suite or sequencer is called in the results.
+
+//
+
+// Supplied rather than derived, unlike a test name. A suite is declared once in a
+
+// composition root that is read as configuration, so the label sits where a reader
+
+// is already looking; and the argument for deriving test names - that renaming an
+
+// instance must not silently rename the reported thing - cuts the other way here,
+
+// because CI trend history is grouped by suite and a suite label should survive
+
+// the instance being moved.
+
+//
+
+// An empty label at the point the run starts is a framework error, not an unnamed
+
+// suite in the result document.
+METHOD SetLabel
+VAR_INPUT
+	Label : T_MaxString;
+END_VAR]]></Declaration>
+    </Method>
   </Itf>
 </TcPlcObject>

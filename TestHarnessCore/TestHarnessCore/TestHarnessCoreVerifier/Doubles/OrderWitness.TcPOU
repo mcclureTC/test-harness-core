@@ -2,8 +2,11 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="OrderWitness" Id="{4946b57c-907f-42cd-9a34-8eebd48dda93}" SpecialFunc="None">
     <Declaration><![CDATA[// Records the order spies were notified in, as a string like '1,2,3'.
+
 //
+
 // A string rather than an array because the assertion reads better and because the
+
 // whole point is to compare against a literal the reader can see.
 FUNCTION_BLOCK OrderWitness IMPLEMENTS I_ProbeWitness
 VAR
@@ -40,8 +43,7 @@ _Count	  := _Count + 1;]]></ST>
 PROPERTY Sequence : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{d2e9e1e0-a2f1-435e-baed-f4cba2fbee96}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[Sequence := _Sequence;]]></ST>
         </Implementation>

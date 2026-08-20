@@ -2,35 +2,45 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_SerialExecution" Id="{d1d56516-d3ca-454e-a921-402bfbd76ed4}" SpecialFunc="None">
     <Declaration><![CDATA[// Part of the acceptance contract: no test body runs while another is running.
+
 //
+
 // Tests share the scan and usually share fixtures, so predictable and slow beats
+
 // fast and flaky. Serial execution is structural here - the arbiter hands out one
+
 // test and the runner drives one - so this is a guard against a future change
+
 // rather than a check on today's code, and it would be caught here and nowhere
+
 // else.
+
 //
+
 // A test cannot observe this about another test: it is handed nothing but its own
+
 // assertion handle. So the tests report in and out of a shared witness and the
+
 // contract becomes one number, MaxConcurrent. TotalEntries stops that number being
+
 // satisfied by nothing running at all.
 FUNCTION_BLOCK CHAR_SerialExecution IMPLEMENTS I_Test
 VAR
-	Inner	 : TestSuite<4>;
-	Recorder : RecordingReporter;
-	Budgets	 : ST_TestBudgets;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	Witness : ConcurrencyWitness;
-	Long	: WitnessedTest;
-	Second	: WitnessedTest;
-	Third	: WitnessedTest;
-
+	Inner			   : TestSuite<4>;
+	Recorder		   : RecordingReporter;
+	Budgets			   : ST_TestBudgets;
+	Phase			   : DINT;
+	Scans			   : DINT;
+	Witness			   : ConcurrencyWitness;
+	Long			   : WitnessedTest;
+	Second			   : WitnessedTest;
+	Third			   : WitnessedTest;
 	ExpectedConcurrent : DINT;
 	ActualConcurrent   : DINT;
 	ExpectedEntries	   : DINT;
 	ActualEntries	   : DINT;
-	ExpectedCount : UDINT;
-	ActualCount	  : UDINT;
+	ExpectedCount	   : UDINT;
+	ActualCount		   : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -51,51 +61,45 @@ IF Scans > 500 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Inner.SetLabel('CHAR_Serial_Subject');
+		Inner.AddReporter(Recorder);
 
-0:
-	Inner.SetLabel('CHAR_Serial_Subject');
-	Inner.AddReporter(Recorder);
+		// Multi-scan deliberately: a single-scan test could never overlap anything, so
 
-	// Multi-scan deliberately: a single-scan test could never overlap anything, so
-	// a suite of them would prove this by accident rather than by design.
-	Long.Attach(Scans := 8, Witness := Witness);
-	Second.Attach(Scans := 4, Witness := Witness);
-	Third.Attach(Scans := 4, Witness := Witness);
+		// a suite of them would prove this by accident rather than by design.
+		Long.Attach(Scans := 8, Witness := Witness);
+		Second.Attach(Scans := 4, Witness := Witness);
+		Third.Attach(Scans := 4, Witness := Witness);
+		Inner.Register(Long, 'Long', Budgets);
+		Inner.Register(Second, 'Second', Budgets);
+		Inner.Register(Third, 'Third', Budgets);
+		Phase := 1;
+		Run	  := FALSE;
 
-	Inner.Register(Long, 'Long', Budgets);
-	Inner.Register(Second, 'Second', Budgets);
-	Inner.Register(Third, 'Third', Budgets);
+	1:
+		IF Inner.Run(Enable := TRUE) THEN
+			Phase := 2;
+		END_IF
 
-	Phase := 1;
-	Run	  := FALSE;
+		Run := FALSE;
 
-1:
-	IF Inner.Run(Enable := TRUE) THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+	2:
+		ExpectedConcurrent := 1;
+		ActualConcurrent   := Witness.MaxConcurrent;
+		Test.AssertEqual(ExpectedConcurrent, ActualConcurrent, 'no test body ran while another was running');
 
-2:
-	ExpectedConcurrent := 1;
-	ActualConcurrent   := Witness.MaxConcurrent;
-	Test.AssertEqual(ExpectedConcurrent, ActualConcurrent,
-					 'no test body ran while another was running');
-
-	// Without this, nothing running at all would satisfy the line above.
-	ExpectedEntries := 3;
-	ActualEntries	:= Witness.TotalEntries;
-	Test.AssertEqual(ExpectedEntries, ActualEntries, 'and all three really ran');
-
-	ExpectedCount := 3;
-	ActualCount	  := Recorder.StatTests;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'all three were registered');
-
-	ExpectedCount := 0;
-	ActualCount	  := Recorder.StatFailures;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and all three passed');
-
-	Run := TRUE;
-
+		// Without this, nothing running at all would satisfy the line above.
+		ExpectedEntries := 3;
+		ActualEntries	:= Witness.TotalEntries;
+		Test.AssertEqual(ExpectedEntries, ActualEntries, 'and all three really ran');
+		ExpectedCount := 3;
+		ActualCount	  := Recorder.StatTests;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'all three were registered');
+		ExpectedCount := 0;
+		ActualCount	  := Recorder.StatFailures;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and all three passed');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

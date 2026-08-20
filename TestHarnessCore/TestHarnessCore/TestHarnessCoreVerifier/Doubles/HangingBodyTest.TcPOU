@@ -2,10 +2,15 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="HangingBodyTest" Id="{62dac601-a811-457d-b1f8-1f0aa2797d00}" SpecialFunc="None">
     <Declaration><![CDATA[// A body that never finishes. The deadline must stop it - this is the failure
+
 // mode the whole timeout mechanism exists for.
+
 //
+
 // Also counts the abandon call, because a hung test is exactly the one that will
+
 // not answer a falling Enable either. The runner makes ONE such call and ignores
+
 // the return.
 FUNCTION_BLOCK HangingBodyTest IMPLEMENTS I_Test
 VAR
@@ -21,8 +26,7 @@ END_VAR]]></Declaration>
 PROPERTY AbandonCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{a05f78b6-1cc9-4f1f-9537-a9b1dc13001c}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[AbandonCalls := _AbandonCalls;]]></ST>
         </Implementation>
@@ -32,8 +36,7 @@ END_VAR
       <Declaration><![CDATA[PROPERTY BodyCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{f804a4fc-20fa-46fb-9dfc-e9a39ea6dee1}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[BodyCalls := _BodyCalls;]]></ST>
         </Implementation>
@@ -48,7 +51,9 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF NOT Enable THEN
 	_AbandonCalls := _AbandonCalls + 1;
+
 	// Deliberately does NOT report itself finished. A test that hung will not
+
 	// answer this either, and the runner must not wait for it.
 	Run := FALSE;
 	RETURN;
@@ -60,12 +65,12 @@ Run		   := FALSE;]]></ST>
     </Method>
     <Property Name="TeardownCalls" Id="{9b4aeb3e-74c4-4267-aa88-c7f5f88a48bd}">
       <Declaration><![CDATA[// Always 0 - this double implements no teardown. Declared so a test can assert
+
 // that abandonment did not somehow invent one.
 PROPERTY TeardownCalls : UDINT]]></Declaration>
       <Get Name="Get" Id="{ea020230-6cd9-4590-9d0b-5aa5e0d6b22d}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[TeardownCalls := 0;]]></ST>
         </Implementation>

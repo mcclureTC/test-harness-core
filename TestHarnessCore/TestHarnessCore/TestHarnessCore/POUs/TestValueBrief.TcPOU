@@ -2,14 +2,23 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestValueBrief" Id="{4976ee98-248a-4b87-baa8-9cfe57ad6720}" SpecialFunc="None">
     <Declaration><![CDATA[// Shortens one rendered value to fit a composed line, with an ellipsis so the
+
 // reader knows to look at the full value rather than believing this one.
+
 //
+
 // Exists because CONCAT cannot build a string longer than 255 characters at all -
+
 // not merely because the destination is that wide. Two full values plus the words
+
 // between them do not fit, so the composed diagnostic gets shortened copies and
+
 // the full values travel separately in ST_CompareResult.
+
 //
+
 // Pure, and separate, because the budget arithmetic is the kind of thing that is
+
 // wrong by one and never noticed.
 FUNCTION TestValueBrief : T_MaxString
 VAR_INPUT
@@ -18,10 +27,15 @@ END_VAR
 
 VAR CONSTANT
 	// The one place the budget exists. Two of these plus the longest surrounding
+
 	// text - the byte-offset form, plus the float hint - stays inside 255, which is
+
 	// the hard ceiling CONCAT itself imposes.
+
 	//
+
 	// Deliberately not a parameter. Every call site would then carry its own copy
+
 	// of the number, which is the bug class Plan.md 2.1 names.
 	Budget : INT := 80;
 END_VAR]]></Declaration>

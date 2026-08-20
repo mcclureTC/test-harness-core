@@ -2,33 +2,43 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="E_RegistrationFault" Id="{013bdcb4-5ac1-4f15-8623-224e170ad938}">
     <Declaration><![CDATA[// Why a registration was refused. None means it was accepted.
+
 //
+
 // Distinct causes rather than one BOOL, because each needs a different action from
+
 // whoever reads the report: resize the suite, rename a test, supply the missing
+
 // argument, move the call earlier. A rejected registration is never silent - a
+
 // test that failed to register would otherwise vanish from the results and CI
+
 // would see fewer passes rather than a failure.
 {attribute 'qualified_only'}
 {attribute 'strict'}
-TYPE E_RegistrationFault :
-(
-	None		  := 0,
-	// No free slot. A sizing error: raise the generic argument on the declaration,
-	// or split the suite.
-	Full		  := 1,
-	// The label is already used in this suite. Labels are the key CI trend history
-	// is built on, so two tests cannot share one.
-	DuplicateLabel := 2,
-	// No label supplied. Usually a missing argument at the call site.
-	EmptyLabel	  := 3,
-	// No test supplied. Its own cause rather than folded into EmptyLabel, because
-	// reporting the wrong one sends the reader to the wrong argument.
-	NoTest		  := 5,
-	// The suite has already been enabled. Registration closes then and a re-run does
-	// not reopen it: a re-run re-executes the registered set, it does not redefine
-	// it.
-	Closed		  := 4
-) DINT;
+TYPE E_RegistrationFault : (
+		None := 0,
+		// No free slot. A sizing error: raise the generic argument on the declaration,
+
+		// or split the suite.
+		Full := 1,
+		// The label is already used in this suite. Labels are the key CI trend history
+
+		// is built on, so two tests cannot share one.
+		DuplicateLabel := 2,
+		// No label supplied. Usually a missing argument at the call site.
+		EmptyLabel := 3,
+		// No test supplied. Its own cause rather than folded into EmptyLabel, because
+
+		// reporting the wrong one sends the reader to the wrong argument.
+		NoTest := 5,
+		// The suite has already been enabled. Registration closes then and a re-run does
+
+		// not reopen it: a re-run re-executes the registered set, it does not redefine
+
+		// it.
+		Closed := 4
+	) DINT;
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

@@ -2,13 +2,14 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="ST_PureSample" Id="{26ed6806-d08e-4f56-a092-1e8aaff237dd}">
     <Declaration><![CDATA[// A sample record for comparison tests. Shaped like a CoE object entry because
+
 // that is the kind of struct a real test compares.
 TYPE ST_PureSample :
-STRUCT
-	Index	 : WORD;
-	SubIndex : BYTE;
-	Value	 : DINT;
-END_STRUCT
+	STRUCT
+		Index	 : WORD;
+		SubIndex : BYTE;
+		Value	 : DINT;
+	END_STRUCT
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

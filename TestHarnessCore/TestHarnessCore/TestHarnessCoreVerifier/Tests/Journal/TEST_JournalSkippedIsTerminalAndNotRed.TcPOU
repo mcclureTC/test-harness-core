@@ -2,7 +2,9 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JournalSkippedIsTerminalAndNotRed" Id="{4742b033-cdd3-4d49-9fb7-6cd89af617eb}" SpecialFunc="None">
     <Declaration><![CDATA[// A skipped test is not a failure and must not turn a build red. It is terminal
+
 // immediately: a skipped suite reports complete, or an aggregate containing one
+
 // waits for it forever.
 FUNCTION_BLOCK TEST_JournalSkippedIsTerminalAndNotRed IMPLEMENTS I_Test
 VAR
@@ -21,7 +23,6 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Subject.MarkSkipped();
-
 Test.AssertTrue(Subject.Status = E_TestStatus.Skipped, 'Skipped');
 Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'with no failure kind');
 
@@ -29,7 +30,6 @@ Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'with no failure kind');
 Expired := Subject.Tick();
 Test.AssertFalse(Expired, 'a skipped test has no deadline left to expire');
 Test.AssertTrue(Subject.Status = E_TestStatus.Skipped, 'and stays Skipped');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

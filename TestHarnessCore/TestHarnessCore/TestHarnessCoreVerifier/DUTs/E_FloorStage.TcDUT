@@ -2,17 +2,17 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="E_FloorStage" Id="{14d96e88-84c5-41dd-8a95-486f79a28df0}">
     <Declaration><![CDATA[// Where the floor check has got to. One step per scan, so each stage's effect can
+
 // be seen before the next runs.
 {attribute 'qualified_only'}
 {attribute 'strict'}
-TYPE E_FloorStage :
-(
-	Register := 0,
-	Select	 := 1,
-	Drive	 := 2,
-	Read	 := 3,
-	Done	 := 4
-) DINT;
+TYPE E_FloorStage : (
+		Register := 0,
+		Select	 := 1,
+		Drive	 := 2,
+		Read	 := 3,
+		Done	 := 4
+	) DINT;
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

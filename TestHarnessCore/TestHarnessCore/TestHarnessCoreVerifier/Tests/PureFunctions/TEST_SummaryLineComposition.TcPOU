@@ -2,21 +2,29 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_SummaryLineComposition" Id="{6a9cb6f8-c3e0-4727-84df-6642f594017a}" SpecialFunc="None">
     <Declaration><![CDATA[// PORTED. TestSummaryLine.
+
 //
+
 // The composition rule is the part most likely to be got subtly wrong, which is
+
 // why it is a separate pure function rather than logic inside the journal - and
+
 // why it deserves tests of its own rather than being exercised through a verdict.
+
 //
+
 // Order is fixed: step label, then generated diagnostic, then the author's
+
 // message. The author's message is the only element that may be dropped, and it is
+
 // dropped WHOLE - a half sentence leaves the reader unable to tell whether the
+
 // sentence ended or the buffer did, and the full text is in the detail either way.
 FUNCTION_BLOCK TEST_SummaryLineComposition IMPLEMENTS I_Test
 VAR
-	Line	 : STRING;
-	LongMsg	 : T_MaxString;
-	LongDiag : T_MaxString;
-
+	Line		: STRING;
+	LongMsg		: T_MaxString;
+	LongDiag	: T_MaxString;
 	ExpectedLen : INT;
 	ActualLen	: INT;
 END_VAR]]></Declaration>
@@ -32,30 +40,23 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[// --- the step label leads --------------------------------------------------
-Line := TestSummaryLine(StepLabel := 'Home', Diagnostic := 'timed out after 5000 cycles',
-						Message := '');
-Test.AssertTrue(FIND(Line, 'Home') = 1,
-				'the step label leads, because a timeout names its step');
+Line := TestSummaryLine(StepLabel := 'Home', Diagnostic := 'timed out after 5000 cycles', Message := '');
+Test.AssertTrue(FIND(Line, 'Home') = 1, 'the step label leads, because a timeout names its step');
 
 // --- all three, when there is room -----------------------------------------
-Line := TestSummaryLine(StepLabel := 'Home', Diagnostic := 'expected 1, actual 2',
-						Message := 'while homing');
+Line := TestSummaryLine(StepLabel := 'Home', Diagnostic := 'expected 1, actual 2', Message := 'while homing');
 Test.AssertTrue(FIND(Line, 'Home') > 0, 'the step label is present');
 Test.AssertTrue(FIND(Line, 'expected 1') > 0, 'and the diagnostic');
 Test.AssertTrue(FIND(Line, 'while homing') > 0, 'and the author message');
 
 // --- no step label ---------------------------------------------------------
-Line := TestSummaryLine(StepLabel := '', Diagnostic := 'expected 1, actual 2',
-						Message := '');
-Test.AssertTrue(FIND(Line, 'expected 1') = 1,
-				'with no step label the diagnostic starts the line');
+Line := TestSummaryLine(StepLabel := '', Diagnostic := 'expected 1, actual 2', Message := '');
+Test.AssertTrue(FIND(Line, 'expected 1') = 1, 'with no step label the diagnostic starts the line');
 
 // --- a message that does not fit is OMITTED, not cut -----------------------
 LongMsg := 'this author message is far too long to fit alongside the diagnostic in eighty characters';
-Line	:= TestSummaryLine(StepLabel := 'Home', Diagnostic := 'expected 1, actual 2',
-						   Message := LongMsg);
-Test.AssertTrue(FIND(Line, 'this author message') = 0,
-				'a message that does not fit is omitted, not truncated');
+Line	:= TestSummaryLine(StepLabel := 'Home', Diagnostic := 'expected 1, actual 2', Message := LongMsg);
+Test.AssertTrue(FIND(Line, 'this author message') = 0, 'a message that does not fit is omitted, not truncated');
 Test.AssertTrue(FIND(Line, 'expected 1') > 0, 'dropping the message keeps the diagnostic');
 
 // --- the composed line fits ------------------------------------------------
@@ -64,12 +65,11 @@ ActualLen	:= LEN(Line);
 Test.AssertTrue(ActualLen <= ExpectedLen, 'the composed line fits the summary field');
 
 // --- a diagnostic alone can still overrun, and is marked --------------------
-LongDiag := 'expected a very long rendered value indeed that goes on and on past any reasonable width, actual another one just like it';
-Line	 := TestSummaryLine(StepLabel := '', Diagnostic := LongDiag, Message := '');
+LongDiag  := 'expected a very long rendered value indeed that goes on and on past any reasonable width, actual another one just like it';
+Line	  := TestSummaryLine(StepLabel := '', Diagnostic := LongDiag, Message := '');
 ActualLen := LEN(Line);
 Test.AssertTrue(ActualLen <= ExpectedLen, 'an overlong diagnostic is cut to fit');
 Test.AssertTrue(FIND(Line, '...') > 0, 'a cut diagnostic is marked with an ellipsis');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

@@ -2,29 +2,37 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <DUT Name="ST_TestRunStatus" Id="{79679e61-eed0-42ae-8651-cefc244b4cf0}">
     <Declaration><![CDATA[// The same figures I_TestRunStatus exposes, as a plain struct.
+
 //
+
 // Published alongside the interface so ADS, TwinCAT HMI and OPC UA read the run
+
 // as ordinary symbols without RPC. That is the portable path and the one CI
+
 // polls: an interface is not reachable from outside the PLC, and a design that
+
 // exposed neither - the only signals were a file appearing on disk and a line in
+
 // a log, both of which have to be scraped.
 TYPE ST_TestRunStatus :
-STRUCT
-	Label		  : T_MaxString;
-	Outcome		  : E_RunOutcome;
-	// Reached a terminal state - NOT "ran everything". A skipped suite is complete.
-	IsComplete	  : BOOL;
-	// Once complete, Passed + Failed + Errored + Skipped equals TestCount.
-	TestCount	  : UDINT;
-	PassedCount	  : UDINT;
-	FailedCount	  : UDINT;
-	// Tests that could not run, plus framework errors. Kept apart from FailedCount
-	// because a build should react differently: a failure means the code is wrong,
-	// an error means the run cannot be trusted.
-	ErrorCount	  : UDINT;
-	SkippedCount  : UDINT;
-	TotalDuration : LREAL;
-END_STRUCT
+	STRUCT
+		Label	: T_MaxString;
+		Outcome : E_RunOutcome;
+		// Reached a terminal state - NOT "ran everything". A skipped suite is complete.
+		IsComplete : BOOL;
+		// Once complete, Passed + Failed + Errored + Skipped equals TestCount.
+		TestCount	: UDINT;
+		PassedCount : UDINT;
+		FailedCount : UDINT;
+		// Tests that could not run, plus framework errors. Kept apart from FailedCount
+
+		// because a build should react differently: a failure means the code is wrong,
+
+		// an error means the run cannot be trusted.
+		ErrorCount	  : UDINT;
+		SkippedCount  : UDINT;
+		TotalDuration : LREAL;
+	END_STRUCT
 END_TYPE]]></Declaration>
   </DUT>
 </TcPlcObject>

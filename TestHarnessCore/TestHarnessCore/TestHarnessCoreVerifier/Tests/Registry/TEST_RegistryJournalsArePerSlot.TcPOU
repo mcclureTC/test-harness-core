@@ -2,15 +2,15 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RegistryJournalsArePerSlot" Id="{5d0dcae8-c062-4d74-a8a6-52e9257a6b99}" SpecialFunc="None">
     <Declaration><![CDATA[// Every registered test gets its own journal, and Journal() hands back a LIVE
+
 // reference rather than a copy - a copy would record into something nobody reads.
 FUNCTION_BLOCK TEST_RegistryJournalsArePerSlot IMPLEMENTS I_Test
 VAR
-	Registry : TestRegistry<4>;
-	Fakes	 : ARRAY[0..1] OF FakeTest;
-	Budgets	 : ST_TestBudgets;
-	JournalA : REFERENCE TO TestJournal;
-	JournalB : REFERENCE TO TestJournal;
-
+	Registry	  : TestRegistry<4>;
+	Fakes		  : ARRAY[0..1] OF FakeTest;
+	Budgets		  : ST_TestBudgets;
+	JournalA	  : REFERENCE TO TestJournal;
+	JournalB	  : REFERENCE TO TestJournal;
 	ExpectedLabel : T_MaxString;
 	ActualLabel	  : T_MaxString;
 END_VAR]]></Declaration>
@@ -27,33 +27,34 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Registry.TryClaim(Fakes[0], 'First', Budgets);
 Registry.TryClaim(Fakes[1], 'Second', Budgets);
-
 JournalA REF= Registry.Journal(0);
 JournalB REF= Registry.Journal(1);
-
 Test.AssertTrue(__ISVALIDREF(JournalA), 'journal 0 is valid');
 Test.AssertTrue(__ISVALIDREF(JournalB), 'journal 1 is valid');
 
 // Written through the returned reference. If it were a copy, nothing below would
+
 // read back what was written here.
 JournalA.Begin('First', 'Verifier.First');
 JournalB.Begin('Second', 'Verifier.Second');
 
 // Re-fetched, not reused: reading back through a FRESH reference proves the
+
 // write reached the registry's storage rather than a local alias.
+
 //
+
 // A member cannot be read off a call result in TwinCAT, so each reference is
+
 // taken into a variable first.
-JournalA REF= Registry.Journal(0);
+JournalA	  REF= Registry.Journal(0);
 ActualLabel	  := JournalA.Label;
 ExpectedLabel := 'First';
 Test.AssertEqual(ExpectedLabel, ActualLabel, 'journal 0 kept its write');
-
-JournalB REF= Registry.Journal(1);
+JournalB	  REF= Registry.Journal(1);
 ActualLabel	  := JournalB.Label;
 ExpectedLabel := 'Second';
 Test.AssertEqual(ExpectedLabel, ActualLabel, 'journal 1 is a different object');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

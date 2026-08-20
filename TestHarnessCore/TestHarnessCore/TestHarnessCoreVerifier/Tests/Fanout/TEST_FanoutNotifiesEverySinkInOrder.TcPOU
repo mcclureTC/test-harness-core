@@ -2,19 +2,22 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_FanoutNotifiesEverySinkInOrder" Id="{aa8e17c5-0c2a-4e87-b8c0-663742d3fdf4}" SpecialFunc="None">
     <Declaration><![CDATA[// Every attached sink receives everything, in the order it was attached.
+
 //
+
 // Order matters for one thing only: it is what a build can rely on if two sinks
+
 // must not be interleaved. If sequencing between two sinks matters beyond that,
+
 // that is one sink wrapping two - not something the fan-out should arbitrate.
 FUNCTION_BLOCK TEST_FanoutNotifiesEverySinkInOrder IMPLEMENTS I_Test
 VAR
-	Fanout	: TestReporterFanout;
-	SpyOne	: SpyReporter;
-	SpyTwo	: SpyReporter;
-	SpyThree : SpyReporter;
-	Witness	: OrderWitness;
-
-	AttachedAll : BOOL;
+	Fanout		  : TestReporterFanout;
+	SpyOne		  : SpyReporter;
+	SpyTwo		  : SpyReporter;
+	SpyThree	  : SpyReporter;
+	Witness		  : OrderWitness;
+	AttachedAll	  : BOOL;
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
 	ExpectedOrder : T_MaxString;
@@ -34,24 +37,26 @@ END_VAR]]></Declaration>
         <ST><![CDATA[SpyOne.Configure(1, Witness);
 SpyTwo.Configure(2, Witness);
 SpyThree.Configure(3, Witness);
-
 AttachedAll := Fanout.Attach(SpyOne) AND Fanout.Attach(SpyTwo) AND Fanout.Attach(SpyThree);
 Test.AssertTrue(AttachedAll, 'all three attached');
-
 ExpectedCount := 3;
 ActualCount	  := Fanout.Count;
 Test.AssertEqual(ExpectedCount, ActualCount, 'and Count says so');
-
-Fanout.TestFinished(SuiteLabel := 'suite', TestLabel := 'a test', Location := '',
-					Status := E_TestStatus.Passed, Kind := E_FailureKind.None,
-					Summary := '', ElapsedTime := 0.0, ElapsedCycles := 0, Assertions := 1);
+Fanout.TestFinished(SuiteLabel	  := 'suite',
+					TestLabel	  := 'a test',
+					Location	  := '',
+					Status		  := E_TestStatus.Passed,
+					Kind		  := E_FailureKind.None,
+					Summary		  := '',
+					ElapsedTime	  := 0.0,
+					ElapsedCycles := 0,
+					Assertions	  := 1);
 
 ExpectedCount := 1;
 ActualCount	  := SpyOne.TestFinishedCalls;
 Test.AssertEqual(ExpectedCount, ActualCount, 'the first was told');
 ActualCount := SpyThree.TestFinishedCalls;
 Test.AssertEqual(ExpectedCount, ActualCount, 'and so was the last');
-
 ExpectedOrder := '1,2,3';
 ActualOrder	  := Witness.Sequence;
 Test.AssertEqual(ExpectedOrder, ActualOrder, 'in the order they were attached');
@@ -60,7 +65,6 @@ Test.AssertEqual(ExpectedOrder, ActualOrder, 'in the order they were attached');
 Fanout.CyclicLogic();
 ActualCount := SpyTwo.CyclicCalls;
 Test.AssertEqual(ExpectedCount, ActualCount, 'and CyclicLogic reaches them all');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

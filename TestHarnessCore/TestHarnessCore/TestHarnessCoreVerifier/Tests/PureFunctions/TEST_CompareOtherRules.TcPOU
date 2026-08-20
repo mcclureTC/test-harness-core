@@ -2,33 +2,33 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_CompareOtherRules" Id="{f31535a5-dab4-4b91-b244-6d0ae5652e55}" SpecialFunc="None">
     <Declaration><![CDATA[// PORTED. TestValueCompare for everything that is neither text nor numeric.
+
 //
+
 // Structs, arrays and enums compare by size and then by bytes. HERE a size
+
 // difference IS a type difference - unlike a string, where capacity is not part of
+
 // the value, two arrays of different length are two different types.
 FUNCTION_BLOCK TEST_CompareOtherRules IMPLEMENTS I_Test
 VAR
-	Result : ST_CompareResult;
-
-	RecordA : ST_PureSample := (Index := 16#6000, SubIndex := 1, Value := 99);
-	RecordB : ST_PureSample := (Index := 16#6000, SubIndex := 1, Value := 99);
-	RecordC : ST_PureSample := (Index := 16#6000, SubIndex := 1, Value := 100);
-
-	ArrayA	   : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#2A, 6, 7, 8];
-	ArrayB	   : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#2A, 6, 7, 8];
-	ArrayC	   : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#00, 6, 7, 8];
-	ArrayShort : ARRAY[0..3] OF BYTE := [1, 2, 3, 4];
-
-	ColourRed	 : E_PureColour := E_PureColour.Red;
-	ColourRedToo : E_PureColour := E_PureColour.Red;
-	ColourGreen	 : E_PureColour := E_PureColour.Green;
-
-	ExpectTrue	: BOOL := TRUE;
-	ExpectFalse : BOOL := FALSE;
-	ActualEqual : BOOL;
-	ExpectType	: E_FailureKind := E_FailureKind.TypeMismatch;
-	ExpectValue : E_FailureKind := E_FailureKind.ValueMismatch;
-	ActualKind	: E_FailureKind;
+	Result		 : ST_CompareResult;
+	RecordA		 : ST_PureSample	   := (Index := 16#6000, SubIndex := 1, Value := 99);
+	RecordB		 : ST_PureSample	   := (Index := 16#6000, SubIndex := 1, Value := 99);
+	RecordC		 : ST_PureSample	   := (Index := 16#6000, SubIndex := 1, Value := 100);
+	ArrayA		 : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#2A, 6, 7, 8];
+	ArrayB		 : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#2A, 6, 7, 8];
+	ArrayC		 : ARRAY[0..7] OF BYTE := [1, 2, 3, 4, 16#00, 6, 7, 8];
+	ArrayShort	 : ARRAY[0..3] OF BYTE := [1, 2, 3, 4];
+	ColourRed	 : E_PureColour		   := E_PureColour.Red;
+	ColourRedToo : E_PureColour		   := E_PureColour.Red;
+	ColourGreen	 : E_PureColour		   := E_PureColour.Green;
+	ExpectTrue	 : BOOL				   := TRUE;
+	ExpectFalse	 : BOOL				   := FALSE;
+	ActualEqual	 : BOOL;
+	ExpectType	 : E_FailureKind := E_FailureKind.TypeMismatch;
+	ExpectValue	 : E_FailureKind := E_FailureKind.ValueMismatch;
+	ActualKind	 : E_FailureKind;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -45,11 +45,9 @@ END_VAR]]></Declaration>
 Result		:= TestValueCompare(RecordA, RecordB);
 ActualEqual := Result.IsEqual;
 Test.AssertEqual(ExpectTrue, ActualEqual, 'identical structs are equal');
-
 Result		:= TestValueCompare(RecordA, RecordC);
 ActualEqual := Result.IsEqual;
 Test.AssertEqual(ExpectFalse, ActualEqual, 'a differing field makes them unequal');
-
 ActualKind := Result.Kind;
 Test.AssertEqual(ExpectValue, ActualKind, 'same type, different value');
 
@@ -60,9 +58,7 @@ Test.AssertEqual(ExpectTrue, ActualEqual, 'identical arrays are equal');
 
 // They differ at index 4 and nowhere else.
 Result := TestValueCompare(ArrayA, ArrayC);
-Test.AssertTrue(FIND(Result.Diagnostic, 'byte 4') > 0,
-				'the diagnostic names the offset of the first difference');
-
+Test.AssertTrue(FIND(Result.Diagnostic, 'byte 4') > 0, 'the diagnostic names the offset of the first difference');
 Result		:= TestValueCompare(ArrayA, ArrayShort);
 ActualEqual := Result.IsEqual;
 Test.AssertEqual(ExpectFalse, ActualEqual, 'arrays of different length are not equal');
@@ -75,11 +71,9 @@ Test.AssertEqual(ExpectType, ActualKind, 'and that is a type mismatch');
 Result		:= TestValueCompare(ColourRed, ColourRedToo);
 ActualEqual := Result.IsEqual;
 Test.AssertEqual(ExpectTrue, ActualEqual, 'identical enum members are equal');
-
 Result		:= TestValueCompare(ColourRed, ColourGreen);
 ActualEqual := Result.IsEqual;
 Test.AssertEqual(ExpectFalse, ActualEqual, 'different enum members are not equal');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

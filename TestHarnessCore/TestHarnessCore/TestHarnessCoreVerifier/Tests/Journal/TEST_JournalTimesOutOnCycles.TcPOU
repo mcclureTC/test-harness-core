@@ -2,18 +2,21 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JournalTimesOutOnCycles" Id="{db17921c-2d1a-45e1-9433-45d1a6d0985c}" SpecialFunc="None">
     <Declaration><![CDATA[// A body that never finishes must be stopped by the deadline rather than stalling
+
 // the suite. Tick both detects the expiry and records it - the runner only has to
+
 // notice it happened.
+
 //
+
 // Called AFTER the body has run, so a budget of one allows one execution.
 FUNCTION_BLOCK TEST_JournalTimesOutOnCycles IMPLEMENTS I_Test
 VAR
-	Subject : TestJournal;
-	Budgets : ST_TestBudgets;
-
-	Expired		 : BOOL;
-	ExpectedKind : E_FailureKind;
-	ActualKind	 : E_FailureKind;
+	Subject		   : TestJournal;
+	Budgets		   : ST_TestBudgets;
+	Expired		   : BOOL;
+	ExpectedKind   : E_FailureKind;
+	ActualKind	   : E_FailureKind;
 	ExpectedStatus : E_TestStatus;
 	ActualStatus   : E_TestStatus;
 END_VAR]]></Declaration>
@@ -28,18 +31,14 @@ VAR_INPUT
 	Test   : I_TestAssertions;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Budgets.Body.Cycles	     := 2;
+        <ST><![CDATA[Budgets.Body.Cycles		 := 2;
 Budgets.Body.IsCyclesSet := TRUE;
 Subject.SetBudgets(Budgets);
-
 Subject.Begin('slow', '');
-
 Expired := Subject.Tick();
 Test.AssertFalse(Expired, 'a budget of two survives one scan');
-
 Expired := Subject.Tick();
 Test.AssertTrue(Expired, 'and expires on the second');
-
 ExpectedKind := E_FailureKind.Timeout;
 ActualKind	 := Subject.Kind;
 Test.AssertEqual(ExpectedKind, ActualKind, 'recorded as a timeout');
@@ -48,10 +47,8 @@ Test.AssertEqual(ExpectedKind, ActualKind, 'recorded as a timeout');
 ExpectedStatus := E_TestStatus.Failed;
 ActualStatus   := Subject.Status;
 Test.AssertEqual(ExpectedStatus, ActualStatus, 'terminal without further help');
-
 Expired := Subject.Tick();
 Test.AssertFalse(Expired, 'and does not fire twice');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

@@ -1,14 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_Labelled" Id="{6f7abda0-ad0a-422a-ad6f-6e8fb2c93470}">
     <Declaration><![CDATA[// Something that carries a human-readable name.
+
 //
+
 // Extracted because a suite needs a label in two unrelated roles - as the thing
+
 // the sequencer drives, and as the thing an observer reads counts from - and
+
 // declaring it twice would let the two drift apart.
 INTERFACE I_Labelled EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Property Name="Label" Id="{2820da08-fae7-45ea-a9e0-97a41685d5c7}">
       <Declaration><![CDATA[// The name that appears in results. Stable across renames of the underlying
+
 // instance, because it is supplied rather than derived.
 PROPERTY Label : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{2ad70b13-51b4-4e1c-aa61-adac70acd6ba}">

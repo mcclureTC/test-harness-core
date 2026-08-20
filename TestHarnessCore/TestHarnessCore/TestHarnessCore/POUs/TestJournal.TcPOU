@@ -2,42 +2,51 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestJournal" Id="{b8a8cfea-0795-47ac-8e9a-17b3c171c645}" SpecialFunc="None">
     <Declaration><![CDATA[// The runner's record of one test: its verdict, its counts, its clock and its
+
 // deadline. One per registered test, owned by the suite.
+
 //
+
 // Written through TestVerdict, read by the reporters. It holds no assertion logic
+
 // and no comparison logic - mixing those in is what takes an object past 673
+
 // lines and made it impossible to test any part of it in isolation.
+
 //
+
 // It holds no detailed report either. Individual checks are streamed to
+
 // I_TestDetailSink as they are recorded; only what the 80-character summary needs
+
 // is kept here, and it is composed once at completion rather than on every check.
+
 // A test with 40 passing checks composes one line and stores nothing per check.
 FUNCTION_BLOCK TestJournal
 VAR
-	_Label		   : T_MaxString;
-	_Location	   : T_MaxString;
-	_Status		   : E_TestStatus;
-	_Kind		   : E_FailureKind;
+	_Label	   : T_MaxString;
+	_Location  : T_MaxString;
+	_Status	   : E_TestStatus;
+	_Kind	   : E_FailureKind;
+	_StepLabel : T_MaxString;
 
-	_StepLabel	   : T_MaxString;
 	// The first failure is kept, not the last. A later failure is usually a
+
 	// consequence of the first, and the first is what the reader must fix.
 	_FailDiagnostic : T_MaxString;
-	_FailMessage   : T_MaxString;
-	_FailStep	   : T_MaxString;
-
-	_Summary	   : T_MaxString;
-
-	_PassCount	   : UDINT;
-	_FailCount	   : UDINT;
-	_ElapsedCycles : UDINT;
-	_IsFirstCycle  : BOOL;
+	_FailMessage	: T_MaxString;
+	_FailStep		: T_MaxString;
+	_Summary		: T_MaxString;
+	_PassCount		: UDINT;
+	_FailCount		: UDINT;
+	_ElapsedCycles	: UDINT;
+	_IsFirstCycle	: BOOL;
 
 	// All three phases. Only Body is enforced here - the runner bounds the other
-	// two, which run outside the span this object measures.
-	_Budgets	   : ST_TestBudgets;
 
-	_Stopwatch	   : TestStopwatch;
+	// two, which run outside the span this object measures.
+	_Budgets   : ST_TestBudgets;
+	_Stopwatch : TestStopwatch;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(*
@@ -47,13 +56,21 @@ END_VAR]]></Declaration>
     </Implementation>
     <Method Name="ApplyDefaults" Id="{c2a2a252-7e44-4c4d-9fca-ebfd25d57080}">
       <Declaration><![CDATA[// Suite-wide budgets, applied to every phase and unit the test did not claim for
+
 // itself at registration.
+
 //
+
 // Each unit is tracked separately on purpose. A test naming its own wall-clock
+
 // budget still inherits the suite's scan budget, and the reverse. A single
+
 // 'overridden' flag would break exactly that case and nothing else would notice.
+
 //
+
 // Called once, when the run starts. The defaults are not re-applied on a re-run:
+
 // what a test claimed at registration it keeps.
 METHOD ApplyDefaults
 VAR_INPUT
@@ -63,6 +80,7 @@ END_VAR]]></Declaration>
         <ST><![CDATA[IF NOT _Budgets.Setup.IsCyclesSet THEN
 	_Budgets.Setup.Cycles := Defaults.Setup.Cycles;
 END_IF
+
 IF NOT _Budgets.Setup.IsTimeoutSet THEN
 	_Budgets.Setup.Timeout := Defaults.Setup.Timeout;
 END_IF
@@ -70,6 +88,7 @@ END_IF
 IF NOT _Budgets.Body.IsCyclesSet THEN
 	_Budgets.Body.Cycles := Defaults.Body.Cycles;
 END_IF
+
 IF NOT _Budgets.Body.IsTimeoutSet THEN
 	_Budgets.Body.Timeout := Defaults.Body.Timeout;
 END_IF
@@ -77,6 +96,7 @@ END_IF
 IF NOT _Budgets.Teardown.IsCyclesSet THEN
 	_Budgets.Teardown.Cycles := Defaults.Teardown.Cycles;
 END_IF
+
 IF NOT _Budgets.Teardown.IsTimeoutSet THEN
 	_Budgets.Teardown.Timeout := Defaults.Teardown.Timeout;
 END_IF]]></ST>
@@ -87,8 +107,7 @@ END_IF]]></ST>
 PROPERTY AssertionCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{d1a3ae9d-4e6c-4fbe-a85f-2acd965b3e8f}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[AssertionCount := _PassCount + _FailCount;]]></ST>
         </Implementation>
@@ -112,7 +131,9 @@ _Stopwatch.Start();]]></ST>
     </Method>
     <Property Name="Budgets" Id="{39cfa526-6364-4b14-b960-61d378a96aee}">
       <Declaration><![CDATA[// The resolved budgets for all three phases, read by the runner to arm the setup
+
 // and teardown deadlines. Valid once the run has started and ApplyDefaults has
+
 // been called.
 PROPERTY Budgets : ST_TestBudgets]]></Declaration>
       <Get Name="Get" Id="{323275e7-4d1c-40c9-b1b4-0b6cc22d3337}">
@@ -127,11 +148,9 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY ElapsedCycles : UDINT]]></Declaration>
       <Get Name="Get" Id="{a3103c5a-712b-4a70-983a-53989c68db56}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[ElapsedCycles := _ElapsedCycles;
-]]></ST>
+          <ST><![CDATA[ElapsedCycles := _ElapsedCycles;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -140,8 +159,7 @@ END_VAR
 PROPERTY ElapsedTime : LREAL]]></Declaration>
       <Get Name="Get" Id="{35f9721c-c669-44cc-9783-c577ab45e725}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[ElapsedTime := _Stopwatch.Elapsed;]]></ST>
         </Implementation>
@@ -149,13 +167,21 @@ END_VAR
     </Property>
     <Method Name="Finish" Id="{74cb9823-229c-4015-bdd2-73a1478c3f93}">
       <Declaration><![CDATA[// Terminal. Composes the summary once and stops the clock.
+
 //
+
 // Named Finish, not Complete: a status word as a method name reads as a question,
+
 // and
+
 // Complete collides with IsComplete on the status interface.
+
 //
+
 // A Passed verdict with no recorded check becomes Errored: a body that checked
+
 // nothing usually means a branch never ran, and reporting that green is a silent
+
 // false pass.
 METHOD Finish
 VAR_INPUT
@@ -167,31 +193,26 @@ END_VAR]]></Declaration>
 END_IF
 
 _Stopwatch.Stop();
-
 IF _FailCount > 0 THEN
 	_Status := SEL(_Kind = E_FailureKind.Environment, E_TestStatus.Failed, E_TestStatus.Errored);
 ELSIF (Status = E_TestStatus.Passed) AND (_PassCount = 0) THEN
-	_Status			 := E_TestStatus.Errored;
-	_Kind			 := E_FailureKind.Environment;
+	_Status			:= E_TestStatus.Errored;
+	_Kind			:= E_FailureKind.Environment;
 	_FailDiagnostic := 'completed without recording a check';
 ELSE
 	_Status := Status;
 END_IF
 
-_Summary := TestSummaryLine(StepLabel  := _FailStep,
-							Diagnostic := _FailDiagnostic,
-							Message	   := _FailMessage);]]></ST>
+_Summary := TestSummaryLine(StepLabel := _FailStep, Diagnostic := _FailDiagnostic, Message := _FailMessage);]]></ST>
       </Implementation>
     </Method>
     <Property Name="IsFirstCycle" Id="{31eba7f5-a511-4659-9363-3ecd682056bf}">
       <Declaration><![CDATA[PROPERTY IsFirstCycle : BOOL]]></Declaration>
       <Get Name="Get" Id="{9a09ee75-68fb-472b-a918-423b5f38dcf1}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[IsFirstCycle := _IsFirstCycle;
-]]></ST>
+          <ST><![CDATA[IsFirstCycle := _IsFirstCycle;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -199,11 +220,9 @@ END_VAR
       <Declaration><![CDATA[PROPERTY Kind : E_FailureKind]]></Declaration>
       <Get Name="Get" Id="{a1788759-da60-4cca-879e-7f6e6339741a}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[Kind := _Kind;
-]]></ST>
+          <ST><![CDATA[Kind := _Kind;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -211,11 +230,9 @@ END_VAR
       <Declaration><![CDATA[PROPERTY Label : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{51f284fd-8569-4334-8c44-457622594439}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[Label := _Label;
-]]></ST>
+          <ST><![CDATA[Label := _Label;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -223,23 +240,25 @@ END_VAR
       <Declaration><![CDATA[PROPERTY Location : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{84dfdc95-b83f-445b-a7fa-72d4f6237036}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[Location := _Location;
-]]></ST>
+          <ST><![CDATA[Location := _Location;]]></ST>
         </Implementation>
       </Get>
       <Set Name="Set" Id="{9e7099ba-7adb-4bcb-bf58-349556ca92cd}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
           <ST><![CDATA[// R13: validated before storing. An instance path is a diagnostic, so a bad one
+
 // should read as "not supplied" rather than send the reader somewhere that does
+
 // not exist.
+
 //
+
 // Length is the only check available: T_MaxString truncates silently at 255, and a
+
 // path cut mid-segment names a place that is not there. An empty classname is
 // honest; a wrong one is worse than none.
 IF LEN(Location) >= 255 THEN
@@ -247,13 +266,13 @@ IF LEN(Location) >= 255 THEN
 	RETURN;
 END_IF
 
-_Location := Location;
-]]></ST>
+_Location := Location;]]></ST>
         </Implementation>
       </Set>
     </Property>
     <Method Name="MarkSkipped" Id="{6ffe1afd-37d8-4c9f-b5b6-df2986251304}">
       <Declaration><![CDATA[// Terminal without running. A skipped test is not a failure and must not turn a
+
 // build red.
 METHOD MarkSkipped]]></Declaration>
       <Implementation>
@@ -263,9 +282,13 @@ _Status := E_TestStatus.Skipped;]]></ST>
     </Method>
     <Method Name="RecordFailure" Id="{8c9ad501-3e04-429f-b5e6-6698564aa084}">
       <Declaration><![CDATA[// One failed check. The verdict becomes Failed and cannot return to Passed.
+
 //
+
 // Only the FIRST failure's text is kept for the summary. A later failure is
+
 // usually downstream of the first, and the summary has room for one. Every
+
 // failure, including the discarded ones, still reaches the detail sink.
 METHOD RecordFailure
 VAR_INPUT
@@ -275,17 +298,17 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_FailCount := _FailCount + 1;
-
 IF _FailCount = 1 THEN
-	_Kind			 := Kind;
+	_Kind			:= Kind;
 	_FailDiagnostic := Diagnostic;
-	_FailMessage	 := Message;
-	_FailStep		 := _StepLabel;
+	_FailMessage	:= Message;
+	_FailStep		:= _StepLabel;
 END_IF]]></ST>
       </Implementation>
     </Method>
     <Method Name="RecordPass" Id="{3864deed-7cbe-4589-be43-36d6377c64a8}">
       <Declaration><![CDATA[// One satisfied check. Nothing but the count: the check's own text goes straight
+
 // to the detail sink and is never held here.
 METHOD RecordPass]]></Declaration>
       <Implementation>
@@ -294,29 +317,35 @@ METHOD RecordPass]]></Declaration>
     </Method>
     <Method Name="Reset" Id="{c52a6a9c-d80c-46a9-8c9e-03bcdcb9b679}">
       <Declaration><![CDATA[// Back to as-declared, keeping the label and location. Used by a re-run: the
+
 // registered set is not redefined, only re-executed.
 METHOD Reset]]></Declaration>
       <Implementation>
-        <ST><![CDATA[_Status			 := E_TestStatus.NotStarted;
-_Kind			 := E_FailureKind.None;
-_StepLabel		 := '';
+        <ST><![CDATA[_Status			:= E_TestStatus.NotStarted;
+_Kind			:= E_FailureKind.None;
+_StepLabel		:= '';
 _FailDiagnostic := '';
-_FailMessage	 := '';
-_FailStep		 := '';
-_Summary		 := '';
-_PassCount		 := 0;
-_FailCount		 := 0;
-_ElapsedCycles	 := 0;
-_IsFirstCycle	 := FALSE;
+_FailMessage	:= '';
+_FailStep		:= '';
+_Summary		:= '';
+_PassCount		:= 0;
+_FailCount		:= 0;
+_ElapsedCycles	:= 0;
+_IsFirstCycle	:= FALSE;
 _Stopwatch.Reset();]]></ST>
       </Implementation>
     </Method>
     <Method Name="SetBudgets" Id="{662101c2-f10b-4f21-aab8-9e1a19e0e40a}">
       <Declaration><![CDATA[// What this test claimed for itself at registration. Whatever it did not claim is
+
 // filled in from the suite defaults when the run starts.
+
 //
+
 // Set once, before anything runs, and never while a phase is in progress. A
+
 // deadline that can move during the work it bounds stops detecting the thing it
+
 // exists for.
 METHOD SetBudgets
 VAR_INPUT
@@ -328,6 +357,7 @@ END_VAR]]></Declaration>
     </Method>
     <Method Name="SetStep" Id="{ca4c5efb-3e0f-4df8-9e22-66e642243020}">
       <Declaration><![CDATA[// Purely diagnostic. Its value is captured with the first failure, so a later
+
 // step cannot relabel an earlier one.
 METHOD SetStep
 VAR_INPUT
@@ -341,28 +371,28 @@ END_VAR]]></Declaration>
       <Declaration><![CDATA[PROPERTY Status : E_TestStatus]]></Declaration>
       <Get Name="Get" Id="{ada9e8d3-31bc-4446-bae0-b04b56937ba7}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[Status := _Status;
-]]></ST>
+          <ST><![CDATA[Status := _Status;]]></ST>
         </Implementation>
       </Get>
     </Property>
     <Property Name="StepLabel" Id="{b023333c-c6f5-4035-b431-00ab30dfe985}">
       <Declaration><![CDATA[// The step label currently set, or empty. Read by TestVerdict so a streamed check
+
 // carries the step it ran under, and by a teardown that behaves differently
+
 // depending on how far the test got.
+
 //
+
 // Read-only. SetStep is the only way in.
 PROPERTY StepLabel : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{8be24e4c-9ecf-4ae8-b7b0-ffd54510f060}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[StepLabel := _StepLabel;
-]]></ST>
+          <ST><![CDATA[StepLabel := _StepLabel;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -371,26 +401,29 @@ END_VAR
 PROPERTY Summary : T_MaxString]]></Declaration>
       <Get Name="Get" Id="{77179aa4-0bbe-4bc3-8596-bbba9bc977c9}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[Summary := _Summary;
-]]></ST>
+          <ST><![CDATA[Summary := _Summary;]]></ST>
         </Implementation>
       </Get>
     </Property>
     <Method Name="Tick" Id="{23c9fd8b-4f8a-4a3c-aa08-eb5383729e62}">
       <Declaration><![CDATA[// Advance one scan. Returns TRUE if a deadline has just expired, in which case
+
 // the suite abandons the test - the verdict is already recorded here.
+
 //
+
 // Called AFTER the test body has run, so a budget of one allows one execution.
+
 // That ordering is also why ElapsedCycles reads N-1 during the body's Nth call:
+
 // the scan in progress has not completed, so it is not counted. A test observing
+
 // its own duration needs one scan more than the duration it observes.
 METHOD Tick : BOOL]]></Declaration>
       <Implementation>
         <ST><![CDATA[Tick := FALSE;
-
 IF _Status <> E_TestStatus.Running THEN
 	RETURN;
 END_IF
@@ -398,28 +431,27 @@ END_IF
 // Only the first scan is the first scan.
 _IsFirstCycle  := FALSE;
 _ElapsedCycles := _ElapsedCycles + 1;
-
 IF (_Budgets.Body.Cycles > 0) AND (_ElapsedCycles >= _Budgets.Body.Cycles) THEN
-	THIS^.RecordFailure(
-		Kind	   := E_FailureKind.Timeout,
-		Diagnostic := TestTimeoutDiagnostic(Phase	 := '',
-											Cycles	 := _Budgets.Body.Cycles,
-											Timeout	 := _Budgets.Body.Timeout,
-											ByCycles := TRUE),
-		Message	   := '');
+	THIS^.RecordFailure(Kind	   := E_FailureKind.Timeout,
+						Diagnostic := TestTimeoutDiagnostic(Phase	 := '',
+															Cycles	 := _Budgets.Body.Cycles,
+															Timeout	 := _Budgets.Body.Timeout,
+															ByCycles := TRUE),
+						Message := '');
+
 	THIS^.Finish(E_TestStatus.Failed);
 	Tick := TRUE;
 	RETURN;
 END_IF
 
 IF (_Budgets.Body.Timeout > T#0S) AND (_Stopwatch.Elapsed >= (TO_LREAL(TIME_TO_UDINT(_Budgets.Body.Timeout)) / 1000.0)) THEN
-	THIS^.RecordFailure(
-		Kind	   := E_FailureKind.Timeout,
-		Diagnostic := TestTimeoutDiagnostic(Phase	 := '',
-											Cycles	 := _Budgets.Body.Cycles,
-											Timeout	 := _Budgets.Body.Timeout,
-											ByCycles := FALSE),
-		Message	   := '');
+	THIS^.RecordFailure(Kind	   := E_FailureKind.Timeout,
+						Diagnostic := TestTimeoutDiagnostic(Phase	 := '',
+															Cycles	 := _Budgets.Body.Cycles,
+															Timeout	 := _Budgets.Body.Timeout,
+															ByCycles := FALSE),
+						Message := '');
+
 	THIS^.Finish(E_TestStatus.Failed);
 	Tick := TRUE;
 END_IF]]></ST>

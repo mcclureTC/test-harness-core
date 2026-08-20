@@ -1,23 +1,37 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_TestTeardown" Id="{cd08c1b5-b158-4452-af5e-7d76cc6e1891}">
     <Declaration><![CDATA[// Optional. Implement when a test leaves something that must be put back -
+
 // motion stopped, power dropped, a handle closed, a route released.
+
 //
+
 // The suite calls Teardown after the test reaches a verdict, whatever that verdict
+
 // is: passed, failed, errored, timed out or abandoned. This is the guarantee the
+
 // original could not make, because it never called the tests and so could not call
+
 // anything after them.
+
 //
+
 // Read Status if the cleanup differs by outcome. Checks recorded here are
+
 // recorded, but the verdict is already set and they cannot change it.
 INTERFACE I_TestTeardown EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Method Name="Teardown" Id="{d4feb74a-a860-41c8-91ca-9c4d49a5737c}">
       <Declaration><![CDATA[// Return TRUE when teardown is complete. Enable behaves as in I_Test.Run.
+
 //
+
 // Bounded by its own deadline, and it must be. A test that failed by hanging is
+
 // now being asked to clean up and will most likely hang again - and on a rig that
+
 // means an axis left powered. The suite abandons an overrunning teardown and
+
 // reports it rather than stalling the run.
 METHOD Teardown : BOOL
 VAR_INPUT

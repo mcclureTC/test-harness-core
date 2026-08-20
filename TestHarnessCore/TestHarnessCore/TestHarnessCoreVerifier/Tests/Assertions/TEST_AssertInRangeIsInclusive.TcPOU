@@ -2,10 +2,12 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_AssertInRangeIsInclusive" Id="{03fcebdc-e0ae-48ca-beab-b7439a93479f}" SpecialFunc="None">
     <Declaration><![CDATA[// Inclusive on BOTH bounds. A range that excluded its own endpoints would make
+
 // every "between 1 and 10" test mean something narrower than it reads.
 FUNCTION_BLOCK TEST_AssertInRangeIsInclusive IMPLEMENTS I_Test
 VAR
 	// A private journal and handle. The assertion under test is driven into THESE,
+
 	// so its verdict can be inspected without the outer suite ever seeing it.
 	Subject : TestJournal;
 	Handle	: TestVerdict;
@@ -23,32 +25,45 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Handle.Target(Subject);
 Subject.Begin('range', '');
+Handle.AssertInRange(5.0,
+					 1.0,
+					 10.0,
+					 'comfortably inside');
 
-Handle.AssertInRange(5.0, 1.0, 10.0, 'comfortably inside');
 Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'inside passes');
-
 Subject.Reset();
 Subject.Begin('range', '');
-Handle.AssertInRange(1.0, 1.0, 10.0, 'on the lower bound');
+Handle.AssertInRange(1.0,
+					 1.0,
+					 10.0,
+					 'on the lower bound');
+
 Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'the lower bound is included');
-
 Subject.Reset();
 Subject.Begin('range', '');
-Handle.AssertInRange(10.0, 1.0, 10.0, 'on the upper bound');
+Handle.AssertInRange(10.0,
+					 1.0,
+					 10.0,
+					 'on the upper bound');
+
 Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'and so is the upper');
-
 Subject.Reset();
 Subject.Begin('range', '');
-Handle.AssertInRange(0.5, 1.0, 10.0, 'below');
+Handle.AssertInRange(0.5,
+					 1.0,
+					 10.0,
+					 'below');
+
 Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'below the range fails');
-
 Subject.Reset();
 Subject.Begin('range', '');
-Handle.AssertInRange(11.0, 1.0, 10.0, 'above');
+Handle.AssertInRange(11.0,
+					 1.0,
+					 10.0,
+					 'above');
+
 Test.AssertTrue(Subject.Kind = E_FailureKind.ValueMismatch, 'and above it fails');
-
 Handle.Untarget();
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

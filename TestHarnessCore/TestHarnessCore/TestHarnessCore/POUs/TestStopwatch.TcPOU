@@ -2,12 +2,19 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TestStopwatch" Id="{3cc4e536-9b8f-43c8-89e1-d34fc7913601}" SpecialFunc="None">
     <Declaration><![CDATA[// Elapsed seconds, measured in task scans.
+
 //
+
 // Carried over essentially unchanged - one of the few parts that
+
 // needed nothing. Resolution is the task period, so a test shorter than one scan
+
 // reports zero. That is honest: at this resolution there is nothing finer to say.
+
 //
+
 // Duration is reported, never asserted on. Scan counts are the reproducible
+
 // measure across Windows, BSD, Linux RT and containers.
 FUNCTION_BLOCK TestStopwatch
 VAR
@@ -29,21 +36,18 @@ PROPERTY Elapsed : LREAL]]></Declaration>
 	Cycles : UDINT;
 END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[
-
-IF NOT _IsRunning THEN
+          <ST><![CDATA[IF NOT _IsRunning THEN
 	Elapsed := _PreviousElapsed;
 	RETURN;
 END_IF
 
 // Unsigned subtraction, so a wrapped cycle counter still yields the correct
+
 // difference.
 Cycles := TwinCAT_SystemInfoVarList._TaskInfo[GETCURTASKINDEXEX()].CycleCount - _StartCycle;
 
 // CycleTime is in 100 ns units.
-Elapsed := TO_LREAL(Cycles)
-		 * TO_LREAL(TwinCAT_SystemInfoVarList._TaskInfo[GETCURTASKINDEXEX()].CycleTime)
-		 / 10000000.0;]]></ST>
+Elapsed := TO_LREAL(Cycles) * TO_LREAL(TwinCAT_SystemInfoVarList._TaskInfo[GETCURTASKINDEXEX()].CycleTime) / 10000000.0;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -51,11 +55,9 @@ Elapsed := TO_LREAL(Cycles)
       <Declaration><![CDATA[PROPERTY IsRunning : BOOL]]></Declaration>
       <Get Name="Get" Id="{15216e90-2da3-48b8-aeb7-9f8f243c274c}">
         <Declaration><![CDATA[VAR
-END_VAR
-]]></Declaration>
+END_VAR]]></Declaration>
         <Implementation>
-          <ST><![CDATA[IsRunning := _IsRunning;
-]]></ST>
+          <ST><![CDATA[IsRunning := _IsRunning;]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -78,6 +80,7 @@ _IsRunning		 := TRUE;]]></ST>
     </Method>
     <Method Name="Stop" Id="{dd061033-f2d8-45d9-9594-7d8c30f50400}">
       <Declaration><![CDATA[// Freezes and returns the elapsed seconds. Stopping a stopped stopwatch returns
+
 // what it already held rather than zero.
 METHOD Stop : LREAL]]></Declaration>
       <Implementation>

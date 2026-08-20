@@ -2,11 +2,13 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <Itf Name="I_ProbeWitness" Id="{740202a6-6c88-474e-8c25-07a56121cd7b}">
     <Declaration><![CDATA[// Somewhere for several spies to record the order they were notified in.
+
 //
+
 // An interface rather than a shared instance, because a spy holding the concrete
+
 // type would be a second thing to keep wired up correctly.
-INTERFACE I_ProbeWitness EXTENDS __SYSTEM.IQueryInterface
-]]></Declaration>
+INTERFACE I_ProbeWitness EXTENDS __SYSTEM.IQueryInterface]]></Declaration>
     <Method Name="Note" Id="{dc3b5eaa-ca0b-423a-8f50-9a4816c4d5ad}">
       <Declaration><![CDATA[// Called by each spy as it is notified. Ordinal identifies which one.
 METHOD Note

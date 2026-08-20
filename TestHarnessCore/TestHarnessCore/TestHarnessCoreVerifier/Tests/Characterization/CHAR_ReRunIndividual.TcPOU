@@ -2,27 +2,32 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="CHAR_ReRunIndividual" Id="{c6818694-4a88-45d6-8829-55389b7b72e6}" SpecialFunc="None">
     <Declaration><![CDATA[// PORTED. An individual re-run is a debugging aid and must NOT touch the result
+
 // document - letting it append would corrupt the CI artifact with duplicate
+
 // entries.
+
 //
+
 // Three things, all of which must hold: the test really did run
+
 // again, no new case was recorded, and no new document was produced. Without the
+
 // first, the test would pass even if ReRunSingle did nothing at all.
 FUNCTION_BLOCK CHAR_ReRunIndividual IMPLEMENTS I_Test
 VAR
-	Inner	 : TestSuite<4>;
-	Recorder : RecordingReporter;
-	Budgets	 : ST_TestBudgets;
-	Phase	 : DINT;
-	Scans	 : DINT;
-	X : PassingTest;
-	Y : PassingTest;
-
+	Inner		   : TestSuite<4>;
+	Recorder	   : RecordingReporter;
+	Budgets		   : ST_TestBudgets;
+	Phase		   : DINT;
+	Scans		   : DINT;
+	X			   : PassingTest;
+	Y			   : PassingTest;
 	Accepted	   : BOOL;
 	CasesAfterRun1 : UDINT;
 	SavesAfterRun1 : UDINT;
-	ExpectedCount : UDINT;
-	ActualCount	  : UDINT;
+	ExpectedCount  : UDINT;
+	ActualCount	   : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -43,53 +48,50 @@ IF Scans > 500 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Inner.SetLabel('CHAR_Individual_Subject');
+		Inner.AddReporter(Recorder);
+		Inner.Register(X, 'X', Budgets);
+		Inner.Register(Y, 'Y', Budgets);
+		Phase := 1;
+		Run	  := FALSE;
 
-0:
-	Inner.SetLabel('CHAR_Individual_Subject');
-	Inner.AddReporter(Recorder);
-	Inner.Register(X, 'X', Budgets);
-	Inner.Register(Y, 'Y', Budgets);
-	Phase := 1;
-	Run	  := FALSE;
+	1:
+		IF Inner.Run(Enable := TRUE) THEN
+			CasesAfterRun1 := Recorder.CaseCount;
+			SavesAfterRun1 := Recorder.SaveCount;
+			Accepted	   := Inner.ReRunSingle('X');
+			Phase		   := 2;
+		END_IF
 
-1:
-	IF Inner.Run(Enable := TRUE) THEN
-		CasesAfterRun1 := Recorder.CaseCount;
-		SavesAfterRun1 := Recorder.SaveCount;
-		Accepted	   := Inner.ReRunSingle('X');
-		Phase		   := 2;
-	END_IF
-	Run := FALSE;
+		Run := FALSE;
 
-2:
-	IF Inner.Run(Enable := TRUE) THEN
-		Phase := 3;
-	END_IF
-	Run := FALSE;
+	2:
+		IF Inner.Run(Enable := TRUE) THEN
+			Phase := 3;
+		END_IF
 
-3:
-	Test.AssertTrue(Accepted, 'the individual re-run was accepted');
+		Run := FALSE;
 
-	// It really ran. Without this the rest would pass on a no-op.
-	ExpectedCount := 2;
-	ActualCount	  := X.BodyCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the chosen test really re-ran');
+	3:
+		Test.AssertTrue(Accepted, 'the individual re-run was accepted');
 
-	ExpectedCount := 1;
-	ActualCount	  := Y.BodyCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing else did');
+		// It really ran. Without this the rest would pass on a no-op.
+		ExpectedCount := 2;
+		ActualCount	  := X.BodyCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the chosen test really re-ran');
+		ExpectedCount := 1;
+		ActualCount	  := Y.BodyCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and nothing else did');
 
-	// And recorded nothing.
-	ExpectedCount := CasesAfterRun1;
-	ActualCount	  := Recorder.CaseCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the re-run recorded no new case');
-
-	ExpectedCount := SavesAfterRun1;
-	ActualCount	  := Recorder.SaveCount;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'and produced no new document');
-
-	Run := TRUE;
-
+		// And recorded nothing.
+		ExpectedCount := CasesAfterRun1;
+		ActualCount	  := Recorder.CaseCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the re-run recorded no new case');
+		ExpectedCount := SavesAfterRun1;
+		ActualCount	  := Recorder.SaveCount;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'and produced no new document');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

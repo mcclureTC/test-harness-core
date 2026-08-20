@@ -2,29 +2,40 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JUnitReporterWritesTheDocument" Id="{021158ac-1737-406a-8930-caa9fce25f8c}" SpecialFunc="None">
     <Declaration><![CDATA[// The document reaches disk, and the write reports success.
+
 //
+
 // It also checks the document is NOT EMPTY, which FilesWritten alone cannot say.
+
 // A successful write of a bare XML declaration looks identical to a successful
+
 // write of a full document - and that is exactly what happened the first time
+
 // this ran: 23 bytes, no error, everything apparently fine.
+
 //
+
 // WHAT THIS STILL CANNOT CHECK: whether the XML is well formed or whether CI can
+
 // parse it. Nothing in the PLC reads the file back. Open it once, by eye.
+
 //
+
 // Writes to the 4026 boot folder. If that path is wrong for this machine the test
+
 // fails as a write failure, which is the correct outcome and not a false alarm.
 FUNCTION_BLOCK TEST_JUnitReporterWritesTheDocument IMPLEMENTS I_Test
 VAR
-	Writer : TestJUnitReporter;
-	Spy	   : SpyReporter;
-	Tally  : TestRunTally;
-	Phase  : DINT;
-	Scans  : DINT;
-	Path : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier.xml';
+	Writer		  : TestJUnitReporter;
+	Spy			  : SpyReporter;
+	Tally		  : TestRunTally;
+	Phase		  : DINT;
+	Scans		  : DINT;
+	Path		  : T_MaxString := 'C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\TestHarnessCoreVerifier.xml';
 	ExpectedCount : UDINT;
 	ActualCount	  : UDINT;
-	Error  : HRESULT;
-	Length : UDINT;
+	Error		  : HRESULT;
+	Length		  : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
@@ -45,66 +56,69 @@ IF Scans > 2000 THEN
 END_IF
 
 CASE Phase OF
+	0:
+		Writer.SetPath(Path);
+		Writer.AttachErrorSink(Spy);
+		Tally.SetLabel('a suite');
+		Tally.Begin(1);
+		Writer.TestStarted(SuiteLabel := 'a suite', TestLabel := 'a test', Location := 'Verifier.Somewhere');
+		Writer.CheckPassed(StepLabel := '', Detail := '');
+		Writer.CheckFailed(StepLabel  := 'Home',
+						   Kind		  := E_FailureKind.ValueMismatch,
+						   Expected	  := '1',
+						   Actual	  := '2',
+						   Diagnostic := 'expected 1, actual 2',
+						   Message	  := 'deliberate');
 
-0:
-	Writer.SetPath(Path);
-	Writer.AttachErrorSink(Spy);
+		Writer.TestFinished(SuiteLabel	  := 'a suite',
+							TestLabel	  := 'a test',
+							Location	  := 'Verifier.Somewhere',
+							Status		  := E_TestStatus.Failed,
+							Kind		  := E_FailureKind.ValueMismatch,
+							Summary		  := 'Home: expected 1, actual 2 - deliberate',
+							ElapsedTime	  := 0.01,
+							ElapsedCycles := 1,
+							Assertions	  := 2);
 
-	Tally.SetLabel('a suite');
-	Tally.Begin(1);
+		Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.01);
+		Tally.Finish();
+		Writer.SuiteFinished(Tally);
+		Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
+		Phase := 1;
+		Run	  := FALSE;
 
-	Writer.TestStarted(SuiteLabel := 'a suite', TestLabel := 'a test',
-					   Location := 'Verifier.Somewhere');
-	Writer.CheckPassed(StepLabel := '', Detail := '');
-	Writer.CheckFailed(StepLabel := 'Home', Kind := E_FailureKind.ValueMismatch,
-					   Expected := '1', Actual := '2',
-					   Diagnostic := 'expected 1, actual 2', Message := 'deliberate');
-	Writer.TestFinished(SuiteLabel := 'a suite', TestLabel := 'a test',
-						Location := 'Verifier.Somewhere', Status := E_TestStatus.Failed,
-						Kind := E_FailureKind.ValueMismatch,
-						Summary := 'Home: expected 1, actual 2 - deliberate',
-						ElapsedTime := 0.01, ElapsedCycles := 1, Assertions := 2);
+	1:
+		// The write is asynchronous. This is what CyclicLogic exists for.
+		Writer.CyclicLogic();
+		IF Writer.IsIdle THEN
+			Phase := 2;
+		END_IF
 
-	Tally.Record(Verdict := E_TestStatus.Failed, ElapsedTime := 0.01);
-	Tally.Finish();
-	Writer.SuiteFinished(Tally);
-	Writer.RunFinished(Status := Tally, TargetInfo := 'the verifier');
-	Phase := 1;
-	Run	  := FALSE;
+		Run := FALSE;
 
-1:
-	// The write is asynchronous. This is what CyclicLogic exists for.
-	Writer.CyclicLogic();
-	IF Writer.IsIdle THEN
-		Phase := 2;
-	END_IF
-	Run := FALSE;
+	2:
+		ExpectedCount := 1;
+		ActualCount	  := Writer.FilesWritten;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'the document was written');
+		ExpectedCount := 0;
+		ActualCount	  := Writer.WriteFailures;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'with no failures');
+		Error := Writer.LastError;
+		Test.AssertTrue(Error = 0, 'and no HRESULT');
 
-2:
-	ExpectedCount := 1;
-	ActualCount	  := Writer.FilesWritten;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'the document was written');
+		// The bar is deliberately well above the 23 bytes an empty document produces,
 
-	ExpectedCount := 0;
-	ActualCount	  := Writer.WriteFailures;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'with no failures');
+		// and well below what this run actually generates. It is a smoke test for
 
-	Error := Writer.LastError;
-	Test.AssertTrue(Error = 0, 'and no HRESULT');
+		// "something was built", not an assertion about the exact bytes.
+		Length := Writer.DocumentLength;
+		Test.AssertTrue(Length > 200, 'the document has real content in it');
 
-	// The bar is deliberately well above the 23 bytes an empty document produces,
-	// and well below what this run actually generates. It is a smoke test for
-	// "something was built", not an assertion about the exact bytes.
-	Length := Writer.DocumentLength;
-	Test.AssertTrue(Length > 200, 'the document has real content in it');
-
-	// A failed write raises a framework error. A successful one must not.
-	ExpectedCount := 0;
-	ActualCount	  := Spy.FrameworkErrorCalls;
-	Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was reported as wrong');
-
-	Run := TRUE;
-
+		// A failed write raises a framework error. A successful one must not.
+		ExpectedCount := 0;
+		ActualCount	  := Spy.FrameworkErrorCalls;
+		Test.AssertEqual(ExpectedCount, ActualCount, 'nothing was reported as wrong');
+		Run := TRUE;
 END_CASE]]></ST>
       </Implementation>
     </Method>

@@ -2,15 +2,16 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_JournalResetKeepsWhatWasRegistered" Id="{0c7cfbbe-b6d1-442b-9e14-509acdd236bf}" SpecialFunc="None">
     <Declaration><![CDATA[// A re-run re-executes the registered set; it does not redefine it. Reset clears
+
 // the verdict and the counts, and keeps the label, the location and the budgets
+
 // the test claimed at registration.
 FUNCTION_BLOCK TEST_JournalResetKeepsWhatWasRegistered IMPLEMENTS I_Test
 VAR
-	Subject : TestJournal;
-	Handle	: TestVerdict;
-	Budgets	: ST_TestBudgets;
-	Got		: ST_TestBudgets;
-
+	Subject		   : TestJournal;
+	Handle		   : TestVerdict;
+	Budgets		   : ST_TestBudgets;
+	Got			   : ST_TestBudgets;
 	ExpectedCycles : UDINT;
 	ActualCycles   : UDINT;
 	ExpectedCount  : UDINT;
@@ -27,32 +28,25 @@ VAR_INPUT
 	Test   : I_TestAssertions;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[Budgets.Body.Cycles	     := 11;
+        <ST><![CDATA[Budgets.Body.Cycles		 := 11;
 Budgets.Body.IsCyclesSet := TRUE;
 Subject.SetBudgets(Budgets);
-
 Handle.Target(Subject);
 Subject.Begin('first run', 'Verifier.Somewhere');
 Handle.Fail('deliberate');
 Subject.Finish(E_TestStatus.Passed);
 Handle.Untarget();
-
 Test.AssertTrue(Subject.Status = E_TestStatus.Failed, 'failed on the first run');
-
 Subject.Reset();
-
 Test.AssertTrue(Subject.Status = E_TestStatus.NotStarted, 'verdict cleared');
 Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'failure kind cleared');
-
 ExpectedCount := 0;
 ActualCount	  := Subject.AssertionCount;
 Test.AssertEqual(ExpectedCount, ActualCount, 'checks cleared');
-
 Got			   := Subject.Budgets;
 ExpectedCycles := 11;
 ActualCycles   := Got.Body.Cycles;
 Test.AssertEqual(ExpectedCycles, ActualCycles, 'the claimed budget survived the reset');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

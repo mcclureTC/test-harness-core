@@ -2,14 +2,20 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_AssertCompletedWithinCountsCompletedScans" Id="{2ebe1817-15a7-452f-a034-a320c9e52c90}" SpecialFunc="None">
     <Declaration><![CDATA[// AssertCompletedWithin compares against COMPLETED scans - the one in progress is
+
 // not counted, because the journal is ticked after the body runs.
+
 //
+
 // That is documented in I_TestTiming and is exactly the kind of off-by-one nobody
+
 // notices until a scan budget behaves oddly. Here the journal is ticked by hand so
+
 // the count is unambiguous rather than a side effect of how long something took.
 FUNCTION_BLOCK TEST_AssertCompletedWithinCountsCompletedScans IMPLEMENTS I_Test
 VAR
 	// A private journal and handle. The assertion under test is driven into THESE,
+
 	// so its verdict can be inspected without the outer suite ever seeing it.
 	Subject : TestJournal;
 	Handle	: TestVerdict;
@@ -41,16 +47,16 @@ Test.AssertTrue(Subject.Kind = E_FailureKind.None, 'the boundary itself passes')
 // A third takes it past.
 Subject.Tick();
 Handle.AssertCompletedWithin(2, 'three scans is not within two');
-Test.AssertTrue(Subject.Kind = E_FailureKind.Timeout,
-				'exceeding the budget is a Timeout, not a value mismatch');
+Test.AssertTrue(Subject.Kind = E_FailureKind.Timeout, 'exceeding the budget is a Timeout, not a value mismatch');
+
 // Summary is composed by Finish, not as checks are recorded - a test with forty
+
 // passing checks composes ONE line, at the end. So the journal is finished before
+
 // its text is read.
 Subject.Finish(E_TestStatus.Passed);
 Test.AssertTrue(FIND(Subject.Summary, 'cycles') > 0, 'and the summary names cycles');
-
 Handle.Untarget();
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

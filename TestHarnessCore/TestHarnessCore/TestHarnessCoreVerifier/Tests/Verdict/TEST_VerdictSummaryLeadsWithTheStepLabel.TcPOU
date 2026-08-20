@@ -2,21 +2,27 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_VerdictSummaryLeadsWithTheStepLabel" Id="{f0102f30-86d9-417f-a424-29e755c94c1d}" SpecialFunc="None">
     <Declaration><![CDATA[// Timeout is the dominant failure mode for anything multi-scan, and there the
+
 // step label IS the diagnostic. "Home: timed out after 5000 cycles" usually ends
+
 // an investigation; "timed out after 5000 cycles" starts one.
+
 //
+
 // The step captured is the one current when the check ran, so a later step cannot
+
 // relabel an earlier failure.
 FUNCTION_BLOCK TEST_VerdictSummaryLeadsWithTheStepLabel IMPLEMENTS I_Test
 VAR
 	// A private journal and handle, so a DELIBERATE failure can be recorded and
+
 	// inspected without the suite's own verdict ever seeing it. The test itself
+
 	// passes; what it proves is that failing works.
 	Subject : TestJournal;
 	Handle	: TestVerdict;
-	Lower  : DINT := 1;
-	Higher : DINT := 2;
-
+	Lower	: DINT := 1;
+	Higher	: DINT := 2;
 	Summary : T_MaxString;
 	FoundAt : INT;
 END_VAR]]></Declaration>
@@ -33,24 +39,18 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Handle.Target(Subject);
 Subject.Begin('stepped', '');
-
 Handle.SetStep('Home');
 Handle.AssertEqual(Lower, Higher, 'while homing');
 
 // A later step must not relabel the failure already recorded.
 Handle.SetStep('Retract');
-
 Subject.Finish(E_TestStatus.Passed);
-
 Summary := Subject.Summary;
 FoundAt := FIND(Summary, 'Home');
 Test.AssertTrue(FoundAt = 1, 'summary opens with the step that was current');
-
 FoundAt := FIND(Summary, 'Retract');
 Test.AssertTrue(FoundAt = 0, 'the later step did not relabel it');
-
 Handle.Untarget();
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

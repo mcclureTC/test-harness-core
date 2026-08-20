@@ -2,16 +2,18 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RegistryClosesRegistration" Id="{89318399-0d9f-435b-ab58-53de6168a2da}" SpecialFunc="None">
     <Declaration><![CDATA[// Registration is open until the suite is first enabled, then closed for good. A
+
 // re-run re-executes the registered set; it does not redefine it.
+
 //
+
 // Closed outranks a free slot: refusing a late claim as Full would be a lie.
 FUNCTION_BLOCK TEST_RegistryClosesRegistration IMPLEMENTS I_Test
 VAR
-	Registry : TestRegistry<4>;
-	Early	 : FakeTest;
-	Late	 : FakeTest;
-	Budgets	 : ST_TestBudgets;
-
+	Registry	  : TestRegistry<4>;
+	Early		  : FakeTest;
+	Late		  : FakeTest;
+	Budgets		  : ST_TestBudgets;
 	ExpectedFault : E_RegistrationFault;
 	ActualFault	  : E_RegistrationFault;
 	ExpectedCount : UDINT;
@@ -29,23 +31,17 @@ VAR_INPUT
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[Test.AssertTrue(Registry.IsOpen, 'open before Close');
-
 ActualFault	  := Registry.TryClaim(Early, 'Registered in time', Budgets);
 ExpectedFault := E_RegistrationFault.None;
 Test.AssertEqual(ExpectedFault, ActualFault, 'accepted while open');
-
 Registry.Close();
-
 Test.AssertFalse(Registry.IsOpen, 'closed after Close');
-
 ActualFault	  := Registry.TryClaim(Late, 'Registered too late', Budgets);
 ExpectedFault := E_RegistrationFault.Closed;
 Test.AssertEqual(ExpectedFault, ActualFault, 'refused as Closed, not Full');
-
 ExpectedCount := 1;
 ActualCount	  := Registry.Count;
 Test.AssertEqual(ExpectedCount, ActualCount, 'late claim took no slot');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>

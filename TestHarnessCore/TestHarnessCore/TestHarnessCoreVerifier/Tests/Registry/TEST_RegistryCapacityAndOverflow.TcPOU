@@ -2,17 +2,20 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="TEST_RegistryCapacityAndOverflow" Id="{85c6da99-c649-47a4-a91b-858d04c02935}" SpecialFunc="None">
     <Declaration><![CDATA[// A registry declared with three slots holds three, and the fourth is refused as
+
 // Full rather than accepted or written past the end.
+
 //
+
 // Declaring ARRAY[0..Capacity] rather than ARRAY[0..Capacity - 1] would make a
+
 // suite asked for two hold three, and report a limit of two while holding them.
 FUNCTION_BLOCK TEST_RegistryCapacityAndOverflow IMPLEMENTS I_Test
 VAR
-	Registry : TestRegistry<3>;
-	Fakes	 : ARRAY[0..3] OF FakeTest;
-	Budgets	 : ST_TestBudgets;
-	i		 : DINT;
-
+	Registry	  : TestRegistry<3>;
+	Fakes		  : ARRAY[0..3] OF FakeTest;
+	Budgets		  : ST_TestBudgets;
+	i			  : DINT;
 	ExpectedFault : E_RegistrationFault;
 	ActualFault	  : E_RegistrationFault;
 	ExpectedCount : UDINT;
@@ -38,15 +41,12 @@ END_FOR
 ExpectedCount := 3;
 ActualCount	  := Registry.Count;
 Test.AssertEqual(ExpectedCount, ActualCount, 'count after filling');
-
 ActualFault	  := Registry.TryClaim(Fakes[3], 'One too many', Budgets);
 ExpectedFault := E_RegistrationFault.Full;
 Test.AssertEqual(ExpectedFault, ActualFault, 'fourth refused as Full');
-
 ExpectedCount := 3;
 ActualCount	  := Registry.Count;
 Test.AssertEqual(ExpectedCount, ActualCount, 'count unchanged by refusal');
-
 Run := TRUE;]]></ST>
       </Implementation>
     </Method>
