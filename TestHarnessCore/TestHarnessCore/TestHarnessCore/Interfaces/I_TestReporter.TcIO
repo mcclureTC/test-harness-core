@@ -34,7 +34,7 @@
 // optional test hooks are, so a sink that does not want checks writes no empty
 
 // method bodies for them.
-INTERFACE I_TestReporter EXTENDS I_Cyclic]]></Declaration>
+INTERFACE I_TestReporter EXTENDS I_TestCyclic]]></Declaration>
     <Method Name="FrameworkError" Id="{857e102a-df18-42f4-9e7c-647b3549d1ff}">
       <Declaration><![CDATA[// The framework itself could not do something: a rejected registration, a suite
 
