@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_LogReporterNarratesSkipsOnlyWhenAsked" Id="{e08e412d-aa79-4809-9c86-237e8ab687a6}" SpecialFunc="None">
+    <Declaration><![CDATA[// A skipped test is narrated like a pass - only when asked - and is never counted
+// as a failure or an error.
+//
+// WHAT THIS CANNOT CHECK is the word on the line. It now reads "skipped", where the
+// pass branch it used to share would have written "passed"; ADSLOGSTR gives no
+// answer back, so the counters prove which BRANCH was taken and the wording has to
+// be read once, by eye, in the Logged Events window - the same limit
+// TEST_LogReporterNarratesWhenAsked states.
+//
+// It therefore passed before skipped verdicts reached sinks as well as after. It
+// is kept as the guard on the branch: a skip routed into the failure or error
+// branch, or logged when narration is off, turns it red.
+FUNCTION_BLOCK TEST_LogReporterNarratesSkipsOnlyWhenAsked IMPLEMENTS I_Test
+VAR
+	Sink		  : TestLogReporter;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{bccfe245-503d-402d-9c36-54164cbbc18e}" />
+    <Method Name="Run" Id="{25387cd6-6574-4961-a3b4-02d5168087c2}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'a skipped test',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Skipped,
+				  Kind			:= E_FailureKind.None,
+				  Summary		:= '',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 0,
+				  Assertions	:= 0);
+ExpectedCount := 0;
+ActualCount	  := Sink.LinesWritten;
+Test.AssertEqual(ExpectedCount, ActualCount, 'quiet about a skip by default');
+
+Sink.SetVerbosity(TRUE);
+Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'another skipped test',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Skipped,
+				  Kind			:= E_FailureKind.None,
+				  Summary		:= '',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 0,
+				  Assertions	:= 0);
+ExpectedCount := 1;
+ActualCount	  := Sink.LinesWritten;
+Test.AssertEqual(ExpectedCount, ActualCount, 'narrated in one line when asked');
+
+ExpectedCount := 0;
+ActualCount	  := Sink.FailuresLogged;
+Test.AssertEqual(ExpectedCount, ActualCount, 'never as a failure');
+ActualCount := Sink.ErrorsLogged;
+Test.AssertEqual(ExpectedCount, ActualCount, 'nor as an error');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

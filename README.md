@@ -7,7 +7,7 @@ scheduled. Nothing is simulated off-target and nothing needs a PC to be
 connected once the project is deployed.
 
 ```
-Suite: 96 passed, 0 failed, 0 errored, 0 skipped, of 96
+===  RUN PASSED  111 passed, 0 failed, 0 errored, 0 skipped, of 111
 ```
 
 ---
@@ -116,7 +116,8 @@ and `JUnitSink.IsIdle` tells you when the file has landed.
 | **Failed vs errored** | A failure means the code is wrong. An error means the test could not run. Counted apart. |
 | **Reporting** | JUnit XML for CI, TwinCAT EventLogger events for HMI and operators, system-log lines for a glance. Attach any combination. |
 | **Suite watchdog** | A suite that stops progressing is named, abandoned and reported rather than holding the run open. |
-| **Re-run** | Repeat a whole run, or re-run one test while debugging without polluting the result document. |
+| **Skip** | Rule a suite out on a target where it must not run. Its tests never run, not even in a re-run, and are still reported by name, as skipped. |
+| **Re-run** | Repeat a whole run — skipped suites stay skipped — or re-run one test while debugging without polluting the result document. |
 
 ## Requirements
 
@@ -133,9 +134,12 @@ surface, deadlines, setup and teardown, fakes, composition and CI.
 
 **`Maintenance_Guide.md`** is for changing the library itself.
 
+**`CHANGELOG.md`** lists what changed between versions — first, the results that
+can change when you upgrade.
+
 ## Verification
 
 `TestHarnessCoreVerifier` is a separate project that tests this one, using this
-one. It runs 96 tests plus an independent floor check that drives the registry,
+one. It runs 111 tests plus an independent floor check that drives the registry,
 arbiter and runner by hand — so that a framework defect cannot disguise itself as
 a passing run.

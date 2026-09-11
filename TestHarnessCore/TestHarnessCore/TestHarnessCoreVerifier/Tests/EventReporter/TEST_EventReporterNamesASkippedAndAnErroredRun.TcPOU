@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_EventReporterNamesASkippedAndAnErroredRun" Id="{3f1358c6-4402-498e-a51c-486b646faab9}" SpecialFunc="None">
+    <Declaration><![CDATA[// A skipped run raises RunSkipped and an errored run raises RunErrored, and the
+// logger accepts both.
+//
+// The run once had two events: RunPassed, and RunFailed for everything else. So a
+// run that exercised nothing raised an Error-severity RunFailed, and a run that
+// could not be trusted read as a defect in the code. RunSkipped (Info) and
+// RunErrored (Error) were added to the event class to match the suite's four.
+//
+// WHAT THIS CAN CHECK: that each run raised exactly one event and the logger
+// refused none. It does NOT prove the class on the target carries RunSkipped and
+// RunErrored: whether the logger refuses an event its class does not define is not
+// established. That proof is the library compiling at all, since the reporter
+// names both.
+//
+// WHAT IT CANNOT: which event was raised. Read that in the logger. RunSkipped is
+// Info and stands apart; RunErrored shares Error severity and text form with
+// RunFailed, so tell those two apart by event ID - 13 against 7.
+FUNCTION_BLOCK TEST_EventReporterNamesASkippedAndAnErroredRun IMPLEMENTS I_Test
+VAR
+	Sink	   : TestEventReporter;
+	SkippedRun : TestRunTally;
+	ErroredRun : TestRunTally;
+
+	ExpectedCount	: UDINT;
+	ActualCount		: UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{58c0302a-3533-4244-8f29-8b34ec91f8bb}" />
+    <Method Name="Run" Id="{872b6d4c-78f3-4035-bfe2-5efe60557ade}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Two runs built by hand, and checked before they are raised.
+SkippedRun.SetLabel('a skipped run');
+SkippedRun.Begin(2);
+SkippedRun.Record(Verdict := E_TestStatus.Skipped, ElapsedTime := 0.0);
+SkippedRun.Record(Verdict := E_TestStatus.Skipped, ElapsedTime := 0.0);
+SkippedRun.Finish();
+ExpectedOutcome := E_RunOutcome.Skipped;
+ActualOutcome	:= SkippedRun.Outcome;
+Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'the first sample run is Skipped');
+
+ErroredRun.SetLabel('an errored run');
+ErroredRun.Begin(2);
+ErroredRun.Record(Verdict := E_TestStatus.Passed, ElapsedTime := 0.1);
+ErroredRun.Record(Verdict := E_TestStatus.Errored, ElapsedTime := 0.1);
+ErroredRun.Finish();
+ExpectedOutcome := E_RunOutcome.Errored;
+ActualOutcome	:= ErroredRun.Outcome;
+Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'the second is Errored');
+
+// Named as samples, so neither is taken for this run's result.
+Sink.RunFinished(Status := SkippedRun, TargetInfo := 'a sample, not this run');
+Sink.RunFinished(Status := ErroredRun, TargetInfo := 'a sample, not this run');
+
+ExpectedCount := 2;
+ActualCount	  := Sink.EventsSent;
+Test.AssertEqual(ExpectedCount, ActualCount, 'each sample run raised one event');
+ExpectedCount := 0;
+ActualCount	  := Sink.FailedSends;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and the logger refused neither');
+
+// A null status is refused rather than dereferenced.
+Sink.RunFinished(Status := 0, TargetInfo := '');
+ExpectedCount := 2;
+ActualCount	  := Sink.EventsSent + Sink.FailedSends;
+Test.AssertEqual(ExpectedCount, ActualCount, 'a null status raises nothing');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

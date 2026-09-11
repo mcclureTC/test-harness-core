@@ -42,6 +42,7 @@ VAR
 	_StartedCount	  : UDINT;
 	_CheckCount		  : UDINT;
 	_FailedCheckCount : UDINT;
+	_CasesWhenSuiteFinished : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(*
@@ -51,6 +52,26 @@ END_VAR]]></Declaration>
     <Folder Name="I_Cyclic" Id="{9ef98fe1-d161-477e-a288-3b84d64af386}" />
     <Folder Name="I_TestDetailSink" Id="{8fe15d3f-6a4b-4607-8122-4432a6cb536b}" />
     <Folder Name="I_TestReporter" Id="{4cf6685d-bdba-4fb9-89c8-74c4606e5dec}" />
+    <Method Name="CaseAt" Id="{3908cc2b-4fc1-42d4-90be-eab3eae50863}">
+      <Declaration><![CDATA[// The whole case at a position in arrival order, or an empty one out of range.
+
+//
+
+// For a test that must see what ARRIVED rather than whether a lookup succeeded:
+
+// a label that failed to match is only diagnosable if the label is visible.
+METHOD CaseAt : ST_RecordedCase
+VAR_INPUT
+	Index : UDINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF Index >= _CaseCount THEN
+	RETURN;
+END_IF
+
+CaseAt := _Cases[Index];]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="CaseCount" Id="{cb425bc3-750d-4dca-8f05-24382a386a06}">
       <Declaration><![CDATA[// Cases recorded - the <testcase> count of the document that would be written.
 PROPERTY CaseCount : UDINT]]></Declaration>
@@ -111,6 +132,25 @@ END_IF
 CaseStatus := _Cases[Index].Status;]]></ST>
       </Implementation>
     </Method>
+    <Property Name="CasesWhenSuiteFinished" Id="{bc84cb59-b942-400d-aaae-5235411a0abb}">
+      <Declaration><![CDATA[// Cases recorded when the most recent SuiteFinished arrived.
+
+//
+
+// A document builder closes the suite element on SuiteFinished. A case arriving
+
+// after that lands under a second suite node with no totals, so a test that cares
+
+// about ORDER compares this with CaseCount.
+PROPERTY CasesWhenSuiteFinished : UDINT]]></Declaration>
+      <Get Name="Get" Id="{215185f2-22cb-4073-a3f8-1609b6f4cbda}">
+        <Declaration><![CDATA[VAR
+END_VAR]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[CasesWhenSuiteFinished := _CasesWhenSuiteFinished;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="CheckCount" Id="{d7654e80-be24-4dc3-bf9a-b3700bebe4f1}">
       <Declaration><![CDATA[PROPERTY CheckCount : UDINT]]></Declaration>
       <Get Name="Get" Id="{0cfb6ccb-8e13-4187-98f5-10b894dc470d}">
@@ -320,7 +360,8 @@ _LastErrorText	 := '';
 _StatTests		 := 0;
 _StatFailures	 := 0;
 _StatErrors		 := 0;
-_StatSkipped	 := 0;]]></ST>
+_StatSkipped	 := 0;
+_CasesWhenSuiteFinished := 0;]]></ST>
       </Implementation>
     </Method>
     <Method Name="RunFinished" Id="{ed48d9d2-6687-42f8-b2e3-8e438ea029d0}" FolderPath="I_TestReporter\">
@@ -438,7 +479,8 @@ _SuiteCount	  := _SuiteCount + 1;
 _StatTests	  := Status.TestCount;
 _StatFailures := Status.FailedCount;
 _StatErrors	  := Status.ErrorCount;
-_StatSkipped  := Status.SkippedCount;]]></ST>
+_StatSkipped  := Status.SkippedCount;
+_CasesWhenSuiteFinished := _CaseCount;]]></ST>
       </Implementation>
     </Method>
     <Method Name="TestFinished" Id="{99a560cd-1064-4da0-93a0-b2ec5dd487be}" FolderPath="I_TestReporter\">

@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_EventReporterDoesNotCallASkipAPass" Id="{724e1917-d77f-4e1e-a86d-a84f5c5e515f}" SpecialFunc="None">
+    <Declaration><![CDATA[// A skipped test raises no event, even with narration on - and above all not
+// TestPassed.
+//
+// The event class has one per-test event for each of Passed, Failed and Errored,
+// and none for Skipped. Narration once sent every verdict that was not a failure
+// or an error down the pass branch, which was harmless while no skipped verdict
+// ever reached a sink. Once one does, an operator filtering for passes would see a
+// test that never ran reported as one that did.
+//
+// The skip is not lost: the suite's own SuiteSkipped event carries the count. A
+// per-test skipped event needs an entry in the event class first.
+//
+// Asserts FailedSends as well as EventsSent, so this holds whether or not the
+// event class is registered on the target: nothing may even be attempted.
+FUNCTION_BLOCK TEST_EventReporterDoesNotCallASkipAPass IMPLEMENTS I_Test
+VAR
+	Sink		  : TestEventReporter;
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{5b00e81d-0716-4bf8-8297-e9c33a19229c}" />
+    <Method Name="Run" Id="{940d2772-b35f-4d32-becc-63cc65753e27}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Sink.SetVerbosity(TRUE);
+Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'a skipped test',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Skipped,
+				  Kind			:= E_FailureKind.None,
+				  Summary		:= '',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 0,
+				  Assertions	:= 0);
+ExpectedCount := 0;
+ActualCount	  := Sink.EventsSent;
+Test.AssertEqual(ExpectedCount, ActualCount, 'a skipped test raised no event, even with narration on');
+ActualCount := Sink.FailedSends;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and none was even attempted');
+
+// Narration really is on: a pass still raises one. Without this, a sink that had
+// simply stopped narrating would pass the checks above.
+Sink.TestFinished(SuiteLabel	:= 'suite',
+				  TestLabel		:= 'a pass',
+				  Location		:= '',
+				  Status		:= E_TestStatus.Passed,
+				  Kind			:= E_FailureKind.None,
+				  Summary		:= '',
+				  ElapsedTime	:= 0.0,
+				  ElapsedCycles := 0,
+				  Assertions	:= 0);
+ExpectedCount := 1;
+ActualCount	  := Sink.EventsSent + Sink.FailedSends;
+Test.AssertEqual(ExpectedCount, ActualCount, 'while a pass is still narrated');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

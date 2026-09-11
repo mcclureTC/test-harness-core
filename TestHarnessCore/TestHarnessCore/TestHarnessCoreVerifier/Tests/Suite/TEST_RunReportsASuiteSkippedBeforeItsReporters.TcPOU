@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunReportsASuiteSkippedBeforeItsReporters" Id="{78697a10-113a-4144-a1a5-0ceb71f53268}" SpecialFunc="None">
+    <Declaration><![CDATA[// A suite skipped before any reporter was attached still reaches the reporters.
+//
+// Skip is only permitted before a suite is first enabled, and a composition root
+// naturally skips in the block that registers - before its sinks are attached,
+// and always before the run has started. Skip used to announce the suite to its
+// sinks at the moment it was called, so in this order the announcement reached
+// nothing: the skipped tests appeared in the run totals and in no sink at all.
+//
+// The wiring below is the order a consumer reported, kept as reported: register,
+// skip, then label the run, attach the sink, add the suites. Skip settles the
+// counts when it is called; the sinks hear about it when the run reaches the suite.
+FUNCTION_BLOCK TEST_RunReportsASuiteSkippedBeforeItsReporters IMPLEMENTS I_Test
+VAR
+	Runner		 : TestRun<2>;
+	PassingSuite : TestSuite<2>;
+	SkippedSuite : TestSuite<2>;
+	Spy			 : SpyReporter;
+
+	Passes	   : PassingTest;
+	FirstSkip  : PassingTest;
+	SecondSkip : PassingTest;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{dcbc6d9e-92c6-4ebc-a0ab-25823dfcfbcb}" />
+    <Method Name="Run" Id="{ecdb368f-a134-4295-812b-662e4fa676a1}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	PassingSuite.SetLabel('passing');
+	PassingSuite.Register(Passes, 'a test that passes', Budgets);
+
+	SkippedSuite.SetLabel('skipped');
+	SkippedSuite.Register(FirstSkip, 'a skipped test', Budgets);
+	SkippedSuite.Register(SecondSkip, 'another skipped test', Budgets);
+	// Before any sink exists.
+	SkippedSuite.Skip();
+
+	Runner.SetLabel('a run');
+	Runner.AddReporter(Spy);
+	Runner.AddSuite(PassingSuite);
+	Runner.AddSuite(SkippedSuite);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 2;
+	ActualCount	  := Spy.SuiteFinishedCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'both suites reached the sink, the skipped one included');
+
+	// The skipped suite runs second, so it is the last one the sink heard about.
+	ExpectedOutcome := E_RunOutcome.Skipped;
+	ActualOutcome	:= Spy.LastSuiteOutcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'and it arrived as Skipped');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

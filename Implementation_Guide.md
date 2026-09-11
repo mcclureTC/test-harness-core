@@ -305,7 +305,8 @@ IF NOT Wired THEN
     Suite.Register(ValveCloses, 'the valve closes on power loss',     Budgets);
 
     Runner.SetLabel('nightly');
-    Runner.SetTargetInfo('CX5140 rig 2');
+    Runner.SetTargetInfo(CONCAT('CX5140 rig 2, TestHarnessCore ',
+                                TestHarnessCore.stLibVersion_TestHarnessCore.sVersion));
     Runner.AddSuite(Suite);
 END_IF
 
@@ -325,11 +326,40 @@ artifact.
   exclusion comes from: two suites touching the same axis cannot overlap.
 - **`TestRun` implements `I_TestRunStatus`**, so runs nest. Counts are *tests* at
   every level.
+- **Put the library version in the target info.** It appears in both run banners
+  and on the document's `<testsuites>` element, so every result names the build
+  that produced it.
+
+### Skipping a suite
+
+A suite that must not run on this target — the hardware is absent, or present and
+not to be moved — is skipped, not left out:
+
+```iecst
+IF NOT GVL_Rig.HasAxes THEN
+    AxisSuite.Skip();
+END_IF
+```
+
+- **Call it in the wiring block**, before the suite is first enabled; later is a
+  framework error. Where it sits relative to `AddReporter` and `AddSuite` does not
+  matter.
+- **Its tests never run** — not even in a re-run. Skipping is part of composition,
+  and a re-run repeats what was composed.
+- **It is still reported**, in its place, when the run reaches it: each test by
+  name, then the suite. The log shows `SUITE SKIPPED`, and the document lists
+  every test as a `<testcase>` with `<skipped/>`, so CI still sees them.
+- **Skipped is not red.** A run with one pass is `Passed`, however many skips sit
+  beside it. A run in which every test was skipped is `Skipped`.
+- **A wiring error is still an error.** A registration refused before the skip, or
+  a suite with no label, makes the suite `Errored`. The skip does not hide it.
+- **`ReRunSingle` does not check for a skip.** Naming a test in a skipped suite
+  runs it.
 
 ### Re-running
 
 ```iecst
-Runner.ReRun();                  // the whole run again, fresh document
+Runner.ReRun();                  // the whole run again, fresh document; skips stay skipped
 Suite.ReRunSingle('the valve opens within two seconds');   // debugging aid
 ```
 
@@ -351,12 +381,16 @@ Runner.AddReporter(JUnitSink);    // TestJUnitReporter  - the CI artifact
 ```
 
 **`TestLogReporter`** writes lines via `ADSLOGSTR`. No project setup. Quiet about
-passes by default; `SetVerbosity(TRUE)` narrates them. Brackets each run with a
-banner, which is only useful if you sort the Logged Events window by time.
+passes by default; `SetVerbosity(TRUE)` narrates them, and names a skipped test as
+skipped. Brackets each run with a banner — `RUN PASSED`, `RUN FAILED`,
+`RUN ERRORED` or `RUN SKIPPED`, at the same severities as the `SUITE` lines —
+which is only useful if you sort the Logged Events window by time.
 
 **`TestEventReporter`** raises TwinCAT 3 EventLogger events — structured,
 filterable, HMI-visible, and routable to an alarm view. No setup: the event class
-ships with the library as an external type.
+ships with the library as an external type. A run raises one of `RunPassed`,
+`RunFailed`, `RunErrored` or `RunSkipped`. A skipped test raises no event of its
+own, even when narrating; the suite's `SuiteSkipped` carries the count.
 
 **`TestJUnitReporter`** writes the XML document CI reads.
 
@@ -369,7 +403,8 @@ The path is required and has no default — it differs by platform and build, an
 default that is wrong writes somewhere nobody looks.
 
 Severity is not decoration in any of them: a **failure** is an error, an
-**errored** test is a warning. A build should react differently to each.
+**errored** test is a warning. A build should react differently to each. A
+**skipped** suite or run is a message: a skip does not turn a build red.
 
 ---
 
@@ -385,13 +420,17 @@ On the run:
 | `TotalDuration` | seconds |
 | `StalledSuites` | assert this is zero |
 
+`Outcome` is decided on test counts, at every level: `Errored` if anything
+errored, else `Failed` if anything failed, else `Skipped` if at least one test
+was skipped and none passed, else `Passed` — which includes a run with no tests.
+
 **`Errors` above zero means the run cannot be trusted** — the framework could not
 do something. Investigate that before reading any other number.
 
 The document is JUnit XML:
 
 ```xml
-<testsuites target="CX5140 rig 2">
+<testsuites target="CX5140 rig 2, TestHarnessCore 0.0.11">
   <testsuite name="Valves" tests="2" failures="1" errors="0" skipped="0" time="1.310000">
     <testcase name="the valve opens within two seconds" time="0.190000"
               cycles="18" assertions="4" checks-passed="3" checks-failed="1">
@@ -403,6 +442,17 @@ The document is JUnit XML:
     </testcase>
   </testsuite>
 </testsuites>
+```
+
+A skipped test is a case too, so CI can count and name it:
+
+```xml
+  <testsuite name="Axes" tests="2" failures="0" errors="0" skipped="2" time="0.000000">
+    <testcase name="the axis homes" time="0.000000"
+              cycles="0" assertions="0" checks-passed="0" checks-failed="0">
+      <skipped/>
+    </testcase>
+    ...
 ```
 
 `<check>` elements are an extension: standard JUnit has nowhere to put per-check
@@ -426,6 +476,11 @@ Assert in CI, not just in the report:
 - `TestCount` equals the number you expect
 - `StalledSuites` is zero
 - `JUnitSink.WriteFailures` is zero
+- `SkippedCount` equals the number you expect to skip on this target — a skip
+  flag set by mistake otherwise reads as a quiet, green run
+
+A `Skipped` run is not a failure, but it has proved nothing. If a gate must
+exercise something, assert `PassedCount` above zero as well.
 
 A missing file is ambiguous — a configuration problem and a run with no tests
 look identical. An empty *announced* run writes a document with `tests="0"`,

@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunReRunDoesNotRunASkippedSuite" Id="{52df7e8a-cdff-4e81-b9d2-157d606d38fb}" SpecialFunc="None">
+    <Declaration><![CDATA[// A re-run does not run the tests of a skipped suite. They stay skipped.
+//
+// THE HAZARD. A suite is skipped because running it would be wrong here - the
+// hardware is absent, or present and not to be moved. A run-level ReRun once
+// re-executed every suite's registered tests, skipped or not, so the one button
+// meant for someone at a keyboard ran exactly the tests that had been ruled out.
+//
+// Skip is part of composition, and a re-run "re-executes what was composed; it
+// does not recompose it" (TestRun.ReRun). A skip is part of what was composed.
+//
+// The passing test must run TWICE. Without that, a re-run that silently did
+// nothing would pass every other check here.
+FUNCTION_BLOCK TEST_RunReRunDoesNotRunASkippedSuite IMPLEMENTS I_Test
+VAR
+	Runner		 : TestRun<2>;
+	PassingSuite : TestSuite<2>;
+	SkippedSuite : TestSuite<2>;
+
+	Passes	   : PassingTest;
+	FirstSkip  : PassingTest;
+	SecondSkip : PassingTest;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{86695792-9345-44fa-9183-cac694a4245e}" />
+    <Method Name="Run" Id="{361c40f0-d290-4c94-9a7a-1073ce3148cb}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	PassingSuite.SetLabel('passing');
+	PassingSuite.Register(Passes, 'a test that passes', Budgets);
+
+	SkippedSuite.SetLabel('skipped');
+	SkippedSuite.Register(FirstSkip, 'a skipped test', Budgets);
+	SkippedSuite.Register(SecondSkip, 'another skipped test', Budgets);
+	SkippedSuite.Skip();
+
+	Runner.SetLabel('a run');
+	Runner.AddSuite(PassingSuite);
+	Runner.AddSuite(SkippedSuite);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	// The house way to re-run: once the first pass is complete.
+	Runner.ReRun();
+	Phase := 3;
+	Run	  := FALSE;
+
+3:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 4;
+	END_IF
+	Run := FALSE;
+
+4:
+	ExpectedCount := 2;
+	ActualCount	  := Passes.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the re-run really ran: the passing test ran twice');
+
+	ExpectedCount := 0;
+	ActualCount	  := FirstSkip.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'a skipped test never ran, not even in the re-run');
+	ActualCount := SecondSkip.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'nor did the other');
+
+	ExpectedCount := 2;
+	ActualCount	  := Runner.SkippedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the re-run still counts them skipped');
+	ExpectedCount := 1;
+	ActualCount	  := Runner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and counts the one pass once, not twice');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

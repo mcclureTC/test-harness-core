@@ -222,7 +222,8 @@ VAR_INPUT
 END_VAR
 
 VAR
-	Line : T_MaxString;
+	Line	: T_MaxString;
+	Outcome : E_RunOutcome;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF Status = 0 THEN
@@ -233,11 +234,22 @@ END_IF
 
 // several targets produces events that cannot be told apart.
 Line := CONCAT(CONCAT(THIS^.Tally(Status), '  on '), TargetInfo);
-IF Status.Outcome = E_RunOutcome.Passed THEN
-	THIS^.Emit(TC_Events.TestHarnessEvents.RunPassed, Line);
+// Read into a variable, as SuiteFinished does: TwinCAT will not take a CASE
+// selector off a property call.
+Outcome := Status.Outcome;
+// The same four outcomes as the suite, each with its own event. RunSkipped and
+// RunErrored were added to the class for this: a skipped run is not red, and an
+// errored one showed nothing about the code, so neither is a RunFailed.
+CASE Outcome OF
+	E_RunOutcome.Passed:
+		THIS^.Emit(TC_Events.TestHarnessEvents.RunPassed, Line);
+	E_RunOutcome.Skipped:
+		THIS^.Emit(TC_Events.TestHarnessEvents.RunSkipped, Line);
+	E_RunOutcome.Errored:
+		THIS^.Emit(TC_Events.TestHarnessEvents.RunErrored, Line);
 ELSE
 	THIS^.Emit(TC_Events.TestHarnessEvents.RunFailed, Line);
-END_IF]]></ST>
+END_CASE]]></ST>
       </Implementation>
     </Method>
     <Method Name="RunStarted" Id="{a8aa82f7-7050-404f-8f72-6c6d8aa5ba4c}" FolderPath="I_TestReporter\">
@@ -264,7 +276,11 @@ END_VAR]]></Declaration>
       </Implementation>
     </Method>
     <Method Name="SetVerbosity" Id="{abf54c99-adfa-48cc-b0cf-60c993b4812e}">
-      <Declaration><![CDATA[// Whether passing and skipped tests raise an event of their own.
+      <Declaration><![CDATA[// Whether passing tests raise an event of their own. Skipped tests do not: the
+
+// event class has no per-test skipped event, so a skip is carried by the suite's
+
+// SuiteSkipped event until the class gains one.
 
 //
 
@@ -374,7 +390,10 @@ CASE Status OF
 		THIS^.Emit(TC_Events.TestHarnessEvents.TestErrored, CONCAT(CONCAT(Line, ': '), Summary));
 
 ELSE
-	IF _IncludePasses THEN
+	// Passes only. The event class has no per-test skipped event, and TestPassed for
+	// a skipped test would report work that never ran; the suite's SuiteSkipped
+	// event carries the count instead.
+	IF _IncludePasses AND (Status = E_TestStatus.Passed) THEN
 		THIS^.Emit(TC_Events.TestHarnessEvents.TestPassed, Line);
 	END_IF
 END_CASE]]></ST>

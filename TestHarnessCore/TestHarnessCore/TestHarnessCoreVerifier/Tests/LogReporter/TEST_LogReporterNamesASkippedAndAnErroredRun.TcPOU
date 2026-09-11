@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_LogReporterNamesASkippedAndAnErroredRun" Id="{6b62aa0e-9040-402e-90c5-c44416118198}" SpecialFunc="None">
+    <Declaration><![CDATA[// A skipped run and an errored run each get a banner of their own, at the severity
+// the suite line uses: RUN SKIPPED as a message, RUN ERRORED as an error.
+//
+// Until the run banner copied the suite line's four branches, both printed RUN
+// FAILED at error severity - so a run that exercised nothing turned an error-filtered
+// log red, and a run that could not be trusted read as a defect in the code.
+//
+// WHAT THIS CANNOT CHECK: the word on the line, or its severity. ADSLOGSTR gives no
+// answer back. The counters prove each banner was written between its two rules;
+// the wording is read by eye, and this test exists so that every verifier log has
+// both banners in it to read. They carry the prefix 'verifier sample - ' and name
+// themselves as samples: RUN ERRORED is an error-severity line on every run, and must
+// not be taken for this run's result.
+FUNCTION_BLOCK TEST_LogReporterNamesASkippedAndAnErroredRun IMPLEMENTS I_Test
+VAR
+	Sink	   : TestLogReporter;
+	SkippedRun : TestRunTally;
+	ErroredRun : TestRunTally;
+
+	ExpectedCount	: UDINT;
+	ActualCount		: UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{a32afdd4-f68c-4bfa-a347-7b992251d22c}" />
+    <Method Name="Run" Id="{e41889e0-9146-435b-ab16-783cb2e45337}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Sink.SetPrefix('verifier sample - ');
+
+// Two runs built by hand, and checked before they are logged: a banner is only
+// worth reading if the outcome behind it is the one intended.
+SkippedRun.SetLabel('a skipped run');
+SkippedRun.Begin(2);
+SkippedRun.Record(Verdict := E_TestStatus.Skipped, ElapsedTime := 0.0);
+SkippedRun.Record(Verdict := E_TestStatus.Skipped, ElapsedTime := 0.0);
+SkippedRun.Finish();
+ExpectedOutcome := E_RunOutcome.Skipped;
+ActualOutcome	:= SkippedRun.Outcome;
+Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'the first sample run is Skipped');
+
+ErroredRun.SetLabel('an errored run');
+ErroredRun.Begin(2);
+ErroredRun.Record(Verdict := E_TestStatus.Passed, ElapsedTime := 0.1);
+ErroredRun.Record(Verdict := E_TestStatus.Errored, ElapsedTime := 0.1);
+ErroredRun.Finish();
+ExpectedOutcome := E_RunOutcome.Errored;
+ActualOutcome	:= ErroredRun.Outcome;
+Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'the second is Errored');
+
+// Expect, in the Logged Events window:
+//   verifier sample - ===  RUN SKIPPED 0 passed, 0 failed, 0 errored, 2 skipped, of 2 ...  (Message)
+//   verifier sample - ===  RUN ERRORED 1 passed, 0 failed, 1 errored, 0 skipped, of 2 ...  (Error)
+Sink.RunFinished(Status := SkippedRun, TargetInfo := 'a sample, not this run');
+ExpectedCount := 3;
+ActualCount	  := Sink.LinesWritten;
+Test.AssertEqual(ExpectedCount, ActualCount, 'the skipped run got a banner between two rules');
+
+Sink.RunFinished(Status := ErroredRun, TargetInfo := 'a sample, not this run');
+ExpectedCount := 6;
+ActualCount	  := Sink.LinesWritten;
+Test.AssertEqual(ExpectedCount, ActualCount, 'and so did the errored run');
+
+// A null status is refused rather than dereferenced.
+Sink.RunFinished(Status := 0, TargetInfo := '');
+ActualCount := Sink.LinesWritten;
+Test.AssertEqual(ExpectedCount, ActualCount, 'a null status writes nothing');
+Run := TRUE;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

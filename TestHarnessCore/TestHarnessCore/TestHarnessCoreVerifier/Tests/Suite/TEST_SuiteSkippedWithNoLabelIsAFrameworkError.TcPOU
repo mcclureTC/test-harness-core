@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteSkippedWithNoLabelIsAFrameworkError" Id="{41578194-21de-44d2-a338-0dc24282ae70}" SpecialFunc="None">
+    <Declaration><![CDATA[// A skipped suite with no label is a framework error, as an enabled one is.
+//
+// The skipped twin of TEST_SuiteWithNoLabelIsAFrameworkError. An unnamed suite
+// produces an unnamed node in the result document, which no CI system can group
+// by, and StartRun reports it. Skip never passes through StartRun, so an unnamed
+// skipped suite went into the document without a word.
+//
+// The sink is attached before the skip so the error is not only counted but SAID:
+// a count with no reason behind it sends a reader looking in the wrong place.
+FUNCTION_BLOCK TEST_SuiteSkippedWithNoLabelIsAFrameworkError IMPLEMENTS I_Test
+VAR
+	Inner	: TestSuite<4>;
+	Spy		: SpyReporter;
+	A		: PassingTest;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{5eb03c27-3910-4bb3-a5a9-3e2530226959}" />
+    <Method Name="Run" Id="{7bb1553a-c836-40aa-854c-9756bfe44782}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	// Deliberately no SetLabel.
+	Inner.Register(A, 'a test', Budgets);
+	Inner.AddReporter(Spy);
+	Inner.Skip();
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 1;
+	ActualCount	  := Inner.ErrorCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the missing label was counted');
+	ActualCount := Spy.FrameworkErrorCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and said, to the sink attached before the skip');
+
+	ActualCount := Inner.SkippedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the test was still skipped');
+	ExpectedCount := 0;
+	ActualCount	  := A.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and never ran');
+
+	ExpectedOutcome := E_RunOutcome.Errored;
+	ActualOutcome	:= Inner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'the suite is Errored, not quietly Skipped');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

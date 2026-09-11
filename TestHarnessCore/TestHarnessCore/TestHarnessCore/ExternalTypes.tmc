@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcModuleClass xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance2" xsi:noNamespaceSchemaLocation="http://www.beckhoff.com/schemas/2009/05/TcModuleClass" GeneratedBy="TwinCAT XAE Plc">
+  <DataTypes>
+    <DataType>
+      <Name GUID="{841D64DF-E6D1-4E9D-A109-5ABE229C724D}">TestHarnessEvents</Name>
+      <DisplayName TxtId=""><![CDATA[TestHarnessCore]]></DisplayName>
+      <EventId>
+        <Name Id="1">TestFailed</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Error</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="2">SuitePassed</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Info</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="3">SuiteFailed</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Error</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="4">RegistrationRejected</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Error</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="5">ResultNotWritten</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Error</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="6">RunPassed</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Info</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="7">RunFailed</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Error</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="8">TestErrored</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Warning</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="9">SuiteErrored</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Error</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="10">SuiteSkipped</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Info</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="11">TestPassed</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Verbose</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="12">RunSkipped</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Info</Severity>
+      </EventId>
+      <EventId>
+        <Name Id="13">RunErrored</Name>
+        <DisplayName TxtId=""><![CDATA[{0}]]></DisplayName>
+        <Severity>Error</Severity>
+      </EventId>
+      <Hides>
+        <Hide GUID="{6D2F1A84-3C77-4E19-9B5A-0C8E4D71A233}" />
+      </Hides>
+    </DataType>
+  </DataTypes>
+</TcModuleClass>

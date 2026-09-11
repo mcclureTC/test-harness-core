@@ -166,11 +166,54 @@ bound everything that did not disable them.
 Not a sentinel index. Letting index 0 double as "no active test" is the trap: a
 long-running test in the first slot would let the next one start alongside it.
 
+### "All skipped" is counted in tests, at every level
+
+`TestRunTally.Finish` settles `Skipped` when at least one test was skipped and none
+passed, once errors and failures are ruled out. It once compared `SkippedCount`
+with the number of results folded in — tests in a suite, but *suites* in a run —
+so a run of one pass and two skips across two suites settled `Skipped`, and a lone
+suite of two skips settled `Passed`. Within a suite the two rules agree, which is
+why it went unnoticed.
+
+### A skipped suite is announced when the run reaches it
+
+`Skip` settles the counts at once but tells no sink. It may only be called before
+the suite is first enabled — before `RunStarted`, and usually before any sink is
+attached — so an announcement made there reaches nothing, or arrives outside the
+run. `Run` makes it on the first enable: each test (`TestFinished`, with no
+`TestStarted`), then `SuiteFinished`. Cases first, because a document builder
+closes the suite element on `SuiteFinished`.
+
+The label and location come from the registry **slot**, not the journal. A journal
+learns them in `Begin`, when its test becomes active, and a skipped test never
+does. Reading the journal sent every skipped case out nameless.
+
+### A skipped suite stays skipped through a re-run
+
+A re-run re-executes what was composed, and a skip is composition — usually there
+because running those tests *here* would be wrong. `TestSuite.ReRun` on a skipped
+suite resets nothing and runs nothing; it re-arms the announcement, so the fresh
+document still lists the skipped tests.
+
+### `Skip` makes the checks `StartRun` makes
+
+A skip bypasses `StartRun`, so it repeats that method's two checks, in its order:
+the label, then re-applying the errors raised before the pass. The label comes
+first because, with no run yet, it adds to the errors being re-applied. A wiring
+error outranks a skip, so such a suite is `Errored`.
+
+### A skipped test raises no event
+
+The event class has per-test events for Passed, Failed and Errored only. Narrating
+a skip as `TestPassed` would report work that never ran; the suite's `SuiteSkipped`
+carries the count. A per-test skipped event needs an entry in the class first.
+
 ---
 
 ## 4. The verifier
 
-`TestHarnessCoreVerifier` — 96 tests, plus the floor check.
+`TestHarnessCoreVerifier` — 111 tests, plus the floor check. Its run banner names
+the library version it ran against.
 
 ### How the tests are organised
 
@@ -221,6 +264,15 @@ being built, so a surface finished early stops attracting them.
 
 **Repeat that check after any significant addition.** It asks a different question
 from "do the tests pass".
+
+### Lines in the log that are there on purpose
+
+A green verifier log still holds `FAILED`, `ERRORED`, `FRAMEWORK` and `SUITE FAILED`
+lines. They come from tests that drive a private sink with a deliberate failure.
+Lines prefixed `verifier sample -`, and events ending `on a sample, not this run`,
+exist to be read by eye: a log line's wording and severity cannot be read back, so
+those tests put every run banner and run event into every log. Only the final
+`RUN` banner is the verifier's result.
 
 ---
 
@@ -284,6 +336,13 @@ reasoning about it.
   project needs no Type System entry of its own — adding the library reference is
   enough. Dropping a `.tmc` into a *PLC project* registers nothing; that is not
   what this is.
+- **Changing the event class.** Edit it in the TMC editor, then check that
+  `ExternalTypes.tmc` in the library project shows the change; re-pin with *Add
+  Global Data Type* if it does not. TwinCAT recalculates the class GUID and lists
+  the old one under Hidden Datatypes — expected, not damage. **Append events;
+  never insert or remove one**, or positions in the generated structure move.
+  `ExternalTypes.tmc` is source, not build output, so commit it: the repository's
+  `.gitignore` excludes `*.tmc` and must exempt this file.
 - `ADSLOGSTR`: a severity bit alone does not say where a message goes. OR in
   `ADSLOG_MSGTYPE_LOG`. Pass the text as `strArg`, never as the format string, or
   a `%` in a test label corrupts the output.
@@ -307,6 +366,15 @@ until something has actually run.
 proves which branch was taken and not what the line says. No PLC code reads the
 JUnit file back, so a test proves the document is non-empty and not that it
 parses. Both need one look by eye, once.
+
+**Watch a new test fail before trusting it.** Run the verifier with the new tests
+against the library as it was, see them fail for the stated reason, then apply
+the fix. A test that has only ever passed has not been shown to detect anything.
+
+**Bump the version for every library build you install.** The verifier resolves
+the newest installed library, and its banner names that version — but a version
+names an install, not its contents. Two builds saved under one number print the
+same line.
 
 ---
 
@@ -343,13 +411,24 @@ checked against each other by anything.
 
 ## 8. Known gaps
 
-- **Event IDs and their definitions are not cross-checked.** The IDs live in the
-  event class; nothing verifies at compile time that every ID `TestEventReporter`
-  raises has a definition behind it. An undefined one still raises — the logger
-  simply has no text for it. Adding an event means editing both.
+- **The event class is checked against the reporter in one direction only.** The
+  build proves every event `TestEventReporter` names exists — the generated symbol
+  would not resolve otherwise. Nothing proves the reverse: `ResultNotWritten` (5)
+  is declared and raised nowhere. Adding an event means editing both.
 - **`<check>` elements are non-standard JUnit.** Harmless, ignored by CI, and the
   only way to carry per-check detail past the 255-character ceiling. If a CI tool
   ever objects, that is the trade to revisit.
 - **No parameterised tests.** Register the same function block twice with
   different construction, or loop inside one test and use `SetStep` to say which
   case failed.
+- **An error raised before any sink is attached is counted but never said.**
+  Registration usually comes before `AddReporter`, so a refused registration makes
+  its suite `Errored` while the message saying why reaches no sink. Holding such
+  messages until the run starts would close it.
+- **`ReRunSingle` does not check for a skip.** It runs a named test even in a
+  skipped suite, and leaves that test's journal holding the single-run verdict,
+  which a later re-run announces while the counts still say skipped.
+- **`AssertEqual` on an enum reports bytes** — `differs at byte 0: expected
+  16#05000000, actual 16#02000000` — and the author's message is the first thing
+  cut from the 80-character summary. A helper that renders enum values by name
+  would fix it, and touch many tests.

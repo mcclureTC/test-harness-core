@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunOfOnlySkippedTestsIsSkipped" Id="{44cb5ae1-b202-4a11-a9da-a8a318bf697c}" SpecialFunc="None">
+    <Declaration><![CDATA[// A run in which every test was skipped is Skipped - not Passed.
+//
+// The same defect as TEST_RunPassesWithSkipsBesideAPass, seen from the other side:
+// one suite absorbed, two tests skipped, and a rule comparing the two found them
+// unequal and fell through to Passed. A run that exercised nothing reported green.
+//
+// Skipped does not turn a build red either, so the difference is not the build's.
+// It is the reader's: a rig run that skipped its integration suites should say so
+// rather than claim a pass it never earned.
+FUNCTION_BLOCK TEST_RunOfOnlySkippedTestsIsSkipped IMPLEMENTS I_Test
+VAR
+	Runner		 : TestRun<1>;
+	SkippedSuite : TestSuite<2>;
+
+	FirstSkip  : PassingTest;
+	SecondSkip : PassingTest;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{9a4145ed-05fa-4dbf-84de-0f9427302299}" />
+    <Method Name="Run" Id="{76554e08-d8d0-4515-874b-e844247e7f1b}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	SkippedSuite.SetLabel('skipped');
+	SkippedSuite.Register(FirstSkip, 'a skipped test', Budgets);
+	SkippedSuite.Register(SecondSkip, 'another skipped test', Budgets);
+	SkippedSuite.Skip();
+
+	Runner.SetLabel('a run');
+	Runner.AddSuite(SkippedSuite);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 2;
+	ActualCount	  := Runner.SkippedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'both tests were skipped');
+
+	ExpectedCount := 0;
+	ActualCount	  := Runner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and none passed');
+
+	ExpectedOutcome := E_RunOutcome.Skipped;
+	ActualOutcome	:= Runner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'a run that exercised nothing is Skipped, not Passed');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

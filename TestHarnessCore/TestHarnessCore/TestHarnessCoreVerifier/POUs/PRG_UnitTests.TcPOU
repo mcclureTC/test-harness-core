@@ -12,7 +12,7 @@
 //
 //   Complete   TRUE once every test has finished
 //   Outcome    Passed if the library is sound
-//   Total      97 - assert this. A test that stops being registered vanishes
+//   Total      111 - assert this. A test that stops being registered vanishes
 //              silently, and CI sees fewer passes rather than a failure
 //   Passed / Failed / Errors / Skipped
 //   Idle       TRUE once the result document has reached disk. CI MUST WAIT FOR
@@ -46,7 +46,7 @@ VAR
 	// A RUN, not just a suite. RunFinished is a run-level event and only a TestRun
 	// raises it - which is what produces a document at all.
 	Runner : TestRun<2>;
-	Suite  : TestSuite<110>;
+	Suite  : TestSuite<130>;
 
 	// All three sinks, which is the realistic composition: a log line to read at a
 	// glance, an event to filter and route, a document for CI.
@@ -115,6 +115,8 @@ VAR
 	suiteClosesRegistrationOnFirstEnable	: TEST_SuiteClosesRegistrationOnFirstEnable;
 	suiteRejectedRegistrationIsNeverSilent	: TEST_SuiteRejectedRegistrationIsNeverSilent;
 	suiteSkipMarksEverythingSkipped	: TEST_SuiteSkipMarksEverythingSkipped;
+	suiteSkippedAfterARejectedRegistrationIsErrored	: TEST_SuiteSkippedAfterARejectedRegistrationIsErrored;
+	suiteSkippedWithNoLabelIsAFrameworkError	: TEST_SuiteSkippedWithNoLabelIsAFrameworkError;
 	suiteReRunRepeatsTheRegisteredSet	: TEST_SuiteReRunRepeatsTheRegisteredSet;
 	suiteReRunSingleRecordsNothing	: TEST_SuiteReRunSingleRecordsNothing;
 	suiteWithNothingRegisteredIsComplete	: TEST_SuiteWithNothingRegisteredIsComplete;
@@ -123,6 +125,14 @@ VAR
 
 	runAnnouncesItselfBeforeAnythingElse	: TEST_RunAnnouncesItselfBeforeAnythingElse;
 	runRefusingASuiteIsNeverSilent	: TEST_RunRefusingASuiteIsNeverSilent;
+	runPassesWithSkipsBesideAPass	: TEST_RunPassesWithSkipsBesideAPass;
+	runOfOnlySkippedTestsIsSkipped	: TEST_RunOfOnlySkippedTestsIsSkipped;
+	runWithMoreSkipsThanPassesIsPassed	: TEST_RunWithMoreSkipsThanPassesIsPassed;
+	runReportsASuiteSkippedBeforeItsReporters	: TEST_RunReportsASuiteSkippedBeforeItsReporters;
+	runReportsASkippedSuiteInItsPlace	: TEST_RunReportsASkippedSuiteInItsPlace;
+	runReportsEachSkippedTestByName	: TEST_RunReportsEachSkippedTestByName;
+	runReRunDoesNotRunASkippedSuite	: TEST_RunReRunDoesNotRunASkippedSuite;
+	runReRunReportsASkippedSuiteAgain	: TEST_RunReRunReportsASkippedSuiteAgain;
 
 	// -- Fanout --
 	fanoutNotifiesEverySinkInOrder	: TEST_FanoutNotifiesEverySinkInOrder;
@@ -140,6 +150,8 @@ VAR
 	logReporterNarratesWhenAsked	: TEST_LogReporterNarratesWhenAsked;
 	logReporterAlwaysWritesFrameworkErrors	: TEST_LogReporterAlwaysWritesFrameworkErrors;
 	logReporterSummarisesASuite	: TEST_LogReporterSummarisesASuite;
+	logReporterNarratesSkipsOnlyWhenAsked	: TEST_LogReporterNarratesSkipsOnlyWhenAsked;
+	logReporterNamesASkippedAndAnErroredRun	: TEST_LogReporterNamesASkippedAndAnErroredRun;
 
 	jUnitReporterOpensOnRunStarted	: TEST_JUnitReporterOpensOnRunStarted;
 
@@ -148,6 +160,8 @@ VAR
 	eventReporterIsQuietAboutPasses	: TEST_EventReporterIsQuietAboutPasses;
 	eventReporterRaisesEachOutcomeOnce	: TEST_EventReporterRaisesEachOutcomeOnce;
 	eventReporterWorksThroughTheFanout	: TEST_EventReporterWorksThroughTheFanout;
+	eventReporterDoesNotCallASkipAPass	: TEST_EventReporterDoesNotCallASkipAPass;
+	eventReporterNamesASkippedAndAnErroredRun	: TEST_EventReporterNamesASkippedAndAnErroredRun;
 
 	// -- JUnitReporter --
 	jUnitReporterWritesTheDocument	: TEST_JUnitReporterWritesTheDocument;
@@ -264,6 +278,8 @@ END_VAR]]></Declaration>
 	Suite.Register(suiteClosesRegistrationOnFirstEnable, 'Suite: registration closes on first enable', Budgets);
 	Suite.Register(suiteRejectedRegistrationIsNeverSilent, 'Suite: a rejected registration is never silent', Budgets);
 	Suite.Register(suiteSkipMarksEverythingSkipped, 'Suite: Skip marks everything skipped and completes', Budgets);
+	Suite.Register(suiteSkippedAfterARejectedRegistrationIsErrored, 'Suite: a registration refused before a skip is still counted', Budgets);
+	Suite.Register(suiteSkippedWithNoLabelIsAFrameworkError, 'Suite: a skipped suite with no label is a framework error', Budgets);
 	Suite.Register(suiteReRunRepeatsTheRegisteredSet, 'Suite: a re-run repeats the registered set', Budgets);
 	Suite.Register(suiteReRunSingleRecordsNothing, 'Suite: an individual re-run records nothing', Budgets);
 	Suite.Register(suiteWithNothingRegisteredIsComplete, 'Suite: an empty suite is complete, not red', Budgets);
@@ -272,6 +288,14 @@ END_VAR]]></Declaration>
 
 	Suite.Register(runAnnouncesItselfBeforeAnythingElse, 'Suite: a run announces itself before any result in it', Budgets);
 	Suite.Register(runRefusingASuiteIsNeverSilent, 'Suite: a suite refused at composition still turns the run red', Budgets);
+	Suite.Register(runPassesWithSkipsBesideAPass, 'Suite: a run with a pass and skips beside it is Passed', Budgets);
+	Suite.Register(runOfOnlySkippedTestsIsSkipped, 'Suite: a run in which every test was skipped is Skipped', Budgets);
+	Suite.Register(runWithMoreSkipsThanPassesIsPassed, 'Suite: a run with more skips than passes is still Passed', Budgets);
+	Suite.Register(runReportsASuiteSkippedBeforeItsReporters, 'Suite: a suite skipped before its reporters were attached still reaches them', Budgets);
+	Suite.Register(runReportsASkippedSuiteInItsPlace, 'Suite: a skipped suite is reported in its place in the run, not when Skip was called', Budgets);
+	Suite.Register(runReportsEachSkippedTestByName, 'Suite: every skipped test reaches the sinks by name, before its suite closes', Budgets);
+	Suite.Register(runReRunDoesNotRunASkippedSuite, 'Suite: a re-run does not run the tests of a skipped suite', Budgets);
+	Suite.Register(runReRunReportsASkippedSuiteAgain, 'Suite: a re-run reports a skipped suite again, as skipped', Budgets);
 
 	// Fanout
 	Suite.Register(fanoutNotifiesEverySinkInOrder, 'Fanout: every sink is notified, in attachment order', Budgets);
@@ -289,6 +313,8 @@ END_VAR]]></Declaration>
 	Suite.Register(logReporterNarratesWhenAsked, 'LogReporter: verbosity turns narration on and off', Budgets);
 	Suite.Register(logReporterAlwaysWritesFrameworkErrors, 'LogReporter: framework errors are never suppressed', Budgets);
 	Suite.Register(logReporterSummarisesASuite, 'LogReporter: one line per suite, carrying the counts', Budgets);
+	Suite.Register(logReporterNarratesSkipsOnlyWhenAsked, 'LogReporter: a skip is narrated only when asked, and never as a failure', Budgets);
+	Suite.Register(logReporterNamesASkippedAndAnErroredRun, 'LogReporter: a skipped run and an errored run each get their own banner', Budgets);
 
 	Suite.Register(jUnitReporterOpensOnRunStarted, 'JUnitReporter: the document opens on RunStarted', Budgets);
 
@@ -297,6 +323,8 @@ END_VAR]]></Declaration>
 	Suite.Register(eventReporterIsQuietAboutPasses, 'EventReporter: quiet about passes until narration is asked for', Budgets);
 	Suite.Register(eventReporterRaisesEachOutcomeOnce, 'EventReporter: one event per notification, none raised twice', Budgets);
 	Suite.Register(eventReporterWorksThroughTheFanout, 'EventReporter: it sits behind the fan-out beside the log sink', Budgets);
+	Suite.Register(eventReporterDoesNotCallASkipAPass, 'EventReporter: a skipped test raises no event, and never TestPassed', Budgets);
+	Suite.Register(eventReporterNamesASkippedAndAnErroredRun, 'EventReporter: a skipped run and an errored run each raise their own event', Budgets);
 
 	// JUnitReporter
 	Suite.Register(jUnitReporterWritesTheDocument, 'JUnitReporter: the document reaches disk', Budgets);
@@ -352,7 +380,13 @@ END_VAR]]></Declaration>
 	JUnitSink.AttachErrorSink(LogSink);
 
 	Runner.SetLabel('TestHarnessCoreVerifier');
-	Runner.SetTargetInfo('TestHarnessCoreVerifier');
+	// Which BUILD of the library ran, printed in both run banners and written to the
+	// result document. The library is resolved as 'newest installed', so the build
+	// under test is otherwise invisible. A version names an install, not its
+	// contents: bump it for every build that needs telling apart, or two different
+	// builds will print the same line.
+	Runner.SetTargetInfo(CONCAT('TestHarnessCoreVerifier, library ',
+								 TestHarnessCore.stLibVersion_TestHarnessCore.sVersion));
 
 	// Attached to the RUN, which pushes each one into every suite. One attachment
 	// point, whatever order suites and sinks are added in.

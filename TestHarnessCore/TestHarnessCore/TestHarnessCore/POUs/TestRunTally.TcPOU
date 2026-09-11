@@ -27,13 +27,6 @@
 FUNCTION_BLOCK TestRunTally IMPLEMENTS I_TestRunStatus
 VAR
 	_Status : ST_TestRunStatus;
-
-	// Tests folded in so far. Distinct from TestCount, which is how many were
-
-	// registered - they differ while a run is in progress, and after one that was
-
-	// abandoned.
-	_Recorded : UDINT;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(*
@@ -68,12 +61,7 @@ _Status.PassedCount	  := _Status.PassedCount + Status.PassedCount;
 _Status.FailedCount	  := _Status.FailedCount + Status.FailedCount;
 _Status.ErrorCount	  := _Status.ErrorCount + Status.ErrorCount;
 _Status.SkippedCount  := _Status.SkippedCount + Status.SkippedCount;
-_Status.TotalDuration := _Status.TotalDuration + Status.TotalDuration;
-
-// Recorded so an aggregate of nothing but skips still reports Skipped rather
-
-// than Passed.
-_Recorded := _Recorded + 1;]]></ST>
+_Status.TotalDuration := _Status.TotalDuration + Status.TotalDuration;]]></ST>
       </Implementation>
     </Method>
     <Method Name="Begin" Id="{afd6b0bf-b5a7-48a3-bf34-1a0532d907bf}">
@@ -96,8 +84,7 @@ _Status.PassedCount	  := 0;
 _Status.FailedCount	  := 0;
 _Status.ErrorCount	  := 0;
 _Status.SkippedCount  := 0;
-_Status.TotalDuration := 0.0;
-_Recorded			  := 0;]]></ST>
+_Status.TotalDuration := 0.0;]]></ST>
       </Implementation>
     </Method>
     <Property Name="ErrorCount" Id="{71a2dd1a-2608-41c3-9f49-bdfb44f607ed}" FolderPath="I_TestRunStatus\">
@@ -166,7 +153,12 @@ IF _Status.ErrorCount > 0 THEN
 	_Status.Outcome := E_RunOutcome.Errored;
 ELSIF _Status.FailedCount > 0 THEN
 	_Status.Outcome := E_RunOutcome.Failed;
-ELSIF (_Recorded > 0) AND (_Status.SkippedCount = _Recorded) THEN
+ELSIF (_Status.SkippedCount > 0) AND (_Status.PassedCount = 0) THEN
+	// Judged on TEST counts alone, which mean the same thing at every level of a
+	// nest. Counting results folded in instead compared tests with suites once
+	// Absorb was involved: a pass beside two skips in two suites settled as
+	// Skipped, and a lone suite of two skips as Passed. Within a suite the two
+	// rules agree, because there every result folded in is one test.
 	_Status.Outcome := E_RunOutcome.Skipped;
 ELSIF _Status.PassedCount > 0 THEN
 	_Status.Outcome := E_RunOutcome.Passed;
@@ -267,7 +259,6 @@ ELSE
 	RETURN;
 END_CASE
 
-_Recorded			  := _Recorded + 1;
 _Status.TotalDuration := _Status.TotalDuration + ElapsedTime;]]></ST>
       </Implementation>
     </Method>

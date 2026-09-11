@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunPassesWithSkipsBesideAPass" Id="{7285b2f7-62b2-4e6e-948c-dbb868f133c1}" SpecialFunc="None">
+    <Declaration><![CDATA[// A run holding a pass and some skips is Passed, whatever the number of suites.
+//
+// THE FAILURE THIS GUARDS IS A UNIT MISMATCH. A run folds each suite in with
+// Absorb, and "all skipped" was once decided by comparing SkippedCount - a count
+// of TESTS - with the number of results absorbed - a count of SUITES. Two skipped
+// tests across two suites satisfied it, so a run that passed a test settled as
+// Skipped, and the log sink printed it as a failed run.
+//
+// The shape is deliberate: two skipped tests, two suites. The collision is the
+// point. TEST_RunWithMoreSkipsThanPassesIsPassed is the same run with three skips,
+// which settled correctly even before the fix - the pair shows it was the
+// collision, not the proportion of skips, that decided the outcome.
+FUNCTION_BLOCK TEST_RunPassesWithSkipsBesideAPass IMPLEMENTS I_Test
+VAR
+	Runner		 : TestRun<2>;
+	PassingSuite : TestSuite<2>;
+	SkippedSuite : TestSuite<2>;
+
+	Passes	   : PassingTest;
+	FirstSkip  : PassingTest;
+	SecondSkip : PassingTest;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{80c473b6-13f6-4fd4-8ff1-fa5787cc0a4c}" />
+    <Method Name="Run" Id="{493503c5-aef5-40bd-9481-311f38265db7}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	PassingSuite.SetLabel('passing');
+	PassingSuite.Register(Passes, 'a test that passes', Budgets);
+
+	SkippedSuite.SetLabel('skipped');
+	SkippedSuite.Register(FirstSkip, 'a skipped test', Budgets);
+	SkippedSuite.Register(SecondSkip, 'another skipped test', Budgets);
+	SkippedSuite.Skip();
+
+	Runner.SetLabel('a run');
+	Runner.AddSuite(PassingSuite);
+	Runner.AddSuite(SkippedSuite);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	// The counts were always right. Only what they were taken to mean was not.
+	ExpectedCount := 1;
+	ActualCount	  := Runner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'one test passed');
+
+	ExpectedCount := 2;
+	ActualCount	  := Runner.SkippedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'two were skipped');
+
+	ActualCount := Runner.SuiteCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'across two suites - the collision this test exists for');
+
+	ExpectedOutcome := E_RunOutcome.Passed;
+	ActualOutcome	:= Runner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'a pass beside skips is Passed, not Skipped');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

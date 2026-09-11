@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <FileVersion>1.0.0.0</FileVersion>
@@ -168,7 +168,13 @@
     <Compile Include="Tests\Characterization\CHAR_WallClockTimeout.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\EventReporter\TEST_EventReporterDoesNotCallASkipAPass.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\EventReporter\TEST_EventReporterIsQuietAboutPasses.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\EventReporter\TEST_EventReporterNamesASkippedAndAnErroredRun.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\EventReporter\TEST_EventReporterRaisesEachOutcomeOnce.TcPOU">
@@ -238,6 +244,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\LogReporter\TEST_LogReporterIsQuietAboutPasses.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\LogReporter\TEST_LogReporterNamesASkippedAndAnErroredRun.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\LogReporter\TEST_LogReporterNarratesSkipsOnlyWhenAsked.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\LogReporter\TEST_LogReporterNarratesWhenAsked.TcPOU">
@@ -333,7 +345,31 @@
     <Compile Include="Tests\Suite\TEST_RunAnnouncesItselfBeforeAnythingElse.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Tests\Suite\TEST_RunOfOnlySkippedTestsIsSkipped.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RunPassesWithSkipsBesideAPass.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Tests\Suite\TEST_RunRefusingASuiteIsNeverSilent.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RunReportsASkippedSuiteInItsPlace.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RunReportsASuiteSkippedBeforeItsReporters.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RunReportsEachSkippedTestByName.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RunReRunDoesNotRunASkippedSuite.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RunReRunReportsASkippedSuiteAgain.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_RunWithMoreSkipsThanPassesIsPassed.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suite\TEST_SuiteClosesRegistrationOnFirstEnable.TcPOU">
@@ -358,6 +394,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suite\TEST_SuiteSkipMarksEverythingSkipped.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteSkippedAfterARejectedRegistrationIsErrored.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Tests\Suite\TEST_SuiteSkippedWithNoLabelIsAFrameworkError.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Tests\Suite\TEST_SuiteWithNoLabelIsAFrameworkError.TcPOU">
@@ -401,8 +443,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="DUTs" />
     <Folder Include="Doubles" />
+    <Folder Include="DUTs" />
     <Folder Include="Interfaces" />
     <Folder Include="Tests" />
     <Folder Include="POUs" />
@@ -453,8 +495,8 @@
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
-  <Data>
-    <o xml:space="preserve" t="OptionKey">
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
       <v n="Name">"&lt;ProjectRoot&gt;"</v>
       <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
         <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
@@ -524,14 +566,14 @@
       </d>
       <d n="Values" t="Hashtable" />
     </o>
-  </Data>
-  <TypeList>
-    <Type n="Boolean">System.Boolean</Type>
-    <Type n="Hashtable">System.Collections.Hashtable</Type>
-    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
-    <Type n="String">System.String</Type>
-  </TypeList>
-</XmlArchive>
+        </Data>
+        <TypeList>
+          <Type n="Boolean">System.Boolean</Type>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
     </PlcProjectOptions>
   </ProjectExtensions>
 </Project>

@@ -1,0 +1,91 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_SuiteSkippedAfterARejectedRegistrationIsErrored" Id="{bea31cad-560c-43ec-9b32-41e49ca35db9}" SpecialFunc="None">
+    <Declaration><![CDATA[// A registration refused before a suite was skipped is still counted: the suite
+// is Errored, not Skipped.
+//
+// The skipped twin of TEST_SuiteRejectedRegistrationIsNeverSilent, whose point is
+// that a rejection raised before the run must survive Tally.Begin. StartRun
+// re-applies it. Skip also calls Tally.Begin, and once re-applied nothing - so a
+// wiring error in a skipped suite vanished from the counts, and the run stayed
+// clear of red while a test was missing from it.
+//
+// A wiring error outranks a skip. The skip is still honoured: the test that did
+// register is skipped, and never runs.
+FUNCTION_BLOCK TEST_SuiteSkippedAfterARejectedRegistrationIsErrored IMPLEMENTS I_Test
+VAR
+	Inner			: TestSuite<4>;
+
+	First			: PassingTest;
+	Second			: PassingTest;
+	AcceptedFirst	: BOOL;
+	AcceptedSecond	: BOOL;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{f711b1b7-8703-401e-9074-406300fe1760}" />
+    <Method Name="Run" Id="{85cd7513-529a-4858-83da-7efae4a1f6ff}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner suite never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	Inner.SetLabel('inner');
+	AcceptedFirst  := Inner.Register(First, 'same label', Budgets);
+	AcceptedSecond := Inner.Register(Second, 'same label', Budgets);
+	Inner.Skip();
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Inner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	Test.AssertTrue(AcceptedFirst, 'the first was taken');
+	Test.AssertFalse(AcceptedSecond, 'the duplicate was refused');
+
+	ExpectedCount := 1;
+	ActualCount	  := Inner.ErrorCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the refusal survived the skip, counted once');
+
+	ActualCount := Inner.SkippedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the test that registered was skipped');
+	ExpectedCount := 0;
+	ActualCount	  := First.BodyCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and never ran');
+
+	ExpectedOutcome := E_RunOutcome.Errored;
+	ActualOutcome	:= Inner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'a wiring error outranks the skip');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

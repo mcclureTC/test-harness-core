@@ -1,0 +1,138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunReportsEachSkippedTestByName" Id="{2ec064ed-458f-4932-9c76-1153a4534f5b}" SpecialFunc="None">
+    <Declaration><![CDATA[// Every skipped test reaches the sinks by name, as a case of its own, before its
+// suite is closed.
+//
+// The result document is what CI reads, and CI reads CASES. A suite element that
+// says skipped="2" and holds no testcase children is two tests that CI cannot see,
+// cannot name, and cannot trend. The JUnit writer was built to take a skipped case
+// that arrives without TestStarted; nothing ever sent it one.
+//
+// ORDER MATTERS. A document builder closes the suite element on SuiteFinished, so a
+// case that arrives after it lands under a second suite node with no totals. That
+// is what CasesWhenSuiteFinished on the recorder is for.
+//
+// Wired in the order a consumer reported - Skip before the sink exists - so this
+// also depends on the announcement having moved to when the run reaches the suite.
+//
+// The second skipped test has a LOCATION, and that is checked before any name. A
+// skipped test never becomes active, so its journal never learns its name or its
+// location; both must be taken from the registry slot. Announcing from the journal
+// empties both, so if the location check fails, that is the code that ran - and
+// the name checks after it print the name that actually arrived, not TRUE/FALSE.
+FUNCTION_BLOCK TEST_RunReportsEachSkippedTestByName IMPLEMENTS I_Test
+VAR
+	Runner		 : TestRun<2>;
+	PassingSuite : TestSuite<2>;
+	SkippedSuite : TestSuite<2>;
+	Recorder	 : RecordingReporter;
+
+	Passes	   : PassingTest;
+	FirstSkip  : PassingTest;
+	// Implements I_TestLocation with a fixed path - the fingerprint above.
+	SecondSkip : FakeTestWithAllHooks;
+
+	ExpectedStatus : E_TestStatus;
+	ActualStatus	: E_TestStatus;
+	Recorded		: ST_RecordedCase;
+	ExpectedText	: T_MaxString;
+	ActualText		: T_MaxString;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{1d817b12-2a58-433b-8fcd-1e84703ea102}" />
+    <Method Name="Run" Id="{7fabb860-a468-4486-af0a-49981a6acec5}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	PassingSuite.SetLabel('passing');
+	PassingSuite.Register(Passes, 'a test that passes', Budgets);
+
+	SkippedSuite.SetLabel('skipped');
+	SkippedSuite.Register(FirstSkip, 'a skipped test', Budgets);
+	SkippedSuite.Register(SecondSkip, 'another skipped test', Budgets);
+	SkippedSuite.Skip();
+
+	Runner.SetLabel('a run');
+	Runner.AddReporter(Recorder);
+	Runner.AddSuite(PassingSuite);
+	Runner.AddSuite(SkippedSuite);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 3;
+	ActualCount	  := Recorder.CaseCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'every test in the run is a case, the skipped two included');
+
+	// Cases arrive in run order: the passing test, then the two skipped ones.
+	Recorded	 := Recorder.CaseAt(2);
+	ExpectedText := 'Verifier.Doubles.AllHooks';
+	ActualText	 := Recorded.Location;
+	Test.AssertEqual(ExpectedText, ActualText, 'a skipped case carries its location');
+
+	Recorded	 := Recorder.CaseAt(1);
+	ExpectedText := 'a skipped test';
+	ActualText	 := Recorded.Label;
+	Test.AssertEqual(ExpectedText, ActualText, 'the first skipped case arrived named');
+
+	Recorded	 := Recorder.CaseAt(2);
+	ExpectedText := 'another skipped test';
+	ActualText	 := Recorded.Label;
+	Test.AssertEqual(ExpectedText, ActualText, 'and so did the second');
+
+	Test.AssertTrue(Recorder.CaseExists('a skipped test'), 'the first skipped test is there by name');
+	ExpectedStatus := E_TestStatus.Skipped;
+	ActualStatus	:= Recorder.CaseStatus('a skipped test');
+	Test.AssertEqual(ExpectedStatus, ActualStatus, 'and recorded as Skipped');
+
+	Test.AssertTrue(Recorder.CaseExists('another skipped test'), 'so is the second');
+	ActualStatus := Recorder.CaseStatus('another skipped test');
+	Test.AssertEqual(ExpectedStatus, ActualStatus, 'also as Skipped');
+
+	// All three cases had arrived when the last suite - the skipped one - closed.
+	ActualCount := Recorder.CasesWhenSuiteFinished;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the skipped cases arrived before their suite was closed');
+
+	ExpectedCount := 2;
+	ActualCount	  := Recorder.SuiteCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and each suite was closed exactly once');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

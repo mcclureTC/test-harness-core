@@ -190,8 +190,19 @@ THIS^.Emit(ADSLOG_MSGTYPE_HINT, _Rule);
 // Severity follows the outcome. A log filtered to errors still shows the closing
 
 // line of a run that went red, and shows nothing of one that did not.
+//
+
+// The same four banners, at the same severities, as the suite line. Skipped is
+
+// not red, so it is not logged as an error; Errored is kept apart from Failed
+
+// because nothing about the code was shown, and the reader should look elsewhere.
 IF Status.Outcome = E_RunOutcome.Passed THEN
 	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('===  RUN PASSED  ', Line));
+ELSIF Status.Outcome = E_RunOutcome.Skipped THEN
+	THIS^.Emit(ADSLOG_MSGTYPE_HINT, CONCAT('===  RUN SKIPPED ', Line));
+ELSIF Status.Outcome = E_RunOutcome.Errored THEN
+	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, CONCAT('===  RUN ERRORED ', Line));
 ELSE
 	THIS^.Emit(ADSLOG_MSGTYPE_ERROR, CONCAT('===  RUN FAILED  ', Line));
 END_IF
@@ -364,6 +375,14 @@ CASE Status OF
 		// should react differently, and so should whoever is reading the log.
 		Line := CONCAT(CONCAT(CONCAT(CONCAT('ERRORED ', SuiteLabel), ' / '), TestLabel), CONCAT(': ', Summary));
 		THIS^.Emit(ADSLOG_MSGTYPE_WARN, Line);
+
+	E_TestStatus.Skipped:
+		// Narrated only when asked, like a pass - but named for what it is. Sharing
+		// the pass branch would write "passed" for a test that never ran.
+		IF _IncludePasses THEN
+			Line := CONCAT(CONCAT(CONCAT('skipped ', SuiteLabel), ' / '), TestLabel);
+			THIS^.Emit(ADSLOG_MSGTYPE_HINT, Line);
+		END_IF
 
 ELSE
 	IF _IncludePasses THEN

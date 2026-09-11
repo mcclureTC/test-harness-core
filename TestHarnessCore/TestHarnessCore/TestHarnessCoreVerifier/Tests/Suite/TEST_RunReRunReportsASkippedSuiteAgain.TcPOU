@@ -1,0 +1,116 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunReRunReportsASkippedSuiteAgain" Id="{65fd4790-2d07-454e-aea1-db2726b9dcf4}" SpecialFunc="None">
+    <Declaration><![CDATA[// A re-run reports a skipped suite again - its tests by name, then the suite -
+// and reports it as Skipped.
+//
+// A re-run exists to produce a FRESH document. If the skipped suite said nothing
+// the second time, its tests would vanish from that document; if its tests ran,
+// they would appear as passes that were never meant to happen. Either way the
+// re-run's artifact would disagree with the first run's about what was skipped.
+//
+// The skipped suite is added last, so what the sink heard LAST is its report.
+FUNCTION_BLOCK TEST_RunReRunReportsASkippedSuiteAgain IMPLEMENTS I_Test
+VAR
+	Runner		 : TestRun<2>;
+	PassingSuite : TestSuite<2>;
+	SkippedSuite : TestSuite<2>;
+	Spy			 : SpyReporter;
+
+	Passes	   : PassingTest;
+	FirstSkip  : PassingTest;
+	SecondSkip : PassingTest;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+	ExpectedStatus : E_TestStatus;
+	ActualStatus	: E_TestStatus;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{972b8b11-66ab-4e8a-8fc6-a08034c396e2}" />
+    <Method Name="Run" Id="{80889134-28c7-44d2-bce3-46dc46e8c5ec}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	PassingSuite.SetLabel('passing');
+	PassingSuite.Register(Passes, 'a test that passes', Budgets);
+
+	SkippedSuite.SetLabel('skipped');
+	SkippedSuite.Register(FirstSkip, 'a skipped test', Budgets);
+	SkippedSuite.Register(SecondSkip, 'another skipped test', Budgets);
+	SkippedSuite.Skip();
+
+	Runner.SetLabel('a run');
+	Runner.AddReporter(Spy);
+	Runner.AddSuite(PassingSuite);
+	Runner.AddSuite(SkippedSuite);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	// The house way to re-run: once the first pass is complete.
+	Runner.ReRun();
+	Phase := 3;
+	Run	  := FALSE;
+
+3:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 4;
+	END_IF
+	Run := FALSE;
+
+4:
+	ExpectedCount := 2;
+	ActualCount	  := Spy.RunFinishedCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'the re-run finished, so a fresh document was written');
+
+	ExpectedCount := 4;
+	ActualCount	  := Spy.SuiteFinishedCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'each suite was reported once per pass');
+	ExpectedCount := 6;
+	ActualCount	  := Spy.TestFinishedCalls;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'and each test once per pass, the skipped ones included');
+
+	ExpectedOutcome := E_RunOutcome.Skipped;
+	ActualOutcome	:= Spy.LastSuiteOutcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'the re-run reported the skipped suite as Skipped');
+
+	ExpectedStatus := E_TestStatus.Skipped;
+	ActualStatus	:= Spy.LastStatus;
+	Test.AssertEqual(ExpectedStatus, ActualStatus, 'and its tests as Skipped, not as passes');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

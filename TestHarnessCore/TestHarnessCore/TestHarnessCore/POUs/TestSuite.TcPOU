@@ -63,6 +63,20 @@ VAR
 	// nowhere. The arbiter is not involved and the tally is not touched.
 	_IsSingle : BOOL;
 
+	// Skip has settled the counts but not yet told the sinks. They are told when
+
+	// the run first drives this suite - after RunStarted, in its place in the
+
+	// sequence. Skip is only allowed before that, when a sink may not even be
+
+	// attached yet.
+	_IsSkipPending : BOOL;
+
+	// The suite was skipped, for good. Skip is part of composition and a re-run does
+
+	// not recompose, so ReRun reads this rather than running what was ruled out.
+	_IsSkipped : BOOL;
+
 	// Framework errors raised BEFORE the run started - a rejected registration, an
 
 	// unnamed suite. Tally.Begin clears its counts, so these are held and re-applied
@@ -336,6 +350,16 @@ END_VAR]]></Declaration>
 	RETURN;
 END_IF
 
+// A skipped suite stays skipped. A re-run "re-executes what was composed; it does
+// not recompose it" (TestRun.ReRun), and a skip is part of what was composed - it
+// is usually there because running these tests here would be wrong. Its verdicts
+// and counts still stand, so nothing is reset; the suite is only announced again,
+// when the run reaches it, so the fresh document still lists its tests.
+IF _IsSkipped THEN
+	_IsSkipPending := TRUE;
+	RETURN;
+END_IF
+
 // The registered set is not redefined, only re-executed. The window stays shut.
 _Registry.ResetAll();
 THIS^.StartRun();]]></ST>
@@ -400,6 +424,9 @@ END_VAR
 VAR
 	Slot	: ST_TestSlot;
 	Outcome : E_PhaseOutcome;
+	i		: DINT;
+	Journal : REFERENCE TO TestJournal;
+	Location : T_MaxString;
 END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[THIS^.EnsureWired();
@@ -419,6 +446,44 @@ IF NOT Enable THEN
 		Run := _Tally.IsComplete;
 	END_IF
 
+	RETURN;
+END_IF
+
+// A skipped suite is announced here, when the run reaches it. Skip already
+// settled the counts, and nothing below would run a test.
+//
+// Each test first, by name, then the suite. The result document is read as
+// cases, so a skipped test that is only a count is invisible to CI; and a
+// document builder closes the suite element on SuiteFinished, so a case sent
+// after it has nowhere to go. No TestStarted: a skipped test never became active,
+// and the sinks already open the element themselves when one is missing.
+IF _IsSkipPending THEN
+	_IsSkipPending := FALSE;
+	FOR i := 0 TO TO_DINT(_Registry.Count) - 1 DO
+		Journal REF= _Registry.Journal(i);
+		IF __ISVALIDREF(Journal) THEN
+			// Label and location from the SLOT, the way TestRunner.Load takes them. A
+			// journal only learns them in Begin, when its test becomes active - and a
+			// skipped test never does, so its journal label is still empty.
+			Slot	 := _Registry.Slot(i);
+			Location := '';
+			IF Slot.Location <> 0 THEN
+				Location := Slot.Location.Path;
+			END_IF
+
+			_Reporters.TestFinished(SuiteLabel	  := _Label,
+									TestLabel	  := Slot.Label,
+									Location	  := Location,
+									Status		  := Journal.Status,
+									Kind		  := Journal.Kind,
+									Summary		  := Journal.Summary,
+									ElapsedTime	  := Journal.ElapsedTime,
+									ElapsedCycles := Journal.ElapsedCycles,
+									Assertions	  := Journal.AssertionCount);
+		END_IF
+	END_FOR
+
+	_Reporters.SuiteFinished(THIS^);
 	RETURN;
 END_IF
 
@@ -523,7 +588,22 @@ END_IF
 
 // reopen for a suite that has reached a terminal state.
 _Registry.Close();
+// The two checks StartRun makes before a pass, in the same order. A skip bypasses
+// StartRun, and must not bypass these: a skipped suite still goes into the
+// result document, and a wiring error is a wiring error whether or not the
+// tests run. The label check comes first because, with no run yet, it adds to
+// the pending errors re-applied below.
+IF _Label = '' THEN
+	THIS^.RaiseFrameworkError('suite was skipped with no label');
+END_IF
 _Tally.Begin(_Registry.Count);
+// Tally.Begin cleared the counts. Re-apply anything raised before this point -
+// a rejected registration above all - or it vanishes, and the run stays clear of
+// red while a test is missing from it.
+FOR i := 1 TO TO_DINT(_PendingErrors) DO
+	_Tally.RecordFrameworkError();
+END_FOR
+
 FOR i := 0 TO TO_DINT(_Registry.Count) - 1 DO
 	Journal REF= _Registry.Journal(i);
 	IF __ISVALIDREF(Journal) THEN
@@ -533,7 +613,12 @@ FOR i := 0 TO TO_DINT(_Registry.Count) - 1 DO
 END_FOR
 
 _Tally.Finish();
-_Reporters.SuiteFinished(THIS^);]]></ST>
+// Settled, but not announced. Skip runs before the suite is first enabled -
+// before RunStarted, and often before any sink is attached - so an announcement
+// made here reaches nothing, or arrives ahead of the run it belongs to. Run
+// makes it when the run reaches this suite.
+_IsSkipped	   := TRUE;
+_IsSkipPending := TRUE;]]></ST>
       </Implementation>
     </Method>
     <Property Name="SkippedCount" Id="{98cde481-38b7-493d-b0ca-c185c5e2ec01}" FolderPath="I_TestRunStatus\">
@@ -557,6 +642,9 @@ END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[_Registry.Close();
 _Registry.ApplyDefaults(_Defaults);
+// A re-run supersedes an announcement Skip left pending: the suite is about to
+// report what it actually does.
+_IsSkipPending := FALSE;
 IF _Label = '' THEN
 	// An unnamed suite produces an unnamed node in the result document, which no
 	// CI system can group by.

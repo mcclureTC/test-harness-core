@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="TEST_RunWithMoreSkipsThanPassesIsPassed" Id="{4a5e622b-4151-4f03-bd4b-8c88e9ef13be}" SpecialFunc="None">
+    <Declaration><![CDATA[// A run with more skips than passes is still Passed.
+//
+// A CONTROL for TEST_RunPassesWithSkipsBesideAPass: the same run, with three
+// skipped tests instead of two. It passed before that defect was fixed, because
+// three skips across two suites never matched the suite count.
+//
+// Kept because the pair isolates the cause. If this one goes red, the rule has
+// started weighing the proportion of skips, which would be a different defect.
+FUNCTION_BLOCK TEST_RunWithMoreSkipsThanPassesIsPassed IMPLEMENTS I_Test
+VAR
+	Runner		 : TestRun<2>;
+	PassingSuite : TestSuite<2>;
+	SkippedSuite : TestSuite<4>;
+
+	Passes	   : PassingTest;
+	FirstSkip  : PassingTest;
+	SecondSkip : PassingTest;
+	ThirdSkip  : PassingTest;
+
+	Budgets : ST_TestBudgets;
+	Phase	: DINT;
+	Scans	: DINT;
+
+	ExpectedCount : UDINT;
+	ActualCount	  : UDINT;
+	ExpectedOutcome : E_RunOutcome;
+	ActualOutcome	: E_RunOutcome;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="I_Test" Id="{9e53848d-6e3f-4861-87df-724c66242924}" />
+    <Method Name="Run" Id="{271715e1-9826-486e-bd37-a24f3e3e60a5}" FolderPath="I_Test\">
+      <Declaration><![CDATA[METHOD Run : BOOL
+VAR_INPUT
+	Enable : BOOL;
+	Test   : I_TestAssertions;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Scans := Scans + 1;
+IF Scans > 200 THEN
+	Test.Fail('the inner run never completed');
+	Run := TRUE;
+	RETURN;
+END_IF
+
+CASE Phase OF
+
+0:
+	PassingSuite.SetLabel('passing');
+	PassingSuite.Register(Passes, 'a test that passes', Budgets);
+
+	SkippedSuite.SetLabel('skipped');
+	SkippedSuite.Register(FirstSkip, 'a skipped test', Budgets);
+	SkippedSuite.Register(SecondSkip, 'another skipped test', Budgets);
+	SkippedSuite.Register(ThirdSkip, 'a third skipped test', Budgets);
+	SkippedSuite.Skip();
+
+	Runner.SetLabel('a run');
+	Runner.AddSuite(PassingSuite);
+	Runner.AddSuite(SkippedSuite);
+
+	Phase := 1;
+	Run	  := FALSE;
+
+1:
+	IF Runner.Run(Enable := TRUE) THEN
+		Phase := 2;
+	END_IF
+	Run := FALSE;
+
+2:
+	ExpectedCount := 1;
+	ActualCount	  := Runner.PassedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'one test passed');
+
+	ExpectedCount := 3;
+	ActualCount	  := Runner.SkippedCount;
+	Test.AssertEqual(ExpectedCount, ActualCount, 'three were skipped - more than the suite count');
+
+	ExpectedOutcome := E_RunOutcome.Passed;
+	ActualOutcome	:= Runner.Outcome;
+	Test.AssertEqual(ExpectedOutcome, ActualOutcome, 'more skips than passes is still Passed');
+
+	Run := TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>
